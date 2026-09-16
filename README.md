@@ -15,7 +15,7 @@ It is made for founders, indie hackers, marketers, designers, and developers who
 **Open source · local-first · built for small teams · no Docker**
 
 <!-- project-links:start -->
-[Website](https://othmaneblial.github.io/GrowthLab/) · [Docs](https://othmaneblial.github.io/GrowthLab/docs.html) · [Alpha release](https://github.com/OthmaneBlial/GrowthLab/releases/tag/v0.1.0-alpha.1) · [Roadmap](docs/ROADMAP.md) · [Contribute](CONTRIBUTING.md)
+[Website](https://othmaneblial.github.io/GrowthLab/) · [Docs](https://othmaneblial.github.io/GrowthLab/docs.html) · [Alpha release](https://github.com/OthmaneBlial/GrowthLab/releases/tag/v0.1.0-alpha.2) · [Roadmap](docs/ROADMAP.md) · [Contribute](CONTRIBUTING.md)
 <!-- project-links:end -->
 
 ![Real bundled battle with two eligible candidates and one deliberately failed heading check](docs/screenshots/growth-demo-failure.png)
@@ -85,7 +85,7 @@ Current milestone: **Three real growth surfaces with verified local PNG captures
 - Private-by-default offline HTML/Markdown reports and interrupted-run recovery
 - Key-free bundled replay demo with one deliberate validation failure
 - Published project website and searchable docs with current progress and actual captures
-- Published v0.1.0-alpha.1 as a source prerelease with explicit alpha limitations
+- Published v0.1.0-alpha.2 as a source prerelease with the explainable SEO rubric
 - Inspected and explicitly resumed pending selected-delivery receipts without rollback
 - Reworked the bundled demo to show intent, evidence and an explicit review choice
 - Local and SSH launchers self-register their controller PID before payload work
