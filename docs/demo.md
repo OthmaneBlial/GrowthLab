@@ -70,10 +70,14 @@ from that sealed source, with optional **OBSERVED** local render checks for
 viewport coverage, visible copy and horizontal overflow; they remain render
 artifacts rather than visual quality, Core Web Vital, real-user performance or
 growth results.
-Visual/performance evaluation remains in progress. A short eight-second demo reel is
-available at [`docs/assets/growthlab-demo.mp4`](assets/growthlab-demo.mp4); it is
-assembled from the real browser captures below and is labelled as a walkthrough,
-not as a continuous recording or a growth result.
+Visual/performance evaluation remains in progress. A continuous 30-second screen
+recording is available at
+[`docs/assets/growthlab-demo-30s.mp4`](assets/growthlab-demo-30s.mp4). It was captured
+from an isolated Chrome profile showing the public GrowthLab site and its real
+browser evidence; it is a product walkthrough, not a growth result.
+
+The earlier eight-second reel remains available at
+[`docs/assets/growthlab-demo.mp4`](assets/growthlab-demo.mp4) for a compact review.
 
 Real local captures show the [Home launch screen](screenshots/growth-demo-home.png),
 [running checks](screenshots/growth-demo-live.png),
