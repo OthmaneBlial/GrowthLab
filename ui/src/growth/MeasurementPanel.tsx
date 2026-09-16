@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { workspaceKey } from "../queries/client";
+import { m } from "../paraglide/messages.js";
 import { growth } from "./api";
 import { parseMeasurementCsv, type LocalMeasurementReport } from "./measurement";
 
@@ -39,27 +40,27 @@ export function MeasurementPanel() {
 
   return <section className="growth-measurement growth-panel" aria-labelledby="growth-measurement-title">
     <span className="growth-section-number">03 / MEASURE WHAT YOU OWN</span>
-    <h2 id="growth-measurement-title">Bring a local outcome export.</h2>
-    <p>Read your own CSV in this browser. GrowthLab compares variants within each metric and optional distribution or channel, locally, and sends no rows to a provider.</p>
+    <h2 id="growth-measurement-title">{m.growth_measure_title()}</h2>
+    <p>{m.growth_measure_intro()}</p>
     <details className="growth-measurement-analysis" open>
-      <summary>Measurement source boundary</summary>
-      {sources.isPending ? <p className="growth-muted">Loading source availability…</p> : sources.error ? <p className="growth-muted">Source availability could not be loaded; local CSV remains available in this browser.</p> : <ul>{sources.data?.map((source) => <li key={source.id}><strong>{source.label}</strong> · {source.status === "available" ? "available locally" : "planned"} · {source.network === "none" ? "no network" : "explicit opt-in network"}<br /><span className="growth-muted">{source.limitation}</span></li>)}</ul>}
+      <summary>{m.growth_measure_source_boundary()}</summary>
+      {sources.isPending ? <p className="growth-muted">{m.growth_measure_loading_sources()}</p> : sources.error ? <p className="growth-muted">{m.growth_measure_sources_unavailable()}</p> : <ul>{sources.data?.map((source) => <li key={source.id}><strong>{source.label}</strong> · {source.status === "available" ? m.growth_measure_available_locally() : m.growth_measure_planned()} · {source.network === "none" ? m.growth_measure_no_network() : m.growth_measure_opt_in_network()}<br /><span className="growth-muted">{source.limitation}</span></li>)}</ul>}
     </details>
     <form onSubmit={summarize}>
-      <label className="growth-file-label" htmlFor="growth-measurement-file">Telemetry CSV<input id="growth-measurement-file" type="file" accept=".csv,text/csv" onChange={(event) => { void readFile(event.target.files?.[0]); }} /></label>
-      <label htmlFor="growth-measurement-baseline">Baseline variant</label>
+      <label className="growth-file-label" htmlFor="growth-measurement-file">{m.growth_measure_telemetry_csv()}<input id="growth-measurement-file" type="file" accept=".csv,text/csv" onChange={(event) => { void readFile(event.target.files?.[0]); }} /></label>
+      <label htmlFor="growth-measurement-baseline">{m.growth_measure_baseline_variant()}</label>
       <input id="growth-measurement-baseline" value={baseline} onChange={(event) => setBaseline(event.target.value)} maxLength={256} required />
-      <button className="growth-button" type="submit" disabled={reading || !csv}>{reading ? "Reading…" : "Summarize locally"} <span aria-hidden="true">→</span></button>
+      <button className="growth-button" type="submit" disabled={reading || !csv}>{reading ? m.growth_measure_reading() : m.growth_measure_summarize_locally()} <span aria-hidden="true">→</span></button>
     </form>
-    {fileName && <p className="growth-measurement-file">Loaded locally: <code>{fileName}</code></p>}
+    {fileName && <p className="growth-measurement-file">{m.growth_measure_loaded_locally()} <code>{fileName}</code></p>}
     {error && <p className="growth-error" role="alert">{error}</p>}
     {report && <div className="growth-measurement-result" aria-live="polite">
-      <div className="growth-line"><strong>Descriptive summary</strong><span className="growth-mark growth-mark-observed">{report.provenance}</span></div>
-      <p className="growth-muted">{report.rowsIncluded} observations · baseline <code>{report.baselineVariant}</code>{report.dateRange ? ` · ${report.dateRange.from} → ${report.dateRange.to}` : " · date range unavailable"}</p>
-      <div className="growth-measurement-table-wrap"><table className="growth-measurement-table"><thead><tr><th>Metric</th><th>Distribution</th><th>Variant</th><th>Mean</th><th>n</th><th>Mean 95%</th><th>Change</th><th>Δ 95%</th></tr></thead><tbody>{report.groups.map((group) => <tr key={`${group.metric}-${group.distribution}-${group.variant}`}><td>{group.metric}</td><td>{group.distribution}</td><td>{group.variant}</td><td>{number(group.mean)}</td><td>{group.sampleSize}</td><td>{interval(group.meanInterval95)}</td><td>{group.comparison?.relativeChangePercent == null ? "—" : `${number(group.comparison.relativeChangePercent)}%`}</td><td>{interval(group.comparison?.differenceInterval95 ?? null)}</td></tr>)}</tbody></table></div>
-      <details className="growth-measurement-analysis"><summary>How the exploratory intervals work</summary><p className="growth-muted">95% normal approximation over independent observations. A mean interval needs at least two rows in a group; a difference interval needs at least two rows in both the variant and baseline. These intervals are descriptive and do not establish significance, causality or a winner.</p></details>
+      <div className="growth-line"><strong>{m.growth_measure_descriptive_summary()}</strong><span className="growth-mark growth-mark-observed">{report.provenance}</span></div>
+      <p className="growth-muted">{report.rowsIncluded} {m.growth_measure_observations()} · baseline <code>{report.baselineVariant}</code>{report.dateRange ? ` · ${report.dateRange.from} → ${report.dateRange.to}` : ` · ${m.growth_measure_date_unavailable()}`}</p>
+      <div className="growth-measurement-table-wrap"><table className="growth-measurement-table"><thead><tr><th>{m.growth_measure_metric()}</th><th>{m.growth_measure_distribution()}</th><th>{m.growth_measure_variant()}</th><th>{m.growth_measure_mean()}</th><th>{m.growth_measure_sample_size()}</th><th>{m.growth_measure_mean_interval()}</th><th>{m.growth_measure_change()}</th><th>{m.growth_measure_difference_interval()}</th></tr></thead><tbody>{report.groups.map((group) => <tr key={`${group.metric}-${group.distribution}-${group.variant}`}><td>{group.metric}</td><td>{group.distribution}</td><td>{group.variant}</td><td>{number(group.mean)}</td><td>{group.sampleSize}</td><td>{interval(group.meanInterval95)}</td><td>{group.comparison?.relativeChangePercent == null ? "—" : `${number(group.comparison.relativeChangePercent)}%`}</td><td>{interval(group.comparison?.differenceInterval95 ?? null)}</td></tr>)}</tbody></table></div>
+      <details className="growth-measurement-analysis"><summary>{m.growth_measure_analysis_summary()}</summary><p className="growth-muted">{m.growth_measure_analysis_body()}</p></details>
       {report.warnings.map((warning) => <p className="growth-muted" key={warning}>{warning}</p>)}
-      <p className="growth-measurement-limit">Measured from your file; no causality, significance or growth lift is inferred.</p>
+      <p className="growth-measurement-limit">{m.growth_measure_limit()}</p>
     </div>}
   </section>;
 }

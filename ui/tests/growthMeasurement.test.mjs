@@ -69,6 +69,6 @@ test("keeps channel distributions separate when comparing variants", () => {
 test("measurement panel surfaces the provider-neutral source boundary", async () => {
   const source = await readFile(new URL("../src/growth/MeasurementPanel.tsx", import.meta.url), "utf8");
   assert.match(source, /measurementSources/);
-  assert.match(source, /Measurement source boundary/);
-  assert.match(source, /explicit opt-in network/);
+  assert.match(source, /growth_measure_source_boundary/);
+  assert.match(source, /growth_measure_opt_in_network/);
 });
