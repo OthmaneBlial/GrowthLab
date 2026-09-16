@@ -126,7 +126,7 @@ Current milestone: **Public repository review, manual-brief onboarding, executab
 - Inspected and explicitly resumed pending selected-delivery receipts without rollback
 - Reworked the bundled demo to show intent, evidence and an explicit review choice
 - Local and SSH launchers self-register their controller PID before payload work
-- Automatic desktop PNG capture from sealed preview documents with archive verification
+- Automatic desktop and phone PNG capture from sealed preview documents with archive verification
 - Explainable SEO page-hygiene rubric with dimension scores and limits
 - Standalone local SEO audit with actionable recommendations, JSON or Markdown output and safe file bounds
 - Eight-second demo reel assembled from real local browser captures
@@ -146,7 +146,7 @@ Current milestone: **Public repository review, manual-brief onboarding, executab
 
 | Validation | Current evidence |
 | --- | --- |
-| Rust tests | **passed** — 945 tests per binary; 943 passed, zero failures and two inherited ignored tests (serial run) |
+| Rust tests | **passed** — 949 tests per binary; 947 passed, zero failures and two inherited ignored tests (serial run) |
 | UI tests | **passed** — 172 tests; zero failures or skips |
 | Local quality checks | **passed** — Formatting, Clippy, UI types, styles and builds |
 | Actual demo and browser flow | **passed** — Real CLI/HTTP execution, desktop/phone checks, verified PNG endpoint checks, SEO rubric records, page-quality hints and standalone local audit on owned fixtures |
@@ -190,7 +190,7 @@ OpenResearch is the base that made GrowthLab possible. We keep its upstream hist
 - Each option is made in an isolated workspace.
 - Checks run on the option that was actually recorded.
 - Static previews use archived page files, with scripts and outside resources blocked.
-- New ready runs can archive a verified desktop PNG when local Chromium is available.
+- New ready runs can archive verified desktop and phone PNGs when local Chromium is available.
 - Reports are private by default.
 - Cloud CI is disabled; checks run locally.
 

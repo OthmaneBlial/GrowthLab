@@ -25,12 +25,13 @@ the battle's allowed/denied-path checks. Limits are 128 files, 4 MiB per file,
 The **Static preview** inspection tab displays that document at a real desktop
 1280 × 900 or phone 390 × 844 CSS viewport, scaled to fit the inspector. When a
 local Chromium-compatible browser is available, the battle engine also captures
-the sealed document at 1280 × 900 as `preview/screenshot-desktop.png`. Its
-dimensions, size and SHA-256 are stored in `preview/metadata.json` and verified
-with the archive. This PNG is a render artifact, **not a visual regression
-result**, accessibility audit or measured growth outcome. Preview availability
-does not change validation eligibility; a failed candidate can still have an
-inspectable page.
+the sealed document at 1280 × 900 and 390 × 844 as
+`preview/screenshot-desktop.png` and `preview/screenshot-phone.png`. Their
+dimensions, sizes and SHA-256 values are stored in `preview/metadata.json` and
+verified with the archive. These PNGs are render artifacts, **not a visual
+regression result**, accessibility audit or measured growth outcome. Preview
+availability does not change validation eligibility; a failed candidate can
+still have an inspectable page.
 
 Phone-sized dashboards initially choose the phone viewport. Controls let you
 inspect either size. The inert preview shows one viewport; use captured source
@@ -62,4 +63,5 @@ Real manual captures show the [desktop candidate](screenshots/growth-preview-des
 [capture metadata](screenshots/growth-preview-capture.json) ties each JPEG to its
 fictional candidate commit and verified source document. These documentation
 images are separate from the immutable run archive. New battle archives may
-also contain an automatic desktop PNG when local browser capture succeeds.
+also contain automatic desktop and phone PNGs when local browser capture
+succeeds. The inspector displays the capture matching the selected viewport.

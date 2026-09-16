@@ -114,9 +114,9 @@ the optional static preview.
 The inspector reads verified archives or checkpoints, not mutable worktree files.
 Artifacts are displayed as escaped text. Configured static pages have a separate
 restricted preview of archived source; scripts and external resources are blocked.
-Ready runs also expose a verified desktop PNG captured from that sealed source
-when local Chromium is available. It is a render artifact, not a visual quality
-score. See
+Ready runs also expose verified desktop and phone PNGs captured from that sealed
+source when local Chromium is available. They are render artifacts, not a visual
+quality score. The capture shown follows the selected viewport. See
 [static-previews.md](static-previews.md). Private prompts and policy files are
 excluded from this viewer. Keyboard arrows, Home and End move between the three
 inspection tabs.

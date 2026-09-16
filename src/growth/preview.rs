@@ -570,15 +570,20 @@ fn bundle(
     // path execute this same capture branch and verify the resulting PNG over
     // HTTP.
     if !cfg!(test) {
-        if let Some(bytes) = render_screenshot(&document_bytes, 1280, 900) {
-            screenshots.push(PreviewScreenshot {
-                path: SCREENSHOT_DESKTOP.into(),
-                width: 1280,
-                height: 900,
-                digest: digest(&bytes),
-                size: bytes.len(),
-            });
-            archived.insert(SCREENSHOT_DESKTOP.into(), bytes);
+        for (path, width, height) in [
+            (SCREENSHOT_DESKTOP, 1280, 900),
+            (SCREENSHOT_PHONE, 390, 844),
+        ] {
+            if let Some(bytes) = render_screenshot(&document_bytes, width, height) {
+                screenshots.push(PreviewScreenshot {
+                    path: path.into(),
+                    width,
+                    height,
+                    digest: digest(&bytes),
+                    size: bytes.len(),
+                });
+                archived.insert(path.into(), bytes);
+            }
         }
     }
     let record = PreviewRecord { producer: PRODUCER.into(), status: PreviewStatus::Ready, source_commit: commit.into(), document_digest: Some(digest(&document_bytes)), sources, screenshots, blocked_resources: resources.blocked.get(), limitation: "Archived static source with an optional local Chromium render capture. A PNG is a render artifact, not a visual regression result, accessibility audit, performance measurement or growth outcome. Supported local styles/images/fonts are bundled; scripts, forms and navigation are removed, external/unsupported resources omitted. Display only in an opaque, inert sandbox frame. Dynamic apps and CSS image-set string sources are not reproduced. If no compatible browser is installed or it cannot render safely, no screenshot is fabricated.".into() };

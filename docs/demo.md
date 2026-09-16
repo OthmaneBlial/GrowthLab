@@ -65,8 +65,9 @@ isolation is locally validated; Linux runtime verification remains pending, and
 Windows validation isolation is unsupported. Candidate HTML is inspectable
 as sealed source text and a restricted desktop/phone preview of archived static
 source. See [static-previews.md](static-previews.md). When local Chromium is
-available, each ready candidate also archives a verified desktop PNG from that
-sealed source; it remains a render artifact rather than a visual quality result.
+available, each ready candidate also archives verified desktop and phone PNGs
+from that sealed source; they remain render artifacts rather than visual quality
+or performance results.
 Visual/performance evaluation remains in progress. A short eight-second demo reel is
 available at [`docs/assets/growthlab-demo.mp4`](assets/growthlab-demo.mp4); it is
 assembled from the real browser captures below and is labelled as a walkthrough,

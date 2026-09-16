@@ -18,7 +18,7 @@
     "Inspected and explicitly resumed pending selected-delivery receipts without rollback",
     "Reworked the bundled demo to show intent, evidence and an explicit review choice",
     "Local and SSH launchers self-register their controller PID before payload work",
-    "Automatic desktop PNG capture from sealed preview documents with archive verification",
+    "Automatic desktop and phone PNG capture from sealed preview documents with archive verification",
     "Explainable SEO page-hygiene rubric with dimension scores and limits",
     "Standalone local SEO audit with actionable recommendations, JSON or Markdown output and safe file bounds",
     "Eight-second demo reel assembled from real local browser captures",
@@ -40,7 +40,7 @@
     {
       "name": "Rust tests",
       "status": "passed",
-      "detail": "945 tests per binary; 943 passed, zero failures and two inherited ignored tests (serial run)"
+      "detail": "949 tests per binary; 947 passed, zero failures and two inherited ignored tests (serial run)"
     },
     {
       "name": "UI tests",

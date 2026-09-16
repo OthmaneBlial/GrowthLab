@@ -94,6 +94,10 @@ def main():
                 screenshots = preview["record"].get("screenshots", [])
                 if os.environ.get("GROWTHLAB_REQUIRE_SCREENSHOT") == "1":
                     assert screenshots, "A local Chromium capture was required but no PNG was archived."
+                    assert {screenshot["path"] for screenshot in screenshots} == {
+                        "preview/screenshot-desktop.png",
+                        "preview/screenshot-phone.png",
+                    }, "Both desktop and phone captures are required for the browser smoke."
                 for screenshot in screenshots:
                     viewport = "desktop" if screenshot["path"].endswith("screenshot-desktop.png") else "phone"
                     image = get(f"/api/growth/variants/{variant}/static-preview/{viewport}")
