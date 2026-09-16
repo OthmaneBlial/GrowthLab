@@ -336,18 +336,48 @@ fn terminate_group(pid: &str) -> Result<()> {
 
 #[cfg(not(windows))]
 fn signal_group(leader: i32, signal: i32) -> Result<bool> {
-    // SAFETY: terminate_group validates the locally recorded positive leader;
-    // negation targets that owned group, not all processes or another PID.
-    if unsafe { libc::kill(-leader, signal) } == 0 {
-        return Ok(true);
+    signal_group_using(leader, signal, || {
+        // SAFETY: terminate_group validates the locally recorded positive leader;
+        // negation targets that owned group, not all processes or another PID.
+        if unsafe { libc::kill(-leader, signal) } == 0 {
+            Ok(())
+        } else {
+            Err(std::io::Error::last_os_error())
+        }
+    })
+}
+
+#[cfg(not(windows))]
+fn signal_group_using(
+    leader: i32,
+    signal: i32,
+    mut send: impl FnMut() -> std::io::Result<()>,
+) -> Result<bool> {
+    for attempt in 0..=25 {
+        let error = match send() {
+            Ok(()) => return Ok(true),
+            Err(error) => error,
+        };
+        if error.raw_os_error() == Some(libc::ESRCH) {
+            return Ok(false);
+        }
+        // XNU filters zombies out of a process-group probe and can report EPERM
+        // while the last owned child is being reaped. Retry only the no-signal
+        // probe; permission failures never become a successful cancellation.
+        // https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/kern_sig.c
+        if cfg!(target_os = "macos")
+            && signal == 0
+            && error.raw_os_error() == Some(libc::EPERM)
+            && attempt < 25
+        {
+            std::thread::sleep(std::time::Duration::from_millis(20));
+            continue;
+        }
+        return Err(anyhow!(
+            "Could not signal local process group {leader} (signal {signal}): {error}"
+        ));
     }
-    let error = std::io::Error::last_os_error();
-    if error.raw_os_error() == Some(libc::ESRCH) {
-        return Ok(false);
-    }
-    Err(anyhow!(
-        "Could not signal local process group {leader} (signal {signal}): {error}"
-    ))
+    unreachable!("The final signal attempt returns its result")
 }
 
 /// What "this machine" is, for the Compute settings card: the hardware a
@@ -478,6 +508,44 @@ mod tests {
             state = inspect_job(dir);
         }
         state
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn group_permission_failures_are_never_reported_as_terminated() {
+        let mut attempts = 0;
+        let result = signal_group_using(42, libc::SIGTERM, || {
+            attempts += 1;
+            Err(std::io::Error::from_raw_os_error(libc::EPERM))
+        });
+        assert!(result.is_err());
+        assert_eq!(
+            attempts, 1,
+            "actual signal permission failures are immediate"
+        );
+        let result = signal_group_using(42, 0, || {
+            Err(std::io::Error::from_raw_os_error(libc::EPERM))
+        });
+        assert!(
+            result.is_err(),
+            "a persistent probe permission error must propagate"
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn macos_group_probe_waits_for_reaping_after_transient_permission_error() {
+        let mut attempts = 0;
+        let result = signal_group_using(42, 0, || {
+            attempts += 1;
+            Err(std::io::Error::from_raw_os_error(if attempts == 1 {
+                libc::EPERM
+            } else {
+                libc::ESRCH
+            }))
+        });
+        assert!(!result.unwrap());
+        assert_eq!(attempts, 2);
     }
 
     #[cfg(unix)]
