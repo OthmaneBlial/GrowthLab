@@ -25,5 +25,10 @@ pre { margin: 0; padding: 22px 18px; white-space: pre-wrap; overflow-wrap: anywh
 .context { border-top: 1px solid #c7d0c4; padding: 26px 0; max-width: 650px; }
 h2 { margin: 12px 0; font: 400 28px Georgia, serif; }
 .context p { color: #47584e; line-height: 1.8; }
+.signals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 28px; max-width: 900px; }
+.signals article { border-top: 2px solid #1f382b; padding-top: 14px; }
+.signals strong { font: 22px Georgia, serif; color: #1f6144; }
+.signals h3 { margin: 10px 0 6px; font-size: 15px; }
+.signals p { margin: 0; font-size: 13px; }
 footer { border-top: 1px solid #c7d0c4; font-size: 12px; color: #47584e; line-height: 1.8; }
-@media (max-width: 720px) { header, main, footer { padding: 22px; } .hero { grid-template-columns: 1fr; gap: 30px; padding: 40px 0; } .edition { max-width: 115px; text-align: right; } }
+@media (max-width: 720px) { header, main, footer { padding: 22px; } .hero { grid-template-columns: 1fr; gap: 30px; padding: 40px 0; } .edition { max-width: 115px; text-align: right; } .signals { grid-template-columns: 1fr; gap: 22px; } }

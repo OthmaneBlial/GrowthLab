@@ -57,7 +57,7 @@ Native-agent battles are still awaiting verification.
 
 **Source alpha · about 40% overall (subjective estimate) · updated 2026-09-16**
 
-Current milestone: **Three real variants with sealed evidence and archived static previews**.
+Current milestone: **Three real growth surfaces with sealed evidence and archived static previews**.
 
 **Working today**
 
@@ -70,6 +70,7 @@ Current milestone: **Three real variants with sealed evidence and archived stati
 - Published project website and searchable docs with current progress and actual captures
 - Published v0.1.0-alpha.1 as a source prerelease with explicit alpha limitations
 - Inspected and explicitly resumed pending selected-delivery receipts without rollback
+- Reworked the bundled demo to show intent, evidence and an explicit review choice
 - Local and SSH launchers self-register their controller PID before payload work
 
 | Validation | Current evidence |

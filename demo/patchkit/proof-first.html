@@ -3,14 +3,14 @@
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>PatchKit — proof-first replay with deliberate heading regression</title><link rel="stylesheet" href="style.css"></head>
 <body>
   <p class="demo-banner">Fictional demo product · declared replay with a deliberate structural failure</p>
-  <header><a class="brand" href="#product">PatchKit</a><span class="edition">A maintainer's workbench</span></header>
+  <header><a class="brand" href="#product">PatchKit</a><span class="edition">A reviewable change workbench</span></header>
   <main id="product">
     <section class="hero">
-      <div><span class="eyebrow">02 / Proof beside the promise</span><p class="hero-title">See exactly what the patch changes.</p><p class="lead">This sample diff shows the proposed copy change beside the review action.</p><a class="cta" href="#sample">Read the sample diff ↗</a><p class="note">This variant deliberately omits the required h1. Its structural check must fail.</p></div>
-      <div class="patch" id="sample"><p class="patch-label">SAMPLE / website/intro.html</p><pre><span class="removed">- &lt;p&gt;A workbench for your patches.&lt;/p&gt;</span>
-<span class="added">+ &lt;p&gt;Inspect before you apply.&lt;/p&gt;</span></pre></div>
+      <div><span class="eyebrow">02 / Proof beside the promise</span><p class="hero-title">See exactly what the patch changes.</p><p class="lead">This proposal puts the evidence beside the review action, but its prominent hero text is not a real heading.</p><a class="cta" href="#sample">Read the sample change ↗</a><p class="note">Deliberate regression · the required h1 is missing, so the structure check must fail.</p></div>
+      <div class="patch" id="sample"><p class="patch-label">PROPOSAL B / proof-led</p><pre><span class="removed">- &lt;p&gt;A workbench for your patches.&lt;/p&gt;</span>
+<span class="added">+ &lt;p&gt;See exactly what the patch changes.&lt;/p&gt;</span></pre></div>
     </section>
-    <section class="context"><span class="eyebrow">Inspectable regression</span><h2>A plausible proposal can fail a guardrail.</h2><p>Visual prominence does not replace document structure. The missing heading is a deliberate fixture regression, not an invented metric or a provider mistake.</p></section>
+    <section class="context"><span class="eyebrow">Inspectable regression</span><h2>A plausible proposal can fail a guardrail.</h2><p>Visual prominence does not replace document structure. The missing heading is a deliberate fixture regression, not an invented metric or a provider mistake. The failed check stays visible for comparison.</p></section>
   </main>
   <footer>Original fictional GrowthLab fixture. No user feedback, conversion lift or comprehensive accessibility proof.</footer>
 </body>

@@ -23,8 +23,10 @@ Git baseline and registers three isolated competitor worktrees.
 
 The original bundled product is **PatchKit**, a fictional static homepage with
 no customers, testimonials, external assets, scripts or outcome telemetry.
-Its source lives in [`demo/patchkit/`](../demo/patchkit/). Three declared proposals
-change its actual homepage through the real battle engine:
+Its source lives in [`demo/patchkit/`](../demo/patchkit/). The baseline makes a
+small review loop visible: state the intent, show the change and keep the final
+choice explicit. Three declared proposals change that surface through the real
+battle engine:
 
 | Proposal | Structure | Local links | Claims constraints | Eligibility |
 |---|---|---|---|---|
