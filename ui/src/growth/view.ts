@@ -1,5 +1,14 @@
 import type { BattleStatus, Run } from "./api";
 
+export type InspectionTab = "evidence" | "artifacts" | "preview";
+const inspectionTabs: InspectionTab[] = ["evidence", "artifacts", "preview"];
+export function inspectionTab(current: InspectionTab, key: string): InspectionTab | null {
+  if (key === "Home") return inspectionTabs[0];
+  if (key === "End") return inspectionTabs.at(-1)!;
+  const direction = key === "ArrowLeft" ? -1 : key === "ArrowRight" ? 1 : 0;
+  return direction ? inspectionTabs[(inspectionTabs.indexOf(current) + direction + inspectionTabs.length) % inspectionTabs.length] : null;
+}
+
 export function validGrowthId(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }

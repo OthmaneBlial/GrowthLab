@@ -14,3 +14,13 @@ services.
 Generic upstream modules and compatibility commands retain their original names
 where renaming would break useful behavior. Attribution is not a claim that the
 GrowthLab-specific experience is already implemented.
+
+The static-preview subsystem uses Cloudflare's `lol_html` under BSD-3-Clause;
+its copyright and license are retained in
+[licenses/lol-html-BSD-3-Clause.txt](licenses/lol-html-BSD-3-Clause.txt) and must
+accompany binary distributions. It also uses unmodified `cssparser` under
+MPL-2.0 and `url`/`percent-encoding` under MIT or Apache-2.0. Exact versions and
+source packages are recorded in Cargo.lock; covered dependency source is available
+from [crates.io](https://crates.io/). These dependency licenses do not replace
+the preserved OpenResearch MIT notice or imply vendor endorsement. A complete
+distribution dependency-notice inventory remains a release packaging gate.

@@ -57,11 +57,15 @@ evaluator calculation, confinement policy digests and limitations. Checks are
 **OBSERVED**. Growth outcomes remain **UNTESTED** without real outcome evidence.
 Passing commands establish eligibility for user review, not conversion lift.
 
-Select a variant and switch between hypothesis/evidence and diff/files/logs.
+Select a variant and switch between hypothesis/evidence, diff/files/logs and
+the optional static preview.
 The inspector reads verified archives or checkpoints, not mutable worktree files.
-Artifacts are displayed as escaped text. HTML is not executed or previewed.
-Private prompts and policy files are excluded from this viewer. Keyboard arrows,
-Home and End move between the two inspection tabs.
+Artifacts are displayed as escaped text. Configured static pages have a separate
+restricted preview of archived source; scripts and external resources are blocked.
+This is not a saved screenshot or visual quality score. See
+[static-previews.md](static-previews.md). Private prompts and policy files are
+excluded from this viewer. Keyboard arrows, Home and End move between the three
+inspection tabs.
 
 ## Explicit delivery and sharing
 
@@ -86,8 +90,8 @@ data-directory move. Project admission prevents local deletion during owned work
 This is not complete cross-process coordination for every inherited or CLI path.
 
 The source-alpha screens are English. Localization of GrowthLab screens, experiment
-tree, richer evaluators, candidate HTML renders/screenshots, the bundled
-`growthlab demo`, broader inputs, real telemetry and release packaging remain required
+tree, richer evaluators, automatic candidate screenshots, broader inputs, real
+telemetry and release packaging remain required
 work. The inherited eager UI bundle still produces a size warning. Linux confinement
 requires native runtime proof; Windows validation is unsupported. Resource quotas
 are not provided. GitHub Actions stays disabled; all checks run locally.

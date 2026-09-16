@@ -82,6 +82,15 @@ pub struct Agents {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
+pub struct StaticPreview {
+    /// Explicit site root inside permitted committed product paths.
+    pub root: String,
+    /// HTML entry relative to that root. Scripts are never executed.
+    pub entry: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub struct GrowthConfig {
     pub version: u32,
     pub product: Product,
@@ -90,6 +99,8 @@ pub struct GrowthConfig {
     pub validation: Validation,
     pub metrics: Metrics,
     pub agents: Agents,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub static_preview: Option<StaticPreview>,
 }
 
 impl GrowthConfig {
@@ -173,6 +184,13 @@ impl GrowthConfig {
         }
         if self.version != 1 {
             return Err(anyhow!("Unsupported growthlab.yaml version; expected 1"));
+        }
+        if let Some(preview) = &self.static_preview {
+            validate_relative_path(&preview.root)?;
+            validate_relative_path(&preview.entry)?;
+            if !preview.entry.to_ascii_lowercase().ends_with(".html") {
+                return Err(anyhow!("static_preview.entry must be a relative HTML file"));
+            }
         }
         for (label, value) in [
             ("product.name", &self.product.name),
@@ -340,12 +358,42 @@ pub(crate) fn fixture() -> GrowthConfig {
             guardrails: vec!["page_load_time".into()],
         },
         agents: Agents { parallelism: 3 },
+        static_preview: None,
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn optional_static_preview_preserves_old_contract_bytes_and_rejects_bad_scope() {
+        let mut config = fixture();
+        let legacy = serde_json::to_vec(&config).unwrap();
+        assert!(!String::from_utf8_lossy(&legacy).contains("static_preview"));
+        let restored: GrowthConfig = serde_json::from_slice(&legacy).unwrap();
+        assert_eq!(serde_json::to_vec(&restored).unwrap(), legacy);
+        config.static_preview = Some(StaticPreview {
+            root: "website".into(),
+            entry: "index.html".into(),
+        });
+        assert_eq!(
+            GrowthConfig::parse(&serde_yaml_ng::to_string(&config).unwrap()).unwrap(),
+            config
+        );
+        for (root, entry) in [
+            ("../private", "index.html"),
+            ("website", "../index.html"),
+            ("website", "index.js"),
+            ("website", "/index.html"),
+        ] {
+            config.static_preview = Some(StaticPreview {
+                root: root.into(),
+                entry: entry.into(),
+            });
+            assert!(config.validate().is_err());
+        }
+    }
 
     #[test]
     fn rejects_credentials_and_unsupported_versions_without_echoing_values() {

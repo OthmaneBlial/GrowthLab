@@ -10,6 +10,7 @@ export interface GrowthConfig {
   validation: { commands: string[]; timeout_seconds: number };
   metrics: { primary: string; guardrails: string[] };
   agents: { parallelism: number };
+  static_preview?: { root: string; entry: string };
 }
 export interface Workspace { projectId: string; config: GrowthConfig; sourceSnapshotCommit: string; createdAt: number }
 export interface Evidence {
@@ -45,6 +46,15 @@ export interface Run {
   implementation: { summary: string; files: { path: string; contents: string | null }[]; risks: string[] } | null;
   validations: Check[]; activeValidation?: { runId: string; commandIndex: number; confinement?: Check["confinement"] };
   agent: { harness: string; requestedModel: string | null; mode: string; cost: number | null; tokens: number | null };
+  staticPreview?: StaticPreviewRecord;
+}
+export interface StaticPreviewRecord {
+  producer: string; status: "ready" | "unavailable"; sourceCommit: string;
+  documentDigest: string | null; sources: { path: string; digest: string; size: number }[];
+  blockedResources: number; limitation: string;
+}
+export interface StaticPreviewData {
+  html: string; record: StaticPreviewRecord; archiveDigest: string; sealed: boolean;
 }
 export interface Selection { id: string; variantId: string; action: "select" | "apply" | "export"; status: "pending" | "done" | "failed"; error: string | null }
 export interface BattleStatus {
@@ -107,6 +117,7 @@ export const growth = {
   compare: (battleId: string, signal?: AbortSignal) => request<Comparison>(`/battles/${id(battleId)}/compare`, "GET", undefined, signal),
   artifacts: (variantId: string, signal?: AbortSignal) => request<ArtifactList>(`/variants/${id(variantId)}/artifacts`, "GET", undefined, signal),
   artifact: (variantId: string, name: string, signal?: AbortSignal) => request<Artifact>(`/variants/${id(variantId)}/artifact?name=${id(name)}`, "GET", undefined, signal),
+  staticPreview: (variantId: string, signal?: AbortSignal) => request<StaticPreviewData>(`/variants/${id(variantId)}/static-preview`, "GET", undefined, signal),
   select: (variantId: string) => request<Selection>(`/variants/${id(variantId)}/select`, "POST"),
   preview: (variantId: string) => request<ApplyPreview>(`/variants/${id(variantId)}/apply-preview`),
   apply: (variantId: string) => request<Selection>(`/variants/${id(variantId)}/apply`, "POST", { confirmed: true }),

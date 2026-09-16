@@ -139,6 +139,8 @@ pub struct BattleRun {
     // Keep old sealed run serialization byte-for-byte compatible.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub active_validation: Option<ActiveValidation>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub static_preview: Option<super::preview::PreviewRecord>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

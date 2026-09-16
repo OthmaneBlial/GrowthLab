@@ -212,6 +212,10 @@ where
         .route("/api/growth/battles/{id}/report", get(battle_report))
         .route("/api/growth/variants/{id}/artifacts", get(artifacts))
         .route("/api/growth/variants/{id}/artifact", get(artifact))
+        .route(
+            "/api/growth/variants/{id}/static-preview",
+            get(static_preview),
+        )
         .route("/api/growth/variants/{id}/select", post(select_variant))
         .route(
             "/api/growth/variants/{id}/apply-preview",
@@ -721,6 +725,7 @@ fn verify_run(
             .ok_or_else(|| bad_request("Captured confinement policy is missing."))?;
         crate::growth::confinement::verify_record(record, policy).map_err(domain_error)?;
     }
+    crate::growth::preview::verify(battle, run, &files).map_err(domain_error)?;
     Ok(files)
 }
 
@@ -761,6 +766,8 @@ fn variant_files(store: &Store, id: &str) -> std::result::Result<CapturedVariant
 fn visible_artifact(name: &str) -> bool {
     name == "implementation.diff"
         || name == "agent.log"
+        || name == crate::growth::preview::DOCUMENT
+        || name == crate::growth::preview::METADATA
         || name.starts_with("files/")
         || name.strip_prefix("validation-").is_some_and(|suffix| {
             suffix.strip_suffix(".log").is_some_and(|index| {
@@ -792,6 +799,32 @@ async fn artifact(
         let text=String::from_utf8(bytes.clone()).map_err(|_|bad_request("Artifact is binary; text viewing is unavailable."))?;
         value(json!({"name":query.name,"text":text,"digest":archive::digest(bytes),"archiveDigest":hash,"sealed":sealed}))
     }).await
+}
+
+/// Return data, never an executable HTML response. The UI displays this only in
+/// an opaque, inert sandbox frame with the archived restrictive CSP.
+async fn static_preview(State(state): State<GrowthState>, Path(id): Path<String>) -> ApiResult {
+    with_store(state, None, move |store| {
+        let CapturedVariant {
+            run,
+            digest: hash,
+            files,
+            sealed,
+        } = variant_files(store, &id)?;
+        let record = run
+            .static_preview
+            .as_ref()
+            .filter(|record| record.status == crate::growth::preview::PreviewStatus::Ready)
+            .ok_or_else(|| not_found("Archived static preview"))?;
+        let html = std::str::from_utf8(
+            files
+                .get(crate::growth::preview::DOCUMENT)
+                .ok_or_else(|| not_found("Archived static preview document"))?,
+        )
+        .map_err(|_| bad_request("Archived static preview is not UTF-8."))?;
+        value(json!({"html":html,"record":record,"archiveDigest":hash,"sealed":sealed}))
+    })
+    .await
 }
 
 async fn select_variant(State(state): State<GrowthState>, Path(id): Path<String>) -> ApiResult {

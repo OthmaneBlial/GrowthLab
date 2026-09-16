@@ -450,7 +450,7 @@ async fn run_variant(
     index: usize,
     agent: &dyn BattleAgent,
 ) -> Result<BattleRun> {
-    let mut run = BattleRun { id:uuid::Uuid::new_v4().to_string(),variant_id:variant.id.clone(),battle_id:battle.id.clone(),contract_digest:battle.contract_digest.clone(),source_snapshot_commit:battle.contract.source_snapshot_commit.clone(),candidate_commit:None,agent:agent.metadata(),implementation:None,validations:vec![],status:"running".into(),error:None,started_at:now_ms(),ended_at:0,provenance:agent.provenance(),confidence:Confidence { label:ConfidenceLabel::Low,rationale:"Proposal and command checks do not establish qualified growth; outcome telemetry is absent.".into() },outcome_provenance:Provenance::Untested,active_validation:None };
+    let mut run = BattleRun { id:uuid::Uuid::new_v4().to_string(),variant_id:variant.id.clone(),battle_id:battle.id.clone(),contract_digest:battle.contract_digest.clone(),source_snapshot_commit:battle.contract.source_snapshot_commit.clone(),candidate_commit:None,agent:agent.metadata(),implementation:None,validations:vec![],status:"running".into(),error:None,started_at:now_ms(),ended_at:0,provenance:agent.provenance(),confidence:Confidence { label:ConfidenceLabel::Low,rationale:"Proposal and command checks do not establish qualified growth; outcome telemetry is absent.".into() },outcome_provenance:Provenance::Untested,active_validation:None,static_preview:None };
     store.save_growth_attempt(&run)?;
     let mut files = BTreeMap::new();
     files.insert(
@@ -504,6 +504,7 @@ async fn run_variant(
         if diff.truncated { return Err(anyhow!("Implementation diff exceeds the archive limit")); }
         files.insert("implementation.diff".into(),redact(&diff.diff).into_bytes());
         capture_committed_files(&run, root, &mut files)?;
+        run.static_preview = super::preview::capture(root, &commit, &battle.contract.config, &mut files)?;
         checkpoint(store,&run,&mut files)?;
         let mut experiment=store.get_local_experiment(&variant.id)?.ok_or_else(|| anyhow!("Experiment missing"))?;
         experiment.agent_status="running".into(); store.update_local_experiment(&experiment)?;

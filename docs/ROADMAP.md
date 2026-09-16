@@ -24,7 +24,9 @@ by this roadmap.
   contributor/security/community documents and release packaging.
   CLI reports and GrowthLab home/workspace/goal/battle/evidence/diff/delivery
   screens are implemented through Rust APIs. Complete tree/settings/localized
-  UX and archived candidate renders/screenshots remain pending. The bundled
+  UX and automatic per-run PNG screenshots remain pending. Restricted previews
+  of immutable static-source bundles pass Rust/HTTP and real desktop/phone checks.
+  These are live browser views, not saved run screenshots. The bundled
   key-free `growthlab demo` replay and real Home launch pass local CLI/HTTP and
   browser checks; a concise real recording and release packaging remain pending.
 - [ ] **4 — Playbooks:** focused roles and practical positioning, activation,

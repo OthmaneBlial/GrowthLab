@@ -13,7 +13,8 @@ Local-first. Open source. No Docker required.
 > HTML/Markdown reports. The GrowthLab dashboard now exposes local import, goal
 > composition, battle execution, captured evidence/diffs and explicit delivery
 > through Rust domain APIs. A key-free bundled fictional replay is available through
-> `growthlab demo`; candidate render archives and a credible release are being built.
+> `growthlab demo`, including restricted previews of archived static candidate pages.
+> Automatic run screenshots and a credible release are being built.
 > No conversion lift, winning variant, adoption, or production readiness is claimed.
 
 ## Why GrowthLab?

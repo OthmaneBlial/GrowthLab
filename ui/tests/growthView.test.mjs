@@ -1,6 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { variantRun, selectedVariant, runPhase } from "../src/growth/view.ts";
+import { variantRun, selectedVariant, runPhase, inspectionTab } from "../src/growth/view.ts";
+
+test("inspection tabs use arrow wrapping and Home/End across all three panels", () => {
+  assert.equal(inspectionTab("evidence", "ArrowLeft"), "preview");
+  assert.equal(inspectionTab("evidence", "ArrowRight"), "artifacts");
+  assert.equal(inspectionTab("artifacts", "ArrowRight"), "preview");
+  assert.equal(inspectionTab("preview", "ArrowRight"), "evidence");
+  assert.equal(inspectionTab("preview", "ArrowLeft"), "artifacts");
+  for (const current of ["evidence", "artifacts", "preview"]) {
+    assert.equal(inspectionTab(current, "Home"), "evidence");
+    assert.equal(inspectionTab(current, "End"), "preview");
+    assert.equal(inspectionTab(current, "Tab"), null);
+  }
+});
 
 test("a live checkpoint never replaces a sealed variant or becomes a sealed result", () => {
   const sealed = { variantId: "v", status: "failed" };

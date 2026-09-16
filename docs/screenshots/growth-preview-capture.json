@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "producer": "manual-dashboard-capture",
+  "provenance": "OBSERVED",
+  "battleId": "9966f4b0-900a-4041-bffb-36214c0d967e",
+  "limitation": "Actual Chrome visible-viewport dashboard screenshots of original fictional demo pages. These documentation evidence files are not automated per-run screenshot artifacts or measured quality/outcome results. Pages can be clipped by the preview viewport.",
+  "captures": [
+    {
+      "file": "growth-preview-desktop.jpg",
+      "format": "JPEG",
+      "sha256": "f3552760590b730ac46d5fca018d4a7bf5897f281c41e927ba1239ecc426a967",
+      "imageSize": {
+        "width": 1280,
+        "height": 626
+      },
+      "candidateViewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "variantId": "411d3276-8a59-4624-888d-385ced3c7e12",
+      "candidateCommit": "ded0e04ff4038a75cb45ac171d05e01eeb6e7ab0",
+      "sourceDocumentDigest": "4355f3acd3edee1d5e478e0a92d9673660910466ed6012723d653bea711d7b7c",
+      "archiveDigest": "9659ef4f95a168c8db0d3c631a5fa83323d5c0243ae2cb9594f5af1541568ab7"
+    },
+    {
+      "file": "growth-preview-failed.jpg",
+      "format": "JPEG",
+      "sha256": "15cfb7407c1d93cb1623ead6679e5df82abea5bfb9beca3cb6019a895b683fe4",
+      "imageSize": {
+        "width": 1280,
+        "height": 626
+      },
+      "candidateViewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "variantId": "772ab924-6696-4ea2-ab68-2945f0c37809",
+      "candidateCommit": "560361c7ae3e3eb19baae58d73d562c133288d4a",
+      "sourceDocumentDigest": "7a87bea43bd644cb4ae86b43e7fb39484885da38fa2c9f35eb504186b509d40f",
+      "archiveDigest": "925cd587bdeb1da35ee80f0baddf4722dfde08e330406f2760d20927f7707d93"
+    },
+    {
+      "file": "growth-preview-phone.jpg",
+      "format": "JPEG",
+      "sha256": "478c95e4ca6c2908903ec2ae22b7d40c6d9603d38684ed0031fc5a2466328f84",
+      "imageSize": {
+        "width": 390,
+        "height": 844
+      },
+      "candidateViewport": {
+        "width": 390,
+        "height": 844
+      },
+      "variantId": "1bbbbeb2-7672-41d0-9f62-944e60d4b882",
+      "candidateCommit": "04153752cf60ec9c8ca696e1743f8af0fd74f48d",
+      "sourceDocumentDigest": "953317cef59fb8902c33c7255d6126d2f628993adaf9b17465b0ce664874bd83",
+      "archiveDigest": "50e861ab43977d96b1eb0dde462a2b09af79105fed9e98e3856c398a2d72bfab"
+    }
+  ]
+}

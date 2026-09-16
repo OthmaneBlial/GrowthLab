@@ -11,6 +11,13 @@
   One deliberate heading regression remains ineligible; growth outcomes are untested.
   CLI demo startup skips inherited automatic session/run restoration and provider
   monitors, refuses Git repository overrides and never selects/applies automatically.
+- Added optional archived static-page bundles from committed permitted candidate
+  source, with source/document digests, bounded resource expansion, unavailable
+  status and frozen-archive verification. The dashboard displays desktop/phone
+  views through verified JSON in an opaque, inert frame; scripts and external
+  resources are blocked. These are not automatic PNG captures or quality scores.
+- Fixed transient macOS cancellation probe errors during owned group reaping;
+  persistent permission failures still propagate and group-gone checks remain.
 - Added schema-v1 `growthlab.yaml` with explicit product/goal, permission prefixes,
   validation commands/timeouts, metrics/guardrails and bounded parallelism.
 - Added atomic config creation, safe parse errors, protected-path/symlink checks
@@ -66,6 +73,6 @@
 This is not a tagged credible release. The complete experiment-tree/settings UX,
 verified native execution, cross-platform confinement proof, incomplete launcher registration
 and interrupted selected-delivery recovery,
-bundled visual replay demo, archived render artifacts and real outcome measurement
+automatic per-run screenshot artifacts, a real demo recording and real outcome measurement
 remain work in the roadmap. No telemetry lift, production readiness, public
 installer or demonstrated adoption is claimed.

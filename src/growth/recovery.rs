@@ -214,6 +214,7 @@ pub fn recover(store: &Store, id: &str) -> Result<RecoveryOutcome> {
                     "Recovery checkpoint does not match the attempt/frozen contract"
                 ));
             }
+            super::preview::verify(&original, &attempt.run, &files)?;
             files
         } else {
             BTreeMap::from([(

@@ -62,6 +62,7 @@ pub fn prepare(store: &Store) -> Result<GrowthBattle> {
         validation: Validation { commands: ["structure", "links", "claims"].map(|check| format!("node website/validate.mjs {check}")).to_vec(), timeout_seconds: 60 },
         metrics: Metrics { primary: "qualified_activation".into(), guardrails: vec!["page_load_time".into()] },
         agents: Agents { parallelism: 3 },
+        static_preview: Some(super::config::StaticPreview { root: "website".into(), entry: "index.html".into() }),
     };
     config.write_new(&product)?;
     for (name, contents) in [

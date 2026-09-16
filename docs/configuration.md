@@ -32,8 +32,13 @@ metrics:
     - bounce_rate
     - page_load_time
 agents:
-  parallelism: 3
+parallelism: 3
 ```
+
+Static landing pages can opt in to an archived restricted preview with
+`static_preview: { root: website, entry: index.html }`, or the CLI's
+`--preview-root website --preview-entry index.html`. See
+[static-previews.md](static-previews.md) for supported assets, permissions and limits.
 
 ## Permissions
 

@@ -21,6 +21,7 @@ to 1 MiB. The existing loopback/origin and remote-host authentication guards app
 | GET | `/battles/{id}/report` | Self-contained attachment; `format=html` or `markdown` |
 | GET | `/variants/{id}/artifacts` | Verified checkpoint/archive entries, sizes, digests and seal status |
 | GET | `/variants/{id}/artifact?name=…` | Verified UTF-8 text artifact; refuses traversal, private prompts and policies |
+| GET | `/variants/{id}/static-preview` | Verified JSON `{html, record, archiveDigest, sealed}` for a ready archived static preview; 404 when absent/unavailable |
 | POST | `/variants/{id}/select` | Record an eligible reviewed candidate |
 | GET | `/variants/{id}/apply-preview` | Read-only selected-patch preview and baseline checks |
 | POST | `/variants/{id}/apply` | Explicit selected working-tree apply with `{ "confirmed": true }` |
@@ -62,9 +63,17 @@ notifications. `resync.required` indicates unavailable metadata; reconnect sends
 the current snapshot. Streams are bounded and stop when their client disconnects.
 
 Artifact reads verify every archive byte, frozen contract/run serialization and
-recorded confinement policy digests. Only `implementation.diff`, `agent.log`,
-`validation-{index}.log` and `files/…` are viewer entries. Binary text reads are
+recorded confinement policy digests and optional static-preview source metadata.
+Only `implementation.diff`, `agent.log`, `validation-{index}.log`, `files/…`,
+`preview/document.html` and `preview/metadata.json` are text viewer entries;
+the complete raw preview-source bundle is not exposed by this viewer. Binary text reads are
 refused. Never use this text endpoint as an executable HTML preview.
+
+The separate static-preview route also returns JSON, preserving the server's
+HTML response protections. Display its document only in an opaque, inert iframe
+with an empty sandbox; the archived CSP blocks scripts and external resources.
+The [preview contract](static-previews.md) documents limits and unsupported input.
+This is archived static source, not a saved screenshot or visual quality score.
 
 Dashboard delivery requires the latest completed selection to match the requested
 variant. Confirmation does not bypass clean-baseline, permission or seal checks.

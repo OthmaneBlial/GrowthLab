@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exercise the real bundled demo command, engine, HTTP records and shutdown."""
 import json
+import hashlib
 import os
 from pathlib import Path
 import re
@@ -76,12 +77,22 @@ def main():
                 variant = row["variantId"]
                 artifacts = json.loads(get(f"/api/growth/variants/{variant}/artifacts"))
                 assert artifacts["sealed"]
+                preview = json.loads(get(f"/api/growth/variants/{variant}/static-preview"))
+                assert preview["sealed"] and preview["archiveDigest"] == artifacts["archiveDigest"]
+                assert preview["record"]["status"] == "ready" and preview["record"]["blockedResources"] == 0
+                assert preview["record"]["documentDigest"] == hashlib.sha256(preview["html"].encode()).hexdigest()
+                assert "script-src 'none'" in preview["html"] and "data:text/css;charset=utf-8;base64," in preview["html"]
+                assert len(preview["record"]["sources"]) == 2
                 log = json.loads(get(f"/api/growth/variants/{variant}/artifact?name=validation-0.log"))["text"]
                 assert "exactlyOnePrimaryHeading" in log
             html = get(f"/growth/{battle}").decode()
             assert "<title>GrowthLab</title>" in html and 'type="module"' in html
             module = re.search(r'src="(/assets/[^\"]+\.js)"', html)
             assert module and "Run bundled demo" in get(module.group(1)).decode(), "The actual dashboard bundle must serve the demo control."
+            ui_root = Path(__file__).resolve().parents[1] / "ui/dist"
+            current_module = re.search(r'src="(/assets/[^\"]+\.js)"', (ui_root / "index.html").read_text())
+            assert current_module and module.group(1) == current_module.group(1), "The dashboard must serve the latest built asset path."
+            assert get(module.group(1)) == (ui_root / module.group(1).lstrip("/")).read_bytes(), "The dashboard server must serve the current built asset."
             report = get(f"/api/growth/battles/{battle}/report?format=html").decode()
             assert all(label in report for label in ["SIMULATED", "OBSERVED", "UNTESTED"])
             assert "PatchKit" not in report and str(root) not in report

@@ -1,6 +1,6 @@
 # GrowthLab progress
 
-Current milestone: **Phase 2/3 — bundled key-free replay demo validated** (2026-09-16).
+Current milestone: **Phase 2/3 — archived static candidate previews validated** (2026-09-16).
 Overall completion: **about 40%, subjective estimate against the full specification**.
 The configuration/import and three-variant replay CLI slices pass locally.
 Selected delivery and report behavior pass local Rust, real CLI and browser checks.
@@ -14,6 +14,24 @@ checks. The complete native-agent/archived-render vertical slice
 and credible release have not passed yet.
 
 ## Completed
+
+- Added opt-in `static_preview` configuration and CLI init flags. Candidate Git
+  objects supply archived HTML/CSS/local assets, a bounded self-contained document
+  and source/document hashes; mutable checkout contents cannot supply the preview.
+  Existing configuration/run serialization stays unchanged when the option is absent.
+- Added verified static-preview JSON and desktop/phone inspection with an opaque,
+  inert iframe and restrictive archived CSP. Scripts, forms and navigation are
+  removed; external/unsupported resources are blocked. A failed validation can
+  still have a preview. Unavailable input records no fabricated document or image.
+- Verified all three real demo pages in Chrome, including the failed variant's
+  zero h1 elements and disabled selection. Desktop/phone widths fit, keyboard
+  focus skips the frame and phone inspection tabs exceed 44px. Real manual UI
+  captures are committed; automatic per-run PNG archives remain pending. See
+  [static-previews.md](static-previews.md).
+- Fixed a macOS cancellation probe race exposed by the full parallel suite.
+  No-signal EPERM probes retry briefly while the owned group is reaped; persistent
+  permission failures and actual signal failures still propagate. Existing real
+  cancellation/group-gone assertions remain unchanged.
 
 - Added `growthlab demo` and Home's **Run bundled demo**, sharing the real owned
   battle controller. Each creates an original fictional PatchKit baseline in a
@@ -138,11 +156,12 @@ Native-agent verification, incomplete launcher registration, interrupted
 selected-delivery recovery and Linux confinement runtime verification remain pending.
 The initial GrowthLab API/dashboard operations now pass local and real synthetic
 browser checks. Complete tree/settings/localized UX and bundled
-candidate renders remain pending. Windows validation is unsupported.
+automatic candidate PNG capture remains pending. Restricted previews of archived
+static source now pass local Rust/HTTP and real browser checks. Windows validation is unsupported.
 
 ## Next three concrete tasks
 
-1. Add archived candidate render artifacts to the working bundled replay demo,
+1. Add actual per-run PNG capture to the archived static-preview foundation,
    then create a concise real recording and richer inspectable quality evaluation.
 2. Close remaining launch/delivery recovery and cross-platform confinement gates,
    then verify genuine native-agent proposals without inventing provider data.
@@ -162,6 +181,26 @@ candidate renders remain pending. Windows validation is unsupported.
   container artifacts are isolated pending GrowthLab release tooling.
 
 ## Latest validation
+
+Static-preview unit (2026-09-16): **passed locally**. Full `cargo test --locked`
+passes **911 tests per binary, zero failures, two inherited ignored tests**;
+Clippy with `-D warnings`, formatting, style checks and the debug build pass.
+UI typecheck/i18n/build and **167 tests, zero failures/skips** pass; final `ui/dist`
+is included. The real CLI demo regression verifies ready previews, exact served
+built assets, source/document/seal hashes and its existing no-provider, privacy,
+baseline and shutdown checks. Debug RustEmbed serves assets from disk; this is
+not fresh release-binary embedding or installer proof.
+The first full suite exposed an owned cancellation probe returning transient
+EPERM after shutdown. After the bounded macOS probe fix, both complete suites pass;
+permission-error regressions and the original real group-gone assertions pass.
+Real dev-slot execution produces three sealed static bundles, nine observed checks
+with exits **0/0/0, 2/0/0, 0/0/0**, zero omitted demo resources and no selection/apply.
+Browser checks verify the actual candidate text/styles, 1280px/390px CSS viewports,
+opaque/inert attributes, phone default, keyboard exclusion, no horizontal overflow
+and empty captured warning/error logs. Hot reload interrupted an initial phone
+selector read; final checks/capture ran after the build completed and a reload.
+Automatic PNG archival, native providers, recording and release gates remain open.
+All six GitHub workflows remain manually disabled; validation runs locally only.
 
 Bundled-demo unit (2026-09-16): **passed locally**. `cargo test --locked` passes
 **902 tests per binary, zero failures, two inherited ignored tests**;
@@ -299,7 +338,7 @@ during inherited harness detection. Native-agent execution is not verified.
 Local CLI/domain/replay validation passed. Selected delivery/report behavior on Linux/Windows,
 complete GrowthLab tree/settings/localized UX, native-agent battles, Linux confinement runtime verification,
 incomplete launcher registration, interrupted selected-delivery recovery,
-archived render artifacts, real demo
+automatic per-run screenshot artifacts, real demo
 recording, release installers and telemetry adapters remain **unverified / not
 implemented**. No growth lift, adoption, native-agent execution or public release
 is claimed.

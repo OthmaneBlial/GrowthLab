@@ -243,8 +243,60 @@ async fn api_bundled_demo_runs_real_checks_without_touching_an_existing_product(
                 .is_empty());
         }
         let variant = row["variantId"].as_str().unwrap();
+        let response = fixture
+            .client
+            .get(format!(
+                "{}/api/growth/variants/{variant}/static-preview",
+                fixture.url
+            ))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status().as_u16(), 200);
+        assert!(response.headers()["content-type"]
+            .to_str()
+            .unwrap()
+            .starts_with("application/json"));
+        let preview: Value = response.json().await.unwrap();
+        let html = preview["html"].as_str().unwrap();
+        assert!(html.contains(crate::growth::preview::CSP));
+        assert!(html.contains("data:text/css;charset=utf-8;base64,"));
+        assert_eq!(preview["record"]["status"], "ready");
+        assert_eq!(
+            preview["record"]["documentDigest"],
+            archive::digest(html.as_bytes())
+        );
+        assert_eq!(preview["record"]["blockedResources"], 0);
+        assert_eq!(preview["record"]["sources"].as_array().unwrap().len(), 2);
+        assert_eq!(preview["sealed"], true);
+        assert_eq!(preview["archiveDigest"], row["archiveDigest"]);
+        let run = terminal["runs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|seal| seal["run"]["variantId"] == variant)
+            .unwrap();
+        assert_eq!(preview["record"], run["run"]["staticPreview"]);
+        assert_eq!(
+            preview["record"]["sourceCommit"],
+            run["run"]["candidateCommit"]
+        );
         let artifacts = fixture.get(&format!("/variants/{variant}/artifacts")).await;
         assert_eq!(artifacts["sealed"], true);
+        assert!(artifacts["artifacts"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|artifact| !artifact["name"]
+                .as_str()
+                .unwrap()
+                .starts_with("preview/source/")));
+        let document = fixture
+            .get(&format!(
+                "/variants/{variant}/artifact?name=preview/document.html"
+            ))
+            .await;
+        assert_eq!(document["text"], html);
         let source = fixture
             .get(&format!(
                 "/variants/{variant}/artifact?name=files/website/index.html"
@@ -315,6 +367,43 @@ async fn api_bundled_demo_runs_real_checks_without_touching_an_existing_product(
             .trim()
             .is_empty()
     );
+    // Even the static-preview JSON route refuses changed sealed bytes; neither
+    // comparison nor selection may consume the altered candidate evidence.
+    let row = &comparison["rows"][0];
+    let variant = row["variantId"].as_str().unwrap();
+    let document = store
+        .data_root()
+        .join("growth-archives")
+        .join(row["archiveDigest"].as_str().unwrap())
+        .join(crate::growth::preview::DOCUMENT);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&document, std::fs::Permissions::from_mode(0o600)).unwrap();
+    }
+    std::fs::write(document, "<h1>Tampered archived preview</h1>").unwrap();
+    fixture
+        .request(
+            reqwest::Method::GET,
+            &format!("/variants/{variant}/static-preview"),
+            None,
+            400,
+        )
+        .await;
+    fixture
+        .request(reqwest::Method::GET, &format!("/battles/{id}"), None, 400)
+        .await;
+    fixture
+        .request(
+            reqwest::Method::GET,
+            &format!("/battles/{id}/compare"),
+            None,
+            400,
+        )
+        .await;
+    fixture
+        .post(&format!("/variants/{variant}/select"), None, 400)
+        .await;
 }
 
 #[tokio::test]

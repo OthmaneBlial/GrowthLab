@@ -34,6 +34,11 @@ pub struct InitArgs {
     pub commands: Vec<String>,
     #[arg(long, default_value = "qualified_signup")]
     pub metric: String,
+    /// Archive a restricted static page from this allowed, committed directory.
+    #[arg(long)]
+    pub preview_root: Option<String>,
+    #[arg(long, requires = "preview_root")]
+    pub preview_entry: Option<String>,
 }
 
 #[derive(Debug, Args)]
@@ -366,6 +371,10 @@ pub fn init(args: InitArgs) -> Result<()> {
             guardrails: vec!["page_load_time".into()],
         },
         agents: Agents { parallelism: 3 },
+        static_preview: args.preview_root.map(|root| super::config::StaticPreview {
+            root,
+            entry: args.preview_entry.unwrap_or_else(|| "index.html".into()),
+        }),
     };
     config.write_new(&args.path)?;
     println!(

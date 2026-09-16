@@ -120,6 +120,7 @@ pub fn compare_with(
                 super::confinement::verify_record(record, policy)?;
             }
         }
+        super::preview::verify(&battle, &sealed.run, &files)?;
     }
     let rows: Vec<_> = variants
         .iter()
