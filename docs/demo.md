@@ -43,7 +43,8 @@ configured checks. Missing prerequisites or interrupted jobs can produce differe
 honestly recorded results; execution is refused if OS isolation is unavailable.
 
 In the dashboard, expand a check fraction, inspect the real diff and validation
-logs, compare the calculation and review the seal, source and policy digests.
+logs, expand the **SEO page hygiene (estimated)** rubric, compare its eight
+dimension observations, and review the seal, source and policy digests.
 Proposals are **SIMULATED**, executed checks **OBSERVED**, and growth outcomes
 **UNTESTED**. No candidate is automatically selected. Select an eligible candidate
 only after review, then export a new patch or explicitly confirm a working-tree
@@ -66,7 +67,7 @@ as sealed source text and a restricted desktop/phone preview of archived static
 source. See [static-previews.md](static-previews.md). When local Chromium is
 available, each ready candidate also archives a verified desktop PNG from that
 sealed source; it remains a render artifact rather than a visual quality result.
-Richer evaluators, a concise recording and a release installer remain in progress.
+Visual/performance evaluators, a concise recording and a release installer remain in progress.
 
 Real local captures show the [Home launch screen](screenshots/growth-demo-home.png),
 [running checks](screenshots/growth-demo-live.png),

@@ -65,12 +65,14 @@ export interface BattleStatus {
   selections: Selection[];
   controller: { running: boolean; error: string | null } | null;
 }
+export interface RubricDimension { key: string; label: string; score: number; maxScore: number; status: "strong" | "partial" | "missing"; evidence: string[] }
+export interface SeoRubric { id: string; label: string; score: number; maxScore: number; provenance: Provenance; dimensions: RubricDimension[]; calculation: string; limitations: string[] }
 export interface Comparison {
   battleId: string; label: string; evaluator: string; calculation: string; limitations: string[];
   recommendedCandidates: string[];
   rows: { variantId: string; title: string; status: string; checks: Check[];
     passedCommands: number; requiredCommands: number; eligible: boolean; archiveDigest: string | null;
-    implementationProvenance: Provenance; checkProvenance: Provenance; outcomeProvenance: Provenance; confidence: Confidence }[];
+    implementationProvenance: Provenance; checkProvenance: Provenance; outcomeProvenance: Provenance; confidence: Confidence; rubric?: SeoRubric }[];
 }
 export interface ArtifactList {
   runId: string; archiveDigest: string; sealed: boolean;

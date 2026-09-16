@@ -124,11 +124,19 @@ not become file artifacts. Directories are private and files read-only on Unix;
 the application refuses overwrite and verifies bytes on every comparison.
 SQLite prevents updates to a sealed run. A digest mismatch refuses comparison.
 
-The first pluggable evaluator shows configured command results individually.
+The comparison shows configured command results individually and, when a
+candidate records an HTML implementation, runs the deterministic
+`seo-page-hygiene-v1` rubric. It gives separate 0–20/0–15/0–10/0–5 dimensions
+for title, description, headings, language, useful copy, canonical URL, links
+and image descriptions. Each dimension exposes its observation in the API and
+dashboard; the total is labeled **ESTIMATED**. The rubric reviews archived HTML
+only and does not crawl, predict rankings, certify accessibility or measure
+traffic/conversion.
+
 The pass fraction is `passed commands / required commands`, normalized only
 within that contract. Eligibility requires all exact commands to pass on one
-immutable candidate commit and a successful sealed attempt. Ties require user
-review; there is no invented copy, accessibility, performance or conversion score.
+immutable candidate commit and a successful sealed attempt. Ties still require
+user review; no combined score is presented as a measured winner.
 
 Proposal provenance is SIMULATED for replay. Command checks are OBSERVED.
 Growth outcome provenance remains UNTESTED, with low confidence. The label is

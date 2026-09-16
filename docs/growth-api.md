@@ -17,7 +17,7 @@ to 1 MiB. The existing loopback/origin and remote-host authentication guards app
 | POST | `/battles/{id}/run` | Submit an explicit replay/native request; HTTP 202 means accepted |
 | POST | `/battles/{id}/cancel` | Persist a cancellation request; not instant termination proof |
 | POST | `/battles/{id}/recover` | Existing verified recovery, without rerunning proposals or commands |
-| GET | `/battles/{id}/compare` | Transparent configured-command comparison; no measured growth inference |
+| GET | `/battles/{id}/compare` | Transparent configured-command comparison plus an optional estimated HTML SEO rubric; no measured growth inference |
 | GET | `/battles/{id}/report` | Self-contained attachment; `format=html` or `markdown` |
 | GET | `/variants/{id}/artifacts` | Verified checkpoint/archive entries, sizes, digests and seal status |
 | GET | `/variants/{id}/artifact?name=…` | Verified UTF-8 text artifact; refuses traversal, private prompts and policies |
@@ -79,6 +79,13 @@ The [preview contract](static-previews.md) documents limits and unsupported inpu
 If present, `GET /api/growth/variants/{id}/static-preview/desktop` returns the
 verified archived PNG with `image/png`; it remains a render artifact, not a
 visual quality score or measured growth result.
+
+Each comparison row may include `rubric` when the sealed implementation contains
+HTML. The `rubric.id` is `seo-page-hygiene-v1`, its `provenance` is `ESTIMATED`,
+and `dimensions` contains the inspectable `key`, `label`, `score`, `maxScore`,
+`status` and `evidence` for title, description, headings, language, useful copy,
+canonical URL, links and image descriptions. The 100-point total is a structural
+page review; it is never a ranking, traffic, accessibility or conversion result.
 
 Dashboard delivery requires the latest completed selection to match the requested
 variant. Confirmation does not bypass clean-baseline, permission or seal checks.

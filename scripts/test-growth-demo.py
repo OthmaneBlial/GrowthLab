@@ -74,6 +74,11 @@ def main():
                 assert row["checkProvenance"] == "OBSERVED" and row["outcomeProvenance"] == "UNTESTED"
                 assert row["eligible"] == (index != 1)
                 assert [check["exitCode"] for check in row["checks"]] == ([2, 0, 0] if index == 1 else [0, 0, 0])
+                rubric = row.get("rubric")
+                assert rubric and rubric["id"] == "seo-page-hygiene-v1"
+                assert rubric["provenance"] == "ESTIMATED" and rubric["maxScore"] == 100
+                assert len(rubric["dimensions"]) == 8
+                assert all(0 <= dimension["score"] <= dimension["maxScore"] for dimension in rubric["dimensions"])
                 variant = row["variantId"]
                 artifacts = json.loads(get(f"/api/growth/variants/{variant}/artifacts"))
                 assert artifacts["sealed"]
@@ -103,7 +108,7 @@ def main():
             assert current_module and module.group(1) == current_module.group(1), "The dashboard must serve the latest built asset path."
             assert get(module.group(1)) == (ui_root / module.group(1).lstrip("/")).read_bytes(), "The dashboard server must serve the current built asset."
             report = get(f"/api/growth/battles/{battle}/report?format=html").decode()
-            assert all(label in report for label in ["SIMULATED", "OBSERVED", "UNTESTED"])
+            assert all(label in report for label in ["SIMULATED", "OBSERVED", "UNTESTED", "SEO page hygiene"])
             assert "PatchKit" not in report and str(root) not in report
             products = list((root / "lab/growth-demo").glob("*/product"))
             assert len(products) == 1

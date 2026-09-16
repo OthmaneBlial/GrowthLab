@@ -2,6 +2,7 @@
 //! Prompts, raw logs, product names and paths are never included.
 use super::archive;
 use super::battle_model::ValidationRecord;
+use super::evaluation::SeoRubric;
 use super::model::{Confidence, Provenance};
 use super::redaction::{contains_secret, redact};
 use super::selection::{self, SelectionStatus};
@@ -54,6 +55,7 @@ pub struct ReportVariant {
     pub lines_added: usize,
     pub lines_removed: usize,
     pub implementation_summary: Option<String>,
+    pub rubric: Option<SeoRubric>,
 }
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -229,6 +231,7 @@ pub fn build(store: &Store, id: &str, options: &ReportOptions) -> Result<BattleR
             } else {
                 None
             },
+            rubric: row.rubric.clone(),
         });
     }
     Ok(BattleReport {
@@ -293,14 +296,18 @@ pub fn markdown(report: &BattleReport) -> String {
         )),
         None => out.push_str("No candidate has been selected.\n\n"),
     }
-    out.push_str("| Variant | Status | Configured checks | Eligible | Proposal | Checks | Outcome |\n|---|---|---|---|---|---|---|\n");
+    out.push_str("| Variant | Status | Configured checks | SEO page hygiene | Eligible | Proposal | Checks | Outcome |\n|---|---|---|---|---|---|---|---|\n");
     for row in &report.variants {
         out.push_str(&format!(
-            "| {} | {} | {} / {} | {} | {} | {} | {} |\n",
+            "| {} | {} | {} / {} | {} | {} | {} | {} | {} |\n",
             md(&row.label),
             md(&row.status),
             row.passed_commands,
             row.required_commands,
+            row.rubric
+                .as_ref()
+                .map(|rubric| format!("{}/{} ESTIMATED", rubric.score, rubric.max_score))
+                .unwrap_or_else(|| "—".into()),
             if row.eligible { "Yes" } else { "No" },
             provenance(row.implementation_provenance),
             provenance(row.check_provenance),
@@ -317,6 +324,34 @@ pub fn markdown(report: &BattleReport) -> String {
             md(&row.label),row.files_changed,row.lines_added,row.lines_removed,md(&row.confidence.rationale)));
         if let Some(summary) = &row.implementation_summary {
             out.push_str(&format!("{}\n\n", md(summary)));
+        }
+        if let Some(rubric) = &row.rubric {
+            out.push_str(&format!(
+                "SEO page hygiene: **{}/{}** (**ESTIMATED**). {}\n\n",
+                rubric.score,
+                rubric.max_score,
+                md(&rubric.calculation)
+            ));
+            for dimension in &rubric.dimensions {
+                out.push_str(&format!(
+                    "- **{}**: {}/{} ({}) — {}\n",
+                    md(&dimension.label),
+                    dimension.score,
+                    dimension.max_score,
+                    md(&dimension.status),
+                    dimension
+                        .evidence
+                        .iter()
+                        .map(|evidence| md(evidence))
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                ));
+            }
+            out.push('\n');
+            for limitation in &rubric.limitations {
+                out.push_str(&format!("  - {}\n", md(limitation)));
+            }
+            out.push('\n');
         }
         for check in &row.checks {
             out.push_str(&format!(
@@ -408,8 +443,40 @@ pub fn document(report: &BattleReport) -> String {
         if row.checks.is_empty() {
             out.push_str("<p>No command results recorded.</p>");
         }
-        out.push_str(&format!(r#"</div></details><dl class="provenance"><dt>Proposal</dt><dd>{}</dd><dt>Checks</dt><dd>{}</dd><dt>Growth outcome</dt><dd>{}</dd></dl><p class="diff-summary"><strong>{}</strong> files changed <span>+{} / −{} text lines</span></p>"#,
-            provenance(row.implementation_provenance),provenance(row.check_provenance),provenance(row.outcome_provenance),row.files_changed,row.lines_added,row.lines_removed));
+        let rubric = row.rubric.as_ref().map(|rubric| {
+            let dimensions = rubric
+                .dimensions
+                .iter()
+                .map(|dimension| {
+                    format!(
+                        "<li><strong>{}</strong> {}/{} · {}<span>{}</span></li>",
+                        html(&dimension.label),
+                        dimension.score,
+                        dimension.max_score,
+                        html(&dimension.status),
+                        html(&dimension.evidence.join(" "))
+                    )
+                })
+                .collect::<String>();
+            let limitations = rubric
+                .limitations
+                .iter()
+                .map(|limitation| format!("<li>{}</li>", html(limitation)))
+                .collect::<String>();
+            format!(
+                r#"<details class="rubric"><summary><span>{}</span><strong>{}/{} · {}</strong></summary><p>{}</p><ul>{}</ul><p class="rubric-limits">{}</p><ul>{}</ul></details>"#,
+                html(&rubric.label),
+                rubric.score,
+                rubric.max_score,
+                provenance(rubric.provenance),
+                html(&rubric.calculation),
+                dimensions,
+                "Limits",
+                limitations
+            )
+        }).unwrap_or_default();
+        out.push_str(&format!(r#"</div></details>{}<dl class="provenance"><dt>Proposal</dt><dd>{}</dd><dt>Checks</dt><dd>{}</dd><dt>Growth outcome</dt><dd>{}</dd></dl><p class="diff-summary"><strong>{}</strong> files changed <span>+{} / −{} text lines</span></p>"#,
+            rubric,provenance(row.implementation_provenance),provenance(row.check_provenance),provenance(row.outcome_provenance),row.files_changed,row.lines_added,row.lines_removed));
         if let Some(summary) = &row.implementation_summary {
             out.push_str(&format!(
                 "<p class=\"implementation\">{}</p>",

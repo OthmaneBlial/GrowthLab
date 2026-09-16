@@ -1,5 +1,7 @@
 //! Explainable deterministic comparison. Passing a command is an observation,
-//! not proof of conversion lift or an accessibility/performance score.
+//! while the optional HTML rubric is an estimated structural SEO review. Neither
+//! is proof of conversion lift, ranking, accessibility or performance.
+use regex::Regex;
 use serde::Serialize;
 
 use crate::error::{anyhow, Result};
@@ -25,6 +27,32 @@ pub struct EvaluationRow {
     pub outcome_provenance: Provenance,
     pub confidence: Confidence,
     pub archive_digest: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rubric: Option<SeoRubric>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RubricDimension {
+    pub key: String,
+    pub label: String,
+    pub score: u8,
+    pub max_score: u8,
+    pub status: String,
+    pub evidence: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct SeoRubric {
+    pub id: String,
+    pub label: String,
+    pub score: u8,
+    pub max_score: u8,
+    pub provenance: Provenance,
+    pub dimensions: Vec<RubricDimension>,
+    pub calculation: String,
+    pub limitations: Vec<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -37,6 +65,291 @@ pub struct Comparison {
     pub limitations: Vec<String>,
     pub recommended_candidates: Vec<String>,
     pub rows: Vec<EvaluationRow>,
+}
+
+fn openings(html: &str, tag: &str) -> Vec<String> {
+    let pattern = format!(r"(?is)<{tag}\b[^>]*>");
+    Regex::new(&pattern)
+        .expect("static HTML tag pattern is valid")
+        .find_iter(html)
+        .map(|match_| match_.as_str().to_string())
+        .collect()
+}
+
+fn paired(html: &str, tag: &str) -> Vec<String> {
+    let pattern = format!(r"(?is)<{tag}\b[^>]*>(.*?)</{tag}\s*>");
+    Regex::new(&pattern)
+        .expect("static HTML paired-tag pattern is valid")
+        .captures_iter(html)
+        .filter_map(|capture| capture.get(1).map(|value| value.as_str().to_string()))
+        .collect()
+}
+
+fn attribute(tag: &str, name: &str) -> Option<String> {
+    let pattern = format!(
+        r#"(?is)\b{}\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))"#,
+        regex::escape(name)
+    );
+    Regex::new(&pattern)
+        .expect("static HTML attribute pattern is valid")
+        .captures(tag)
+        .and_then(|capture| {
+            (1..=3).find_map(|index| capture.get(index).map(|value| value.as_str().to_string()))
+        })
+}
+
+fn text_content(value: &str) -> String {
+    let without_blocks = Regex::new(r"(?is)<(?:script|style)\b[^>]*>.*?</(?:script|style)\s*>")
+        .expect("static HTML block pattern is valid")
+        .replace_all(value, " ");
+    let without_tags = Regex::new(r"(?is)<[^>]+>")
+        .expect("static HTML tag stripping pattern is valid")
+        .replace_all(&without_blocks, " ");
+    Regex::new(r"\s+")
+        .expect("static whitespace pattern is valid")
+        .replace_all(&without_tags, " ")
+        .trim()
+        .to_string()
+}
+
+fn dimension(
+    key: &str,
+    label: &str,
+    score: u8,
+    max_score: u8,
+    evidence: impl IntoIterator<Item = String>,
+) -> RubricDimension {
+    RubricDimension {
+        key: key.into(),
+        label: label.into(),
+        score,
+        max_score,
+        status: if score == max_score {
+            "strong"
+        } else if score > 0 {
+            "partial"
+        } else {
+            "missing"
+        }
+        .into(),
+        evidence: evidence.into_iter().collect(),
+    }
+}
+
+/// Score basic, inspectable SEO page hygiene from an archived HTML candidate.
+/// This is deliberately structural and returns `ESTIMATED` provenance: it does
+/// not crawl the web, inspect rankings, or predict traffic.
+pub fn seo_rubric(html: &str) -> SeoRubric {
+    let titles = paired(html, "title");
+    let title_length = titles
+        .first()
+        .map(|title| text_content(title).len())
+        .unwrap_or(0);
+    let title_score = match title_length {
+        10..=60 => 20,
+        1..=200 => 12,
+        _ => 0,
+    };
+    let title_dimension = dimension(
+        "title",
+        "Search title",
+        title_score,
+        20,
+        [if title_length == 0 {
+            "No non-empty <title> element was found.".into()
+        } else {
+            format!("Title contains {title_length} characters; 10–60 is the rubric range.")
+        }],
+    );
+
+    let description = openings(html, "meta").into_iter().find(|tag| {
+        attribute(tag, "name").is_some_and(|name| name.eq_ignore_ascii_case("description"))
+    });
+    let description_length = description
+        .as_deref()
+        .and_then(|tag| attribute(tag, "content"))
+        .map(|value| text_content(&value).len())
+        .unwrap_or(0);
+    let description_score = match description_length {
+        70..=160 => 20,
+        1..=300 => 12,
+        _ => 0,
+    };
+    let description_dimension = dimension(
+        "description",
+        "Search description",
+        description_score,
+        20,
+        [if description_length == 0 {
+            "No non-empty meta description was found.".into()
+        } else {
+            format!(
+                "Description contains {description_length} characters; 70–160 is the rubric range."
+            )
+        }],
+    );
+
+    let h1s = paired(html, "h1");
+    let h2_count = paired(html, "h2").len();
+    let non_empty_h1s = h1s
+        .iter()
+        .filter(|heading| !text_content(heading).is_empty())
+        .count();
+    let heading_score = match (non_empty_h1s, h2_count) {
+        (1, count) if count > 0 => 20,
+        (1, _) => 15,
+        (count, _) if count > 1 => 10,
+        _ => 0,
+    };
+    let heading_dimension = dimension(
+        "headings",
+        "Heading structure",
+        heading_score,
+        20,
+        [format!(
+            "Found {non_empty_h1s} non-empty h1 and {h2_count} h2 elements; one h1 is required."
+        )],
+    );
+
+    let language = openings(html, "html")
+        .first()
+        .and_then(|tag| attribute(tag, "lang"))
+        .filter(|value| !value.trim().is_empty());
+    let language_dimension = dimension(
+        "language",
+        "Document language",
+        u8::from(language.is_some()) * 10,
+        10,
+        [match language {
+            Some(language) => format!("The document declares lang=\"{language}\"."),
+            None => "The html element does not declare a language.".into(),
+        }],
+    );
+
+    let visible_length = text_content(html).len();
+    let content_score = match visible_length {
+        240.. => 15,
+        120..=239 => 10,
+        1..=119 => 5,
+        _ => 0,
+    };
+    let content_dimension = dimension(
+        "content",
+        "Useful page copy",
+        content_score,
+        15,
+        [format!(
+            "The archived HTML contains about {visible_length} visible text characters."
+        )],
+    );
+
+    let canonical = openings(html, "link").into_iter().any(|tag| {
+        attribute(&tag, "rel").is_some_and(|rel| {
+            rel.split_ascii_whitespace()
+                .any(|value| value.eq_ignore_ascii_case("canonical"))
+        }) && attribute(&tag, "href").is_some_and(|href| !href.trim().is_empty())
+    });
+    let canonical_dimension = dimension(
+        "canonical",
+        "Canonical URL",
+        u8::from(canonical) * 5,
+        5,
+        [if canonical {
+            "A canonical link with a non-empty href is present.".into()
+        } else {
+            "No canonical link with a non-empty href was found.".into()
+        }],
+    );
+
+    let links = openings(html, "a")
+        .into_iter()
+        .filter(|tag| {
+            attribute(tag, "href").is_some_and(|href| !href.trim().is_empty() && href.trim() != "#")
+        })
+        .count();
+    let links_dimension = dimension(
+        "links",
+        "Useful links",
+        u8::from(links > 0) * 5,
+        5,
+        [format!(
+            "Found {links} non-empty links that can lead a reader to the next action."
+        )],
+    );
+
+    let images = openings(html, "img");
+    let missing_alt = images
+        .iter()
+        .filter(|tag| attribute(tag, "alt").is_none_or(|alt| alt.trim().is_empty()))
+        .count();
+    let media_dimension = dimension(
+        "media",
+        "Image descriptions",
+        u8::from(images.is_empty() || missing_alt == 0) * 5,
+        5,
+        [if images.is_empty() {
+            "No images are present; there is no image text to audit.".into()
+        } else {
+            format!(
+                "Found {} images; {missing_alt} are missing a useful alt attribute.",
+                images.len()
+            )
+        }],
+    );
+
+    let dimensions = vec![
+        title_dimension,
+        description_dimension,
+        heading_dimension,
+        language_dimension,
+        content_dimension,
+        canonical_dimension,
+        links_dimension,
+        media_dimension,
+    ];
+    let score = dimensions
+        .iter()
+        .map(|dimension| dimension.score as u16)
+        .sum::<u16>() as u8;
+    SeoRubric {
+        id: "seo-page-hygiene-v1".into(),
+        label: "SEO page hygiene (estimated)".into(),
+        score,
+        max_score: 100,
+        provenance: Provenance::Estimated,
+        dimensions,
+        calculation: "100-point structural rubric: title 20, description 20, headings 20, language 10, useful copy 15, canonical 5, links 5 and image descriptions 5.".into(),
+        limitations: vec![
+            "This reviews the archived HTML only; it does not crawl, index, rank or measure traffic.".into(),
+            "Scores are estimated structural signals, not a predicted position or conversion result.".into(),
+            "External links, search demand, backlinks, structured data and real user behavior are not evaluated here.".into(),
+        ],
+    }
+}
+
+fn html_for_run<'a>(
+    battle: &GrowthBattle,
+    run: &'a super::battle_model::BattleRun,
+) -> Option<&'a str> {
+    let implementation = run.implementation.as_ref()?;
+    let preferred = battle
+        .contract
+        .config
+        .static_preview
+        .as_ref()
+        .map(|preview| format!("{}/{}", preview.root, preview.entry));
+    implementation
+        .files
+        .iter()
+        .find(|file| {
+            file.contents.is_some() && preferred.as_deref().is_some_and(|path| path == file.path)
+        })
+        .or_else(|| {
+            implementation.files.iter().find(|file| {
+                file.contents.is_some() && file.path.to_ascii_lowercase().ends_with(".html")
+            })
+        })
+        .and_then(|file| file.contents.as_deref())
 }
 
 pub trait BattleEvaluator {
@@ -54,10 +367,10 @@ pub trait BattleEvaluator {
 pub struct ConfiguredCommandEvaluator;
 impl BattleEvaluator for ConfiguredCommandEvaluator {
     fn id(&self) -> &str {
-        "configured-command-pass-v1"
+        "configured-command-pass-v1+seo-page-hygiene-v1"
     }
     fn calculation(&self) -> &str {
-        "Passed configured commands / required configured commands. Eligibility additionally requires a successful sealed run, the exact frozen command list and one immutable candidate commit. This ratio normalizes only command checks; it is not a combined growth score."
+        "Configured command pass fraction is shown alongside an independent 100-point SEO page-hygiene rubric. Eligibility requires a successful sealed run, the exact frozen command list and one immutable candidate commit; neither signal proves traffic, ranking or conversion lift."
     }
     fn evaluate(
         &self,
@@ -84,7 +397,10 @@ impl BattleEvaluator for ConfiguredCommandEvaluator {
                             && Some(&check.source_commit) == run.candidate_commit.as_ref()
                     })
         });
-        EvaluationRow { variant_id:variant_id.into(),title:title.into(),status:run.map(|run|run.status.clone()).unwrap_or("untested".into()),passed_commands:passed,required_commands:required,pass_fraction:(!checks.is_empty() && required>0).then_some(passed as f64 / required.max(1) as f64),eligible:required>0 && matches && passed==required && run.is_some_and(|run|run.status=="done"),checks,implementation_provenance:run.map(|run|run.provenance).unwrap_or(Provenance::Untested),check_provenance:if run.is_some_and(|run|!run.validations.is_empty()) {Provenance::Observed} else {Provenance::Untested},outcome_provenance:Provenance::Untested,confidence:Confidence { label:ConfidenceLabel::Low,rationale:"Command checks cannot establish outcome lift; candidate choice needs user review and real product evidence.".into() },archive_digest:sealed.map(|sealed|sealed.archive_digest.clone()) }
+        let rubric = run
+            .and_then(|run| html_for_run(battle, run))
+            .map(seo_rubric);
+        EvaluationRow { variant_id:variant_id.into(),title:title.into(),status:run.map(|run|run.status.clone()).unwrap_or("untested".into()),passed_commands:passed,required_commands:required,pass_fraction:(!checks.is_empty() && required>0).then_some(passed as f64 / required.max(1) as f64),eligible:required>0 && matches && passed==required && run.is_some_and(|run|run.status=="done"),checks,implementation_provenance:run.map(|run|run.provenance).unwrap_or(Provenance::Untested),check_provenance:if run.is_some_and(|run|!run.validations.is_empty()) {Provenance::Observed} else {Provenance::Untested},outcome_provenance:Provenance::Untested,confidence:Confidence { label:ConfidenceLabel::Low,rationale:"Command checks and structural SEO signals cannot establish outcome lift; candidate choice needs user review and real product evidence.".into() },archive_digest:sealed.map(|sealed|sealed.archive_digest.clone()),rubric }
     }
 }
 
@@ -148,4 +464,45 @@ pub fn compare_with(
             .collect(),
         rows,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{seo_rubric, Provenance};
+
+    #[test]
+    fn seo_rubric_exposes_each_structural_signal_and_estimated_provenance() {
+        let html = r#"<!doctype html><html lang="en"><head>
+            <title>Invoice software for small teams</title>
+            <meta name="description" content="Create, send, and track professional invoices in one calm workspace for small teams and independent businesses.">
+            <link rel="canonical" href="https://example.test/invoices">
+        </head><body><h1>Send invoices without the busywork</h1>
+            <h2>Everything your team needs to get paid</h2>
+            <p>Make invoices, share them with customers, and see what needs attention in one place. Keep your records clear and your follow-up simple.</p>
+            <p>Start with a template, invite a teammate, and keep the whole process easy to understand from the first visit through the final payment.</p>
+            <a href="/start">Try the workspace</a><img src="hero.png" alt="Invoice workspace overview">
+        </body></html>"#;
+        let rubric = seo_rubric(html);
+        assert_eq!(rubric.provenance, Provenance::Estimated);
+        assert_eq!(rubric.max_score, 100);
+        assert_eq!(rubric.score, 100);
+        assert_eq!(rubric.dimensions.len(), 8);
+        assert!(rubric
+            .dimensions
+            .iter()
+            .all(|dimension| dimension.score == dimension.max_score));
+        assert!(rubric.calculation.contains("title 20"));
+        assert_eq!(rubric.limitations.len(), 3);
+    }
+
+    #[test]
+    fn seo_rubric_calls_out_missing_search_and_heading_signals() {
+        let rubric = seo_rubric("<p>A short page without search metadata.</p>");
+        assert!(rubric.score < 30);
+        assert_eq!(rubric.dimensions[0].status, "missing");
+        assert_eq!(rubric.dimensions[1].status, "missing");
+        assert_eq!(rubric.dimensions[2].status, "missing");
+        assert!(rubric.dimensions[0].evidence[0].contains("No non-empty"));
+        assert!(rubric.dimensions[1].evidence[0].contains("No non-empty"));
+    }
 }

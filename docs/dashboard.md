@@ -57,6 +57,12 @@ evaluator calculation, confinement policy digests and limitations. Checks are
 **OBSERVED**. Growth outcomes remain **UNTESTED** without real outcome evidence.
 Passing commands establish eligibility for user review, not conversion lift.
 
+When a recorded option contains HTML, the card also exposes **SEO page hygiene
+(estimated)**. Expand it to see the eight structural dimensions and their direct
+observations. The 100-point rubric checks page metadata and basic content shape;
+it does not estimate rankings, traffic or conversion and does not replace a
+real crawl, accessibility audit or performance measurement.
+
 Select a variant and switch between hypothesis/evidence, diff/files/logs and
 the optional static preview.
 The inspector reads verified archives or checkpoints, not mutable worktree files.
