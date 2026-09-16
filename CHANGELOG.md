@@ -5,6 +5,12 @@
 - Preserved OpenResearch history and MIT attribution; audited its Rust, SQLite,
   worktree, snapshot, run, agent-harness and dashboard foundations.
 - Added canonical `growthlab` CLI and retained the `orx` compatibility entry point.
+- Added `growthlab demo` and a Home launch button for the original fictional
+  PatchKit replay. It creates its own private Git baseline and three real isolated
+  proposals, runs structure/link/claims commands and seals actual results.
+  One deliberate heading regression remains ineligible; growth outcomes are untested.
+  CLI demo startup skips inherited automatic session/run restoration and provider
+  monitors, refuses Git repository overrides and never selects/applies automatically.
 - Added schema-v1 `growthlab.yaml` with explicit product/goal, permission prefixes,
   validation commands/timeouts, metrics/guardrails and bounded parallelism.
 - Added atomic config creation, safe parse errors, protected-path/symlink checks

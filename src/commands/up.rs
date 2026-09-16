@@ -49,6 +49,14 @@ mod growth_api;
 mod harness_setup;
 
 pub async fn run(args: UpArgs) -> Result<()> {
+    run_inner(args, false).await
+}
+
+pub async fn demo(args: UpArgs) -> Result<()> {
+    run_inner(args, true).await
+}
+
+async fn run_inner(args: UpArgs, bundled_demo: bool) -> Result<()> {
     let port = args.port;
     let persistent_host = args.remote_host;
     let remote_auth = if persistent_host {
@@ -73,6 +81,7 @@ pub async fn run(args: UpArgs) -> Result<()> {
         // A second double-click should reach the running dashboard, not fail on its port.
         Err(error)
             if error.kind() == std::io::ErrorKind::AddrInUse
+                && !bundled_demo
                 && crate::owns_its_console()
                 && dashboard_is_serving(port).await =>
         {
@@ -89,11 +98,13 @@ pub async fn run(args: UpArgs) -> Result<()> {
     // Open early so the schema exists before any request or agent spawn.
     {
         let store = Store::open()?;
-        local::chat::reconcile_unfinished_turns(&store)?;
-        for run in store.list_active_runs()? {
-            if store.get_local_experiment(&run.experiment_id)?.is_some() {
-                if let Err(err) = crate::commands::exp::spawn_detached_supervise(&run.id) {
-                    eprintln!("could not recover supervisor for run {}: {err}", run.id);
+        if !bundled_demo {
+            local::chat::reconcile_unfinished_turns(&store)?;
+            for run in store.list_active_runs()? {
+                if store.get_local_experiment(&run.experiment_id)?.is_some() {
+                    if let Err(err) = crate::commands::exp::spawn_detached_supervise(&run.id) {
+                        eprintln!("could not recover supervisor for run {}: {err}", run.id);
+                    }
                 }
             }
         }
@@ -126,8 +137,9 @@ pub async fn run(args: UpArgs) -> Result<()> {
     };
     // Plan-mode turns hand this port to the `orx mcp-gate` permission bridge.
     state.chat.set_up_port(actual_port);
-    state.chat.resume_persisted_queues();
-    {
+    // Opening the fictional demo must not resume other projects or providers.
+    if !bundled_demo {
+        state.chat.resume_persisted_queues();
         let chat = state.chat.clone();
         let moving = state.data_dir_move_in_progress.clone();
         let gate = state.data_dir_gate.clone();
@@ -150,22 +162,41 @@ pub async fn run(args: UpArgs) -> Result<()> {
         });
     }
 
-    spawn_agent_preflight();
-    // Deliver explicitly registered run wake-ups once their chat becomes idle.
-    tokio::spawn(local::chat::watch_runs(
-        state.chat.clone(),
-        state.data_dir_move_in_progress.clone(),
-        state.data_dir_gate.clone(),
-    ));
-    spawn_claude_auth_monitor(state.chat.clone(), claude.clone(), state.harnesses.clone());
-    spawn_background_tasks(remote_auth.is_none());
+    if !bundled_demo {
+        spawn_agent_preflight();
+        // Deliver explicitly registered run wake-ups once their chat becomes idle.
+        tokio::spawn(local::chat::watch_runs(
+            state.chat.clone(),
+            state.data_dir_move_in_progress.clone(),
+            state.data_dir_gate.clone(),
+        ));
+        spawn_claude_auth_monitor(state.chat.clone(), claude.clone(), state.harnesses.clone());
+        spawn_background_tasks(remote_auth.is_none());
+    }
     let live_events = state.chat.clone();
     local::overleaf_live::set_event_sink(Box::new(move |name, data| {
         live_events.emit_event(name, data)
     }));
 
+    let demo_id = if bundled_demo {
+        Some(
+            growth_api::start_demo(&state)
+                .await
+                .map_err(|error| anyhow!("{}", error.1))?,
+        )
+    } else {
+        None
+    };
     let app = router(state.clone(), remote_auth.clone());
-    let url = format!("http://127.0.0.1:{actual_port}");
+    let url = match demo_id {
+        Some(id) => {
+            let url = format!("http://127.0.0.1:{actual_port}/growth/{id}");
+            eprintln!("growthlab demo: battle {id} at {url}");
+            eprintln!("growthlab demo: fictional replay proposals SIMULATED; actual checks OBSERVED; growth outcome UNTESTED. No provider, product apply or publishing.");
+            url
+        }
+        None => format!("http://127.0.0.1:{actual_port}"),
+    };
     let (stop_tx, mut stop_rx) = tokio::sync::watch::channel(false);
     let control_server = if persistent_host {
         Some(

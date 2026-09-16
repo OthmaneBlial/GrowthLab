@@ -1,7 +1,7 @@
 # GrowthLab progress
 
-Current milestone: **Phase 2/3 — GrowthLab domain API and dashboard validation** (2026-09-16).
-Overall completion: **about 35%, subjective estimate against the full specification**.
+Current milestone: **Phase 2/3 — bundled key-free replay demo validated** (2026-09-16).
+Overall completion: **about 40%, subjective estimate against the full specification**.
 The configuration/import and three-variant replay CLI slices pass locally.
 Selected delivery and report behavior pass local Rust, real CLI and browser checks.
 Recovery passes local Rust and real CLI interruption/legacy-archive checks.
@@ -9,10 +9,27 @@ Validation commands now require an OS confinement driver. macOS isolation and
 sealed policy digests pass local checks; Linux runtime verification remains pending.
 GitHub Actions is disabled at the user's request.
 The GrowthLab API and initial dashboard pass local Rust/UI and synthetic real
-browser checks. The complete native-agent/visual-demo vertical slice
+browser checks. The bundled fictional replay now passes real CLI/HTTP and browser
+checks. The complete native-agent/archived-render vertical slice
 and credible release have not passed yet.
 
 ## Completed
+
+- Added `growthlab demo` and Home's **Run bundled demo**, sharing the real owned
+  battle controller. Each creates an original fictional PatchKit baseline in a
+  new private data-root directory and three actual competitor worktrees. Replay
+  proposals are SIMULATED, actual checks OBSERVED and growth outcomes UNTESTED.
+  Structure/links/claims exits reproduce **0/0/0, 2/0/0, 0/0/0**; the deliberate
+  heading regression is ineligible, with no automatic selection or apply.
+- Verified CLI demo startup does not invoke provider CLIs, resumes no inherited
+  sessions/runs automatically, rejects Git repository overrides before seeding
+  and preserves its clean fictional baseline. The real binary serves the built
+  dashboard bundle, private reports and all three verified sealed attempts.
+- Captured the real Home launch, running checks, failure breakdown and phone
+  layout. Desktop/phone root and main scroll widths fit their viewport; keyboard
+  focus is visible, the demo touch target is 44px and captured console warnings/
+  errors are empty. Fixed route-first CSS layer ordering so the inherited base
+  reset cannot override GrowthLab button styling. See [demo.md](demo.md).
 
 - Verified authenticated GitHub account and absence of `OthmaneBlial/GrowthLab`.
 - Created the public repository and preserved full upstream Git history locally.
@@ -125,7 +142,7 @@ candidate renders remain pending. Windows validation is unsupported.
 
 ## Next three concrete tasks
 
-1. Add the bundled one-command visual demo and archived candidate render artifacts,
+1. Add archived candidate render artifacts to the working bundled replay demo,
    then create a concise real recording and richer inspectable quality evaluation.
 2. Close remaining launch/delivery recovery and cross-platform confinement gates,
    then verify genuine native-agent proposals without inventing provider data.
@@ -145,6 +162,24 @@ candidate renders remain pending. Windows validation is unsupported.
   container artifacts are isolated pending GrowthLab release tooling.
 
 ## Latest validation
+
+Bundled-demo unit (2026-09-16): **passed locally**. `cargo test --locked` passes
+**902 tests per binary, zero failures, two inherited ignored tests**;
+`cargo clippy --all-targets -- -D warnings`, formatting and `cargo build --locked`
+pass. UI typecheck/i18n build/style checks and **166 tests, zero failures/skips**
+pass; generated `ui/dist` is included. `scripts/test-growth-demo.py` passes with
+the real binary, built JS serving, nine actual checks, policy/seal verification,
+private reports, provider sentinels, Git-override refusal and graceful shutdown.
+The first full parallel suite exposed the new demo test's 20-second polling
+deadline while two attempts still ran without controller errors. Its wait now
+allows 60 seconds; all terminal, seal, exit-code, provenance and untouched-product
+assertions remain, and both complete suites pass. Existing one-check API tests
+retain their original wait budget. Real dev-slot Home execution reproduces the
+same results and baseline preservation; owned tabs/viewport/slot are cleaned up.
+Inherited build warnings about the route generator, CSS Highlight optimization
+and large eager bundle remain visible. No GitHub workflow is enabled/dispatched.
+
+Earlier validation evidence follows; it is not a release or provider claim.
 
 - GitHub Actions: **disabled at the user's request (2026-09-16)**. All six
   workflows are `disabled_manually`; no active runs remain. Validation runs
@@ -264,7 +299,7 @@ during inherited harness detection. Native-agent execution is not verified.
 Local CLI/domain/replay validation passed. Selected delivery/report behavior on Linux/Windows,
 complete GrowthLab tree/settings/localized UX, native-agent battles, Linux confinement runtime verification,
 incomplete launcher registration, interrupted selected-delivery recovery,
-archived render artifacts, visual
-demo, release installers and telemetry adapters remain **unverified / not
+archived render artifacts, real demo
+recording, release installers and telemetry adapters remain **unverified / not
 implemented**. No growth lift, adoption, native-agent execution or public release
 is claimed.

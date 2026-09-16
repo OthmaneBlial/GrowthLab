@@ -192,6 +192,7 @@ where
     GrowthState: FromRef<S>,
 {
     Router::new()
+        .route("/api/growth/demo", post(create_demo))
         .route("/api/growth/capabilities", get(capabilities))
         .route(
             "/api/growth/workspaces",
@@ -319,6 +320,76 @@ async fn capabilities() -> ApiResult {
     value(
         json!({"isolationAvailable":crate::growth::confinement::available().is_ok(),"platform":std::env::consts::OS,"harnesses":local::harness::registry().iter().map(|harness|json!({"id":harness.id(),"toolsDisabledProposals":harness.one_shot_has_no_tools()})).collect::<Vec<_>>(),"limitation":"Adapter capabilities do not verify installation, authentication or provider execution. Linux requires native namespace verification; Windows validation is unsupported. Resource quotas are not provided."}),
     )
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct DemoRequest {}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DemoLaunch {
+    project_id: String,
+    battle_id: String,
+    accepted: bool,
+}
+
+pub(super) async fn start_demo(state: &AppState) -> std::result::Result<String, ApiError> {
+    Ok(prepare_and_launch_demo(GrowthState::from_ref(state))
+        .await?
+        .battle_id)
+}
+
+async fn create_demo(
+    State(state): State<GrowthState>,
+    Json(_): Json<DemoRequest>,
+) -> std::result::Result<Response, ApiError> {
+    let launched = prepare_and_launch_demo(state).await?;
+    Ok((StatusCode::ACCEPTED, Json(launched)).into_response())
+}
+
+async fn prepare_and_launch_demo(state: GrowthState) -> std::result::Result<DemoLaunch, ApiError> {
+    let host = state.host.clone();
+    let lifecycle = state.lifecycle.clone();
+    with_owned_store(state, None, move |store, storage| {
+        if host
+            .workers
+            .lock()
+            .unwrap()
+            .values()
+            .filter(|worker| worker.running)
+            .count()
+            >= 2
+        {
+            return Err(ApiError(
+                StatusCode::CONFLICT,
+                "Two battles are already running. Finish or cancel one first.".into(),
+            ));
+        }
+        let battle = crate::growth::demo::prepare(&store).map_err(domain_error)?;
+        let admission = lifecycle.admit(&battle.project_id).ok_or_else(|| {
+            ApiError(
+                StatusCode::CONFLICT,
+                "Demo workspace is being deleted.".into(),
+            )
+        })?;
+        let response = DemoLaunch {
+            project_id: battle.project_id,
+            battle_id: battle.id.clone(),
+            accepted: true,
+        };
+        host.launch(
+            store,
+            storage,
+            battle.id,
+            ExecutionRequest::Replay {
+                plan: crate::growth::demo::replay(),
+            },
+            admission,
+        )?;
+        Ok(response)
+    })
+    .await
 }
 
 #[derive(Deserialize)]

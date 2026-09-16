@@ -1,3 +1,6 @@
+/* This route stylesheet can load before main's Tailwind stylesheet. Declare
+   the same layer order first so the base button reset cannot override it. */
+@layer theme, base, vendor, components, utilities;
 @layer components {
 .growth-app { height:100%; display:flex; flex-direction:column; background:var(--canvas); color:var(--text); font-family:var(--sans); font-size:0.875rem; }
 .growth-app * { min-width:0; }
@@ -37,6 +40,11 @@
 .growth-intro h1,.growth-workspace-heading h1 { font-family:Georgia,"Times New Roman",serif; font-weight:400; font-size:clamp(2rem,3.7vw,3.9rem); letter-spacing:-0.045em; line-height:1.06; }
 .growth-intro p { font-size:1rem; line-height:1.7; max-width:590px; margin-top:23px; color:var(--subtext); }
 .growth-home-grid { display:grid; grid-template-columns:1.15fr 1fr; border:1px solid var(--border); }
+.growth-demo-launch { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:28px; padding:24px; margin-bottom:28px; border:1px solid var(--border); background:var(--surface); }
+.growth-demo-launch h2 { font-family:Georgia,serif; font-weight:400; font-size:1.5rem; line-height:1.2; margin:10px 0; }
+.growth-demo-launch p { color:var(--subtext); font-size:0.75rem; line-height:1.8; max-width:620px; }
+.growth-demo-launch .growth-button { margin:0; }
+@media (max-width:850px) { .growth-demo-launch { grid-template-columns:1fr; gap:18px; } .growth-demo-launch .growth-button { justify-self:start; } }
 .growth-panel { padding:32px; background:var(--base); }
 .growth-panel+.growth-panel { border-left:1px solid var(--border); }
 .growth-panel h2,.growth-goal h2,.growth-execution h2,.growth-share h2 { font-family:Georgia,serif; font-size:1.75rem; font-weight:400; letter-spacing:-0.035em; margin:17px 0 13px; }

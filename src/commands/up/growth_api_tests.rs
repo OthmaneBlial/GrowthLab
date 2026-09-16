@@ -114,7 +114,11 @@ impl Fixture {
         json!({"mode":"replay","plan":{"version":1,"implementations":implementations}})
     }
     async fn wait(&self, id: &str, terminal: bool) -> Value {
-        let deadline = tokio::time::Instant::now() + Duration::from_secs(20);
+        self.wait_with_timeout(id, terminal, Duration::from_secs(20))
+            .await
+    }
+    async fn wait_with_timeout(&self, id: &str, terminal: bool, timeout: Duration) -> Value {
+        let deadline = tokio::time::Instant::now() + timeout;
         loop {
             let status = self.get(&format!("/battles/{id}")).await;
             let reached = if terminal {
@@ -181,6 +185,136 @@ impl Drop for Fixture {
             let _ = std::fs::remove_dir_all(&self.root);
         }
     }
+}
+
+#[tokio::test]
+async fn api_bundled_demo_runs_real_checks_without_touching_an_existing_product() {
+    let fixture = Fixture::new(false).await;
+    let baseline = crate::local::git::git(Some(&fixture.product), &["rev-parse", "HEAD"]).unwrap();
+    let invalid = fixture
+        .client
+        .post(format!("{}/api/growth/demo", fixture.url))
+        .json(&json!({"unexpected": true}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(invalid.status().as_u16(), 422);
+    assert!(fixture
+        .get("/workspaces")
+        .await
+        .as_array()
+        .unwrap()
+        .is_empty());
+    let launched = fixture.post("/demo", Some(json!({})), 202).await;
+    assert_eq!(launched["accepted"], true);
+    let id = launched["battleId"].as_str().unwrap();
+    // Nine real subprocess checks compete with the full parallel Rust suite.
+    // Keep every terminal/seal/exit-code assertion, but allow the fixture's
+    // configured 60-second command budget before declaring controller failure.
+    let terminal = fixture
+        .wait_with_timeout(id, true, Duration::from_secs(60))
+        .await;
+    assert_eq!(terminal["battle"]["status"], "failed");
+    assert!(terminal["selections"].as_array().unwrap().is_empty());
+    assert_eq!(terminal["runs"].as_array().unwrap().len(), 3);
+    let comparison = fixture.get(&format!("/battles/{id}/compare")).await;
+    assert_eq!(
+        comparison["recommendedCandidates"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+    for (index, row) in comparison["rows"].as_array().unwrap().iter().enumerate() {
+        assert_eq!(row["implementationProvenance"], "SIMULATED");
+        assert_eq!(row["checkProvenance"], "OBSERVED");
+        assert_eq!(row["outcomeProvenance"], "UNTESTED");
+        assert_eq!(row["eligible"], index != 1);
+        assert_eq!(row["requiredCommands"], 3);
+        assert_eq!(row["passedCommands"], if index == 1 { 2 } else { 3 });
+        for (check_index, check) in row["checks"].as_array().unwrap().iter().enumerate() {
+            assert_eq!(
+                check["exitCode"],
+                if index == 1 && check_index == 0 { 2 } else { 0 }
+            );
+            assert!(!check["confinement"]["policyDigest"]
+                .as_str()
+                .unwrap()
+                .is_empty());
+        }
+        let variant = row["variantId"].as_str().unwrap();
+        let artifacts = fixture.get(&format!("/variants/{variant}/artifacts")).await;
+        assert_eq!(artifacts["sealed"], true);
+        let source = fixture
+            .get(&format!(
+                "/variants/{variant}/artifact?name=files/website/index.html"
+            ))
+            .await;
+        assert_eq!(
+            source["text"],
+            crate::growth::demo::replay().implementations[index].files[0]
+                .contents
+                .as_deref()
+                .unwrap()
+        );
+        let log = fixture
+            .get(&format!(
+                "/variants/{variant}/artifact?name=validation-0.log"
+            ))
+            .await;
+        assert!(log["text"]
+            .as_str()
+            .unwrap()
+            .contains("exactlyOnePrimaryHeading"));
+    }
+    let store = Store::open_at(fixture.state.data_root()).unwrap();
+    let product = PathBuf::from(
+        store
+            .get_local_project(launched["projectId"].as_str().unwrap())
+            .unwrap()
+            .unwrap()
+            .repo_path,
+    );
+    assert!(product.canonicalize().unwrap().starts_with(
+        fixture
+            .state
+            .data_root()
+            .join("growth-demo")
+            .canonicalize()
+            .unwrap()
+    ));
+    assert_eq!(
+        std::fs::read_to_string(product.join("website/index.html")).unwrap(),
+        include_str!("../../../demo/patchkit/website/index.html")
+    );
+    assert!(
+        crate::local::git::git(Some(&product), &["status", "--porcelain"])
+            .unwrap()
+            .trim()
+            .is_empty()
+    );
+    assert!(crate::local::git::git(Some(&product), &["remote"])
+        .unwrap()
+        .trim()
+        .is_empty());
+    assert_eq!(
+        crate::local::git::git(Some(&product), &["rev-parse", "HEAD"])
+            .unwrap()
+            .trim(),
+        terminal["battle"]["contract"]["sourceSnapshotCommit"]
+            .as_str()
+            .unwrap()
+    );
+    assert_eq!(
+        crate::local::git::git(Some(&fixture.product), &["rev-parse", "HEAD"]).unwrap(),
+        baseline
+    );
+    assert!(
+        crate::local::git::git(Some(&fixture.product), &["status", "--porcelain"])
+            .unwrap()
+            .trim()
+            .is_empty()
+    );
 }
 
 #[tokio::test]

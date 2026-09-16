@@ -37,6 +37,27 @@ pub struct InitArgs {
 }
 
 #[derive(Debug, Args)]
+pub struct DemoArgs {
+    /// Bind a fresh loopback port by default; existing dashboards stay available.
+    #[arg(long, default_value_t = 0)]
+    pub port: u16,
+    #[arg(long)]
+    pub no_browser: bool,
+}
+
+pub async fn demo(args: DemoArgs) -> Result<()> {
+    crate::commands::up::demo(crate::UpArgs {
+        port: args.port,
+        no_browser: args.no_browser,
+        no_agent: true,
+        remote: None,
+        model: None,
+        remote_host: false,
+    })
+    .await
+}
+
+#[derive(Debug, Args)]
 pub struct ConfigArgs {
     #[command(subcommand)]
     pub command: ConfigCommand,

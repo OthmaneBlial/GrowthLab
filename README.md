@@ -12,7 +12,8 @@ Local-first. Open source. No Docker required.
 > selection, guarded apply/export, interrupted-attempt recovery and private-by-default
 > HTML/Markdown reports. The GrowthLab dashboard now exposes local import, goal
 > composition, battle execution, captured evidence/diffs and explicit delivery
-> through Rust domain APIs. The bundled visual demo and a credible release are being built.
+> through Rust domain APIs. A key-free bundled fictional replay is available through
+> `growthlab demo`; candidate render archives and a credible release are being built.
 > No conversion lift, winning variant, adoption, or production readiness is claimed.
 
 ## Why GrowthLab?
@@ -60,6 +61,23 @@ files, offline dependency limits, private policy evidence and platform support.
 The [dashboard workflow](docs/dashboard.md) covers the local app and its current
 limits; the [domain API](docs/growth-api.md) documents controller and artifact semantics.
 Do not use the upstream OpenResearch installer to install GrowthLab.
+
+## Try the bundled battle
+
+With the source prerequisites and installed canonical command:
+
+```sh
+growthlab demo
+```
+
+It opens a real three-variant battle on an original fictional product without
+an agent API key. One proposal deliberately fails a heading check; two remain
+eligible for review. Proposals are **SIMULATED**, checks **OBSERVED**, and growth
+outcomes **UNTESTED**. Inspect the logs and diffs, then choose whether to select
+and export a candidate. See the [demo workflow](docs/demo.md) for source commands,
+requirements and current limitations. No candidate is automatically applied.
+
+![Actual bundled battle: two eligible candidates and a deliberate heading failure](docs/screenshots/growth-demo-failure.png)
 
 ## Architecture and privacy
 

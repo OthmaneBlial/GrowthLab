@@ -23,6 +23,11 @@ Use a local Git product with a reviewed, committed `growthlab.yaml`, following
 Import records the committed context and baseline; it does not publish the product.
 Existing workspaces are accessible from Home on desktop and phone layouts.
 
+Home's **Run bundled demo** starts a real replay battle on a newly created
+fictional product without a provider key. One proposal deliberately fails a
+heading check. See [demo.md](demo.md) for expected results and limitations;
+the button never automatically selects or applies a candidate.
+
 On the workspace screen, inspect permissions and commands, enter a goal, and
 prepare a landing-page battle. The three initial hypotheses are deterministic
 **UNTESTED** templates. Each competitor receives the same frozen source and

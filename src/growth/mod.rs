@@ -9,6 +9,7 @@ pub mod config;
 pub mod confinement;
 #[cfg(all(test, any(target_os = "macos", target_os = "linux")))]
 mod confinement_tests;
+pub mod demo;
 pub mod evaluation;
 pub mod model;
 pub mod recovery;

@@ -94,6 +94,7 @@ async function request<T>(path: string, method = "GET", body?: unknown, signal?:
   return result;
 }
 export const growth = {
+  demo: () => request<{projectId: string; battleId: string; accepted: boolean}>("/demo", "POST", {}),
   workspaces: (signal?: AbortSignal) => request<Workspace[]>("/workspaces", "GET", undefined, signal),
   import: (path: string) => request<Workspace>("/workspaces", "POST", { path }),
   capabilities: (signal?: AbortSignal) => request<Capabilities>("/capabilities", "GET", undefined, signal),

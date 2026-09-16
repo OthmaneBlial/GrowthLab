@@ -61,6 +61,8 @@ struct Cli {
 // you add a *read-only* subcommand, add it there too, or it stays gated in plan
 // mode. `readonly_verbs_are_real_commands` catches renames but not additions.
 enum Command {
+    /// Run the bundled fictional three-variant replay and open the local dashboard.
+    Demo(growth::cli::DemoArgs),
     /// Create a reviewed product configuration (default: analysis only).
     Init(growth::cli::InitArgs),
 
@@ -1034,6 +1036,7 @@ fn should_capture_command(command: &Command) -> bool {
 /// variant name so renames don't silently break analytics continuity.
 fn command_name(command: &Command) -> &'static str {
     match command {
+        Command::Demo(_) => "demo",
         Command::Init(_) => "init",
         Command::Config(_) => "config",
         Command::Workspace(_) => "workspace",
@@ -1094,6 +1097,7 @@ async fn dispatch(command: Command) -> error::Result<()> {
         .transpose()?;
 
     match command {
+        Command::Demo(args) => growth::cli::demo(args).await,
         Command::Init(args) => growth::cli::init(args),
         Command::Config(args) => growth::cli::config(args),
         Command::Workspace(args) => growth::cli::workspace(args),
@@ -1152,7 +1156,8 @@ async fn dispatch(command: Command) -> error::Result<()> {
 fn command_uses_lifecycle_lock(command: &Command) -> bool {
     !matches!(
         command,
-        Command::Init(_)
+        Command::Demo(_)
+            | Command::Init(_)
             | Command::Config(_)
             | Command::Workspace(_)
             | Command::Hypotheses(_)
@@ -1363,6 +1368,38 @@ mod cli_tests {
             ])
             .expect_err("local report cannot read remote research state");
             assert_eq!(error.kind(), clap::error::ErrorKind::UnknownArgument);
+        }
+    }
+
+    #[test]
+    fn bundled_demo_defaults_to_a_fresh_local_port_without_provider_flags() {
+        let cli = Cli::try_parse_from(["growthlab", "demo"]).unwrap();
+        let command = cli.command.unwrap();
+        assert_eq!(command_name(&command), "demo");
+        assert!(!command_uses_lifecycle_lock(&command));
+        assert!(matches!(
+            command,
+            Command::Demo(growth::cli::DemoArgs {
+                port: 0,
+                no_browser: false
+            })
+        ));
+        let cli =
+            Cli::try_parse_from(["growthlab", "demo", "--port", "5901", "--no-browser"]).unwrap();
+        assert!(matches!(
+            cli.command,
+            Some(Command::Demo(growth::cli::DemoArgs {
+                port: 5901,
+                no_browser: true
+            }))
+        ));
+        for flag in ["--remote", "--model", "--harness"] {
+            assert_eq!(
+                Cli::try_parse_from(["growthlab", "demo", flag, "unexpected"])
+                    .unwrap_err()
+                    .kind(),
+                clap::error::ErrorKind::UnknownArgument
+            );
         }
     }
 
