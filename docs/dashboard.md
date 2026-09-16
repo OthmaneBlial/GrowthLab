@@ -121,7 +121,10 @@ and optional navigation/paint timings. PNGs and checks are render inspection
 artifacts, not a visual quality score, Lighthouse result, accessibility audit,
 Core Web Vital, real-user performance measurement or growth outcome. Sealed
 comparisons also expose the decomposable `static-render-hints-v1` rubric when
-both checks are present. The capture shown follows the selected viewport. See
+both checks are present, plus the separate `browser-timing-hints-v1` rubric
+when navigation timings are available. The timing rubric is a local heuristic,
+not a Lighthouse, Core Web Vital, accessibility, visual regression or field
+performance result. The capture shown follows the selected viewport. See
 [static-previews.md](static-previews.md). Private prompts and policy files are
 excluded from this viewer. Keyboard arrows, Home and End move between the three
 inspection tabs.

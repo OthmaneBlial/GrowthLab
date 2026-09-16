@@ -104,6 +104,15 @@ Chromium checks are available. The 100-point total
 is a structural page review; it is never a ranking, traffic, accessibility or
 conversion result.
 
+When the same sealed preview contains navigation timing observations, a row may
+also include `performance` with id `browser-timing-hints-v1`, provenance
+**OBSERVED** and four local dimensions: first-paint hint, DOM content loaded,
+load complete and timing metadata integrity. The first-paint value can fall back
+to a first rendered frame proxy when a `file://` document exposes no paint entry.
+Thresholds are transparent heuristics from one sanitized local Chromium run;
+they are not Lighthouse, Core Web Vitals, accessibility, visual regression,
+real-user performance or growth evidence.
+
 The same row may include `quality` when HTML is available. Its
 `page-quality-hints-v1` record is an **ESTIMATED** 30-point companion with
 mobile viewport, named controls, form labels, loading-hint and claim-guardrail dimensions. It is

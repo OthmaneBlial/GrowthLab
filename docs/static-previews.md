@@ -61,6 +61,14 @@ document and PNG hashes. Comparisons can summarize available checks with the
 `static-render-hints-v1` rubric; its `OBSERVED` score remains an inspection aid,
 not a combined growth score.
 
+When navigation timing entries are present, comparisons also expose the
+separate `browser-timing-hints-v1` rubric. It summarizes DOM content loaded,
+load complete, a first-paint hint and timing metadata integrity for desktop and
+phone. A local `file://` capture may use its first rendered frame as the
+first-paint proxy when Chromium exposes no paint entry. This is a transparent
+heuristic from one sanitized local run, not Lighthouse, Core Web Vitals,
+accessibility, visual regression, real-user performance or growth evidence.
+
 Private reports do not include these source documents or renderings by default.
 The dashboard exposes a verified desktop PNG only inside the local candidate
 inspector; explicit visual report disclosure remains pending.
