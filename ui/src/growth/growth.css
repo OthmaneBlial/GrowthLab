@@ -67,6 +67,9 @@
 .growth-hypothesis-node { min-width:0; padding:15px; border:1px solid var(--border); background:var(--surface-bright); }
 .growth-hypothesis-node h3 { margin:10px 0 8px; }
 .growth-hypothesis-node p { margin:7px 0; }
+.growth-hypothesis-actions { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:14px; padding-top:12px; border-top:1px solid var(--border); }
+.growth-hypothesis-actions .growth-button { padding:8px 10px; font-size:0.625rem; }
+.growth-hypothesis-actions code { max-width:9ch; overflow:hidden; color:var(--subtext); font-size:0.5625rem; text-overflow:ellipsis; white-space:nowrap; }
 @media (max-width: 760px) { .growth-hypothesis-branches { grid-template-columns:1fr; } .growth-experiment-map > .growth-line { display:block; } .growth-experiment-map > .growth-line button { margin-top:14px; } }
 .growth-url-audit { margin-top:28px; }
 .growth-url-audit-intro { max-width:720px; }
