@@ -24,3 +24,19 @@ source packages are recorded in Cargo.lock; covered dependency source is availab
 from [crates.io](https://crates.io/). These dependency licenses do not replace
 the preserved OpenResearch MIT notice or imply vendor endorsement. A complete
 distribution dependency-notice inventory remains a release packaging gate.
+
+The embedded dashboard includes unmodified KaTeX JavaScript under MIT
+([license](licenses/KaTeX-MIT.txt)) and KaTeX font files under SIL Open Font
+License 1.1. Their original copyright and Reserved Font Name statements are
+retained in [KaTeX-fonts-NOTICE.txt](licenses/KaTeX-fonts-NOTICE.txt), alongside
+the [OFL license](licenses/SIL-Open-Font-License-1.1.txt). The official license
+text is available at https://openfontlicense.org/open-font-license-official-text/.
+The fonts' separate license is preserved; the project MIT license does not
+relicense them.
+
+The dashboard's Clover library and React Markdown dependencies retain their
+original ISC notices in [clo-lib-ISC.txt](licenses/clo-lib-ISC.txt) and
+[clo-react-markdown-ISC.txt](licenses/clo-react-markdown-ISC.txt). Package
+versions are pinned in ui/pnpm-lock.yaml. This source prerelease provides
+source archives, without standalone executables or installers; complete
+binary-distribution notices and target packaging remain pending.

@@ -8,7 +8,7 @@ checks and evidence behind each one. Choose what ships.
 **Local-first · Rust + SQLite · Isolated Git worktrees · No Docker**
 
 <!-- project-links:start -->
-[Documentation](docs/dashboard.md) · [Roadmap](docs/ROADMAP.md) · [Contribute](CONTRIBUTING.md)
+[Website](https://othmaneblial.github.io/GrowthLab/) · [Docs](https://othmaneblial.github.io/GrowthLab/docs.html) · [Roadmap](docs/ROADMAP.md) · [Contribute](CONTRIBUTING.md)
 <!-- project-links:end -->
 
 ![Real bundled battle with two eligible candidates and one deliberately failed heading check](docs/screenshots/growth-demo-failure.png)
@@ -61,6 +61,7 @@ Current milestone: **Three real variants with sealed evidence and archived stati
 - Dashboard comparison, source previews, diffs, logs and explicit selected apply/export
 - Private-by-default offline HTML/Markdown reports and interrupted-run recovery
 - Key-free bundled replay demo with one deliberate validation failure
+- Published project website and searchable docs with current progress and actual captures
 
 | Validation | Current evidence |
 | --- | --- |
@@ -68,6 +69,7 @@ Current milestone: **Three real variants with sealed evidence and archived stati
 | UI tests | **passed** — 167 tests; zero failures or skips |
 | Local quality checks | **passed** — Formatting, Clippy, UI types, styles and builds |
 | Actual demo and browser flow | **passed** — Real CLI/HTTP execution and desktop/phone checks on owned fictional fixtures |
+| Release build and runtime smokes | **passed** — Fresh locked macOS arm64 build; real CLI import, delivery and HTTP demo; embedded UI verified |
 | GitHub CI | **disabled** — All six workflows manually disabled; validation runs locally |
 
 **Still ahead**
@@ -76,7 +78,7 @@ Current milestone: **Three real variants with sealed evidence and archived stati
 - Native-agent battle verification and remaining launch/delivery recovery
 - Complete experiment tree, settings and localized interface
 - Broader inputs, growth playbooks and real measurement
-- Cross-platform runtime proof and release packaging
+- Cross-platform runtime proof, portable binaries/installers and distribution notices
 <!-- project-status:end -->
 
 Progress is an estimate of the full [product specification](docs/SPEC.md).
