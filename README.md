@@ -1,12 +1,16 @@
 # GrowthLab
 
-### Growth experiments you can review.
+### SEO growth ideas you can actually review.
 
-Turn product growth questions into competing implementations from the same Git
-baseline. Compare positioning, onboarding, pricing pages and launch surfaces;
-inspect the checks and evidence behind each one, then choose what ships.
+GrowthLab helps you answer a simple question:
 
-**Local-first · Rust + SQLite · Isolated Git worktrees · No Docker**
+> **Which change could help more people find and understand our product?**
+
+Bring in your product, describe an SEO or growth idea, and compare three clear versions side by side. GrowthLab shows the pages, the changes, and the checks behind each option so you can choose what to test next.
+
+It is made for founders, indie hackers, marketers, designers, and developers who want a better way to work on SEO, landing pages, onboarding, and launch messaging.
+
+**Open source · local-first · built for small teams · no Docker**
 
 <!-- project-links:start -->
 [Website](https://othmaneblial.github.io/GrowthLab/) · [Docs](https://othmaneblial.github.io/GrowthLab/docs.html) · [Alpha release](https://github.com/OthmaneBlial/GrowthLab/releases/tag/v0.1.0-alpha.1) · [Roadmap](docs/ROADMAP.md) · [Contribute](CONTRIBUTING.md)
@@ -14,46 +18,57 @@ inspect the checks and evidence behind each one, then choose what ships.
 
 ![Real bundled battle with two eligible candidates and one deliberately failed heading check](docs/screenshots/growth-demo-failure.png)
 
-An AI proposal is a starting point. GrowthLab makes it reviewable: actual changed
-files, a fixed evaluation contract, captured command output, immutable evidence
-and an explicit delivery decision. It is being built as an open-source growth
-team for developers, indie hackers and small product teams. One playbook never
-defines the product; GrowthLab is a general growth experimentation lab.
+## What can I use it for?
 
-A diff is simply the technical record of what changed. The product value is the
-safe comparison of growth approaches and the evidence that helps you decide.
+- Find a clearer angle for a landing page.
+- Turn a search question into a useful page idea.
+- Compare titles, sections, calls to action, and onboarding paths.
+- Check that a proposed page still works before you publish it.
+- Keep a simple record of what you tried and why.
 
-The working alpha includes a key-free replay demo. Its proposals are declared
-fixtures; its edits, commits, checks and archives execute for real in Rust.
-Native-agent battles are still awaiting verification.
+GrowthLab helps you make a better decision. It does not pretend to know your future rankings or sales.
 
-## What happens in a Growth Battle?
+## The simple loop
 
-1. **Freeze the baseline.** Import a local Git product and review its goal,
-   permitted paths and validation commands in `growthlab.yaml`.
-2. **Run three approaches.** Each competitor gets the same contract and its own
-   isolated Git worktree. Checks execute on the recorded candidate snapshot.
-3. **Inspect the tradeoffs.** Compare results, source previews, change records,
-   evidence and logs. A failed check stays visible and makes that candidate
-   ineligible.
-4. **Make the decision.** Select a candidate, export its patch or explicitly
-   apply it to a clean matching product checkout. No automatic commit or push.
-5. **Keep the evidence.** Export an offline HTML/Markdown report with private
-   context withheld by default.
+1. **Bring your product.** Start with the project you already have.
+2. **Describe the opportunity.** Example: “Make our page clearer for people searching for invoice software.”
+3. **Try three versions.** Each option is kept separate so the original stays safe.
+4. **Review and choose.** See the page, the changes, and the checks. Keep the option you want to test.
 
-| A useful proposal needs… | GrowthLab supplies today |
-| --- | --- |
-| An implementation you can review | Real files and change records from committed candidate objects |
-| A fair comparison | One frozen source snapshot and validation contract for all competitors |
-| Evidence behind a recommendation | Actual exit codes, logs, provenance and verified archive digests |
-| Room for your judgment | Explicit candidate selection and guarded apply/export |
-| A reproducible starting point | An original bundled product and deterministic replay plan |
+A failed check stays visible. Nothing is published or changed in your live product automatically.
+
+## See a real example
+
+The bundled demo uses a fictional product called PatchKit. It creates three landing-page ideas:
+
+- two pass the checks and stay available for review;
+- one removes the main heading and is marked ineligible;
+- the original product remains untouched.
+
+Run it locally. You do not need an agent key:
+
+~~~sh
+git clone https://github.com/OthmaneBlial/GrowthLab.git
+cd GrowthLab
+pnpm -C ui install --frozen-lockfile
+pnpm -C ui build
+cargo install --path . --bin growthlab --locked
+growthlab demo
+~~~
+
+The dashboard opens on your machine. The demo is deliberately honest:
+
+**SIMULATED ideas · OBSERVED checks · UNTESTED SEO outcomes**
+
+The alpha verifies the work you asked it to verify. It does not claim a ranking increase, more traffic, or more conversions.
+
+[Demo walkthrough](docs/demo.md) · [Use your own product](docs/configuration.md) · [Run a battle](docs/battles.md) · [Apply, export and report](docs/delivery.md)
 
 ## Current progress
 
 <!-- project-status:start -->
 <!-- Generated by scripts/sync-project-status.mjs from docs/status.json. -->
-[![Project progress: about 45% estimate](docs/assets/progress.svg)](docs/PROGRESS.md) [![Checks run locally; GitHub CI disabled](docs/assets/checks.svg)](docs/PROGRESS.md)
+[![Project progress: about 45% estimate](docs/assets/progress.svg)](docs/PROGRESS.md) [![Checks run locally; cloud CI disabled](docs/assets/checks.svg)](docs/PROGRESS.md)
 
 **Source alpha · about 45% overall (subjective estimate) · updated 2026-09-16**
 
@@ -61,8 +76,8 @@ Current milestone: **Three real growth surfaces with sealed evidence and verifie
 
 **Working today**
 
-- Local Git workspace import and reviewed growthlab.yaml permissions
-- Three competing changes from one frozen baseline in isolated Git worktrees
+- Local product import with reviewed growthlab.yaml permissions
+- Three competing changes from one frozen starting point in isolated workspaces
 - Actual validation commands, inspectable failures, cancellation and sealed evidence
 - Dashboard comparison, source previews, diffs, logs and explicit selected apply/export
 - Private-by-default offline HTML/Markdown reports and interrupted-run recovery
@@ -82,7 +97,7 @@ Current milestone: **Three real growth surfaces with sealed evidence and verifie
 | Actual demo and browser flow | **passed** — Real CLI/HTTP execution, desktop/phone checks and verified PNG endpoint checks on owned fictional fixtures |
 | Release build and runtime smokes | **passed** — Fresh locked macOS arm64 build; real CLI import, delivery and HTTP demo; embedded UI verified |
 | Selected-delivery recovery | **passed** — 20 battle tests on both binaries; exact candidate finalization and local conflict preservation |
-| GitHub CI | **disabled** — All six workflows manually disabled; validation runs locally |
+| Cloud CI | **disabled** — Cloud workflows are disabled; validation runs locally |
 
 **Still ahead**
 
@@ -93,108 +108,38 @@ Current milestone: **Three real growth surfaces with sealed evidence and verifie
 - Cross-platform runtime proof, portable binaries/installers and distribution notices
 <!-- project-status:end -->
 
-Progress is an estimate of the full [product specification](docs/SPEC.md).
-Local test results prove the behavior covered by those checks; they do not prove
-growth lift, provider authorization, cross-platform runtime or production readiness.
-The detailed work log is in [PROGRESS.md](docs/PROGRESS.md).
+The percentage is a human estimate against the full [product specification](docs/SPEC.md), not a traffic or ranking metric. Local checks show what has been verified; they do not prove SEO lift, provider authorization, or production readiness. See the detailed [progress log](docs/PROGRESS.md).
 
-## Try the real demo
+## Built on OpenResearch
 
-Source prerequisites: **Git, stable Rust/Cargo, Node.js 22+ and pnpm 10**.
-Validation requires `/usr/bin/sandbox-exec` on macOS, or `/usr/bin/bwrap` with
-permitted unprivileged namespaces on Linux. macOS is locally verified; Linux
-runtime verification is pending. Windows validation isolation is not implemented.
+GrowthLab starts from [alphaXiv/OpenResearch](https://github.com/alphaXiv/OpenResearch), and we are grateful for that foundation.
 
-```sh
-git clone https://github.com/OthmaneBlial/GrowthLab.git
-cd GrowthLab
-pnpm -C ui install --frozen-lockfile
-pnpm -C ui build
-cargo install --path . --bin growthlab --locked
-growthlab demo
-```
+OpenResearch provides the local-first runtime, permissions, dashboard, process supervision, and safe workspace primitives underneath this project. GrowthLab adds the SEO growth layer: ideas, competing page versions, evidence, decisions, and reports.
 
-The command opens the local dashboard and creates a fictional PatchKit baseline
-plus three real competitors. One deliberately removes the primary heading and
-fails validation; two remain eligible for review. Nothing is selected or applied
-automatically. The demo requires no agent API key and no Docker.
+OpenResearch is the base that made GrowthLab possible. We keep its upstream history, preserve its MIT license and notice, and build this independent product on top. alphaXiv does not endorse GrowthLab.
 
-**SIMULATED proposals · OBSERVED checks · UNTESTED growth outcomes**
+## For people who want the details
 
-The alpha calls eligible variants **Recommended candidates**. It does not claim
-that a page increased conversions or won a live experiment.
+- Rust and SQLite keep the core local and easy to inspect.
+- Each option is made in an isolated workspace.
+- Checks run on the option that was actually recorded.
+- Static previews use archived page files, with scripts and outside resources blocked.
+- New ready runs can archive a verified desktop PNG when local Chromium is available.
+- Reports are private by default.
+- Cloud CI is disabled; checks run locally.
 
-[Demo walkthrough](docs/demo.md) · [Use your own product](docs/configuration.md) ·
-[Run a battle](docs/battles.md) · [Apply, export and report](docs/delivery.md)
-
-![Actual archived static candidate source displayed in the dashboard](docs/screenshots/growth-preview-desktop.jpg)
-
-Static previews come from permitted committed HTML/CSS/assets, displayed in an
-opaque, inert frame. They are live views of archived source, with scripts and
-external resources blocked. New ready runs also attempt a verified desktop PNG
-from that sealed document when local Chromium is available; dynamic-app rendering
-and visual quality evaluation remain pending. [Preview boundaries](docs/static-previews.md).
-
-## Built around evidence
-
-```text
-Product repository + growthlab.yaml
-                 │
-      Frozen source + battle contract
-                 │
-    ┌────────────┼────────────┐
- Variant A    Variant B    Variant C
- worktree     worktree     worktree
-    └────────────┼────────────┘
-                 │
-   Snapshot checks + sealed run archives
-                 │
-   Compare → select → explicit apply/export
-```
-
-The Rust/Axum core owns orchestration, permissions, delivery and the domain API.
-SQLite persists workspaces, variants, attempts and decisions. The React dashboard
-reads verified checkpoints and archives. Generic agent harnesses, Git primitives
-and process supervision come from the OpenResearch foundation.
-
-[Architecture audit](docs/openresearch-foundation.md) · [Domain API](docs/growth-api.md)
-
-## Local by default. Explicit at the boundaries.
-
-- Product changes stay in isolated worktrees until you authorize selected apply.
-- Validation commands require OS confinement with no unrestricted fallback.
-- Default reports omit private goals, names, paths, prompts and raw logs.
-- Source builds disable upstream telemetry and refuse the upstream updater.
-- Native proposals require explicit authorization to send permitted context to
-  the chosen provider. Installation/authentication is not assumed.
-- Agents do not automatically deploy, purchase ads, message people, change live
-  billing or analytics, or push to your product repository.
-
-This is a source alpha. Coordinate other writers to your checkout and inspect
-changes before committing them. See [confinement limits](docs/confinement.md),
-[recovery behavior](docs/recovery.md) and [security policy](SECURITY.md).
+[Architecture audit](docs/openresearch-foundation.md) · [Domain API](docs/growth-api.md) · [Preview boundaries](docs/static-previews.md) · [Security policy](SECURITY.md)
 
 ## Develop and contribute
 
-```sh
+~~~sh
 cargo test --locked
 pnpm -C ui test
 node scripts/dev-slot.mjs start --db empty
 node scripts/dev-slot.mjs status
-# When finished:
 node scripts/dev-slot.mjs stop
-```
+~~~
 
-The development helper isolates its database, ports and owned processes. The
-canonical CLI is `growthlab`; `orx` remains a compatibility entry point.
-GitHub CI is disabled at the user's request; checks run locally.
+Please inspect contributions before sharing them.
 
-[Contribution guide](CONTRIBUTING.md) · [Roadmap](docs/ROADMAP.md) ·
-[Release notes](CHANGELOG.md) · [Code of conduct](CODE_OF_CONDUCT.md)
-
-## OpenResearch foundation
-
-Built from [alphaXiv/OpenResearch](https://github.com/alphaXiv/OpenResearch), with
-upstream history preserved. GrowthLab extends its local-first experimentation
-architecture into a new product domain. MIT licensed; retain [LICENSE](LICENSE)
-and [NOTICE.md](NOTICE.md). alphaXiv does not endorse GrowthLab.
+[Contribution guide](CONTRIBUTING.md) · [Roadmap](docs/ROADMAP.md) · [Release notes](CHANGELOG.md) · [Code of conduct](CODE_OF_CONDUCT.md)
