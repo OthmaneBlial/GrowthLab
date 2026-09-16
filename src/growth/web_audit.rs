@@ -2,7 +2,7 @@
 //!
 //! The fetcher performs one robots.txt request and one page request. It follows
 //! no redirects, sends no credentials, and refuses non-HTTPS URLs. The page is
-//! passed to the same structural SEO and page-quality rubrics used for local
+//! passed to the same structural SEO, page-quality and accessibility rubrics used for local
 //! candidates; the result remains ESTIMATED and never represents ranking or
 //! traffic evidence.
 
@@ -13,7 +13,10 @@ use serde::Serialize;
 use crate::error::{anyhow, Result};
 use crate::store::now_ms;
 
-use super::evaluation::{page_quality_rubric, seo_rubric, PageQualityRubric, SeoRubric};
+use super::evaluation::{
+    accessibility_rubric, page_quality_rubric, seo_rubric, PageQualityRubric, RenderRubric,
+    SeoRubric,
+};
 use super::model::Provenance;
 
 const MAX_HTML_BYTES: usize = 4 * 1024 * 1024;
@@ -44,6 +47,7 @@ pub struct RemoteSeoAudit {
     pub provenance: Provenance,
     pub rubric: SeoRubric,
     pub quality: PageQualityRubric,
+    pub accessibility: RenderRubric,
     pub limitations: Vec<String>,
 }
 
@@ -301,6 +305,8 @@ pub async fn fetch(raw: &str) -> Result<RemoteSeoAudit> {
         provenance: Provenance::Estimated,
         rubric: seo_rubric(&html),
         quality: page_quality_rubric(&html),
+        accessibility: accessibility_rubric(&html)
+            .ok_or_else(|| anyhow!("Website HTML was empty; accessibility review was refused"))?,
         limitations: vec![
             "The structural rubric is ESTIMATED and reviews returned HTML only.".into(),
             "No ranking, traffic, backlink, search-demand, accessibility certification, performance or conversion result is measured.".into(),
@@ -369,6 +375,31 @@ pub fn markdown(audit: &RemoteSeoAudit) -> String {
     }
     output.push_str("\n### Quality-hint limits\n\n");
     for limitation in &audit.quality.limitations {
+        output.push_str(&format!("- {limitation}\n"));
+    }
+    output.push_str(&format!(
+        "\n## Accessibility structure hints\n\n**{} / {}** — {}\n\n| Dimension | Score | Status | Evidence |\n| --- | ---: | --- | --- |\n",
+        audit.accessibility.score, audit.accessibility.max_score, audit.accessibility.label
+    ));
+    for dimension in &audit.accessibility.dimensions {
+        output.push_str(&format!(
+            "| {} | {}/{} | {} | {} |\n",
+            dimension.label,
+            dimension.score,
+            dimension.max_score,
+            dimension.status,
+            dimension.evidence.join(" ").replace('|', "\\|")
+        ));
+    }
+    output.push_str(&format!("\n{}\n", audit.accessibility.calculation));
+    if !audit.accessibility.recommendations.is_empty() {
+        output.push_str("\n### Accessibility next steps\n\n");
+        for recommendation in &audit.accessibility.recommendations {
+            output.push_str(&format!("- {recommendation}\n"));
+        }
+    }
+    output.push_str("\n### Accessibility limits\n\n");
+    for limitation in &audit.accessibility.limitations {
         output.push_str(&format!("- {limitation}\n"));
     }
     output.push_str("\n## Limits\n\n");

@@ -77,7 +77,7 @@ export type AccessibilityRubric = RenderRubric;
 export interface RemoteSeoAudit {
   url: string; retrievedAt: number; httpStatus: number; contentType: string | null;
   robots: { url: string; status: number; allowed: boolean; matchedRule: string | null; retrievedAt: number; limitation: string };
-  scope: string; provenance: Provenance; rubric: SeoRubric; quality?: PageQualityRubric; limitations: string[];
+  scope: string; provenance: Provenance; rubric: SeoRubric; quality?: PageQualityRubric; accessibility?: AccessibilityRubric; limitations: string[];
 }
 export interface PublicRepositoryAudit {
   url: string; apiUrl: string; owner: string; repository: string; fullName: string; htmlUrl: string;

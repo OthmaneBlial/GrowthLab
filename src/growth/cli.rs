@@ -512,6 +512,7 @@ fn audit_markdown(
     path: &Path,
     rubric: &super::evaluation::SeoRubric,
     quality: &super::evaluation::PageQualityRubric,
+    accessibility: &super::evaluation::RenderRubric,
 ) -> String {
     let mut output = format!(
         "# Local SEO page audit\n\n- File: `{}`\n- Score: **{} / {}**\n- Provenance: **{}**\n- Rubric: **{}** (`{}`)\n\n",
@@ -575,6 +576,35 @@ fn audit_markdown(
     for limitation in &quality.limitations {
         output.push_str(&format!("- {limitation}\n"));
     }
+    output.push_str(&format!(
+        "\n## Accessibility structure hints\n\n**{} / {}** — {}\n\n| Dimension | Score | Status | Evidence |\n| --- | ---: | --- | --- |\n",
+        accessibility.score, accessibility.max_score, accessibility.label
+    ));
+    for dimension in &accessibility.dimensions {
+        output.push_str(&format!(
+            "| {} | {}/{} | {} | {} |\n",
+            markdown_cell(&dimension.label),
+            dimension.score,
+            dimension.max_score,
+            markdown_cell(&dimension.status),
+            markdown_cell(&dimension.evidence.join(" "))
+        ));
+    }
+    output.push_str(&format!(
+        "\n**Calculation:** {}\n\n",
+        accessibility.calculation
+    ));
+    if !accessibility.recommendations.is_empty() {
+        output.push_str("## Accessibility next steps\n\n");
+        for recommendation in &accessibility.recommendations {
+            output.push_str(&format!("- {recommendation}\n"));
+        }
+        output.push('\n');
+    }
+    output.push_str("## Accessibility limits\n\n");
+    for limitation in &accessibility.limitations {
+        output.push_str(&format!("- {limitation}\n"));
+    }
     output.push_str("\nThis is a local structural review of the supplied file. It does not fetch the web and does not claim rankings, traffic, or conversions.\n");
     output
 }
@@ -593,12 +623,15 @@ pub async fn seo_audit(args: SeoAuditArgs) -> Result<()> {
     let html = read_audit_html(args.html.as_deref().expect("clap requires --html or --url"))?;
     let rubric = super::evaluation::seo_rubric(&html);
     let quality = super::evaluation::page_quality_rubric(&html);
+    let accessibility = super::evaluation::accessibility_rubric(&html)
+        .ok_or_else(|| anyhow!("SEO audit input was empty; accessibility review was refused"))?;
     match args.format {
         SeoAuditFormat::Json => print_json(&serde_json::json!({
             "path": args.html,
             "scope": "Local UTF-8 HTML file; no network request",
             "rubric": rubric,
             "quality": quality,
+            "accessibility": accessibility,
         })),
         SeoAuditFormat::Markdown => {
             print!(
@@ -606,7 +639,8 @@ pub async fn seo_audit(args: SeoAuditArgs) -> Result<()> {
                 audit_markdown(
                     args.html.as_deref().expect("html was validated"),
                     &rubric,
-                    &quality
+                    &quality,
+                    &accessibility
                 )
             );
             Ok(())
@@ -1247,11 +1281,13 @@ mod tests {
         let html = read_audit_html(&path).unwrap();
         let rubric = super::super::evaluation::seo_rubric(&html);
         let quality = super::super::evaluation::page_quality_rubric(&html);
-        let markdown = audit_markdown(&path, &rubric, &quality);
+        let accessibility = super::super::evaluation::accessibility_rubric(&html).unwrap();
+        let markdown = audit_markdown(&path, &rubric, &quality, &accessibility);
         assert!(markdown.contains("# Local SEO page audit"));
         assert!(markdown.contains("Provenance: **ESTIMATED**"));
         assert!(markdown.contains("SEO page hygiene"));
         assert!(markdown.contains("Page quality hints"));
+        assert!(markdown.contains("Accessibility structure hints"));
         assert!(markdown.contains("does not claim rankings"));
         std::fs::remove_dir_all(dir).unwrap();
     }
