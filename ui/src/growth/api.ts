@@ -71,7 +71,7 @@ export interface PageQualityRubric { id: string; label: string; score: number; m
 export interface RemoteSeoAudit {
   url: string; retrievedAt: number; httpStatus: number; contentType: string | null;
   robots: { url: string; status: number; allowed: boolean; matchedRule: string | null; retrievedAt: number; limitation: string };
-  scope: string; provenance: Provenance; rubric: SeoRubric; limitations: string[];
+  scope: string; provenance: Provenance; rubric: SeoRubric; quality?: PageQualityRubric; limitations: string[];
 }
 export interface PublicRepositoryAudit {
   url: string; apiUrl: string; owner: string; repository: string; fullName: string; htmlUrl: string;

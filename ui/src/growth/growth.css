@@ -76,6 +76,7 @@
 .growth-url-audit-dimensions>div { display:flex; justify-content:space-between; gap:8px; padding:10px; border:1px solid var(--border); background:var(--base); font-size:0.625rem; }
 .growth-url-audit-dimensions span { color:var(--subtext); }
 .growth-url-audit-result details { grid-column:1 / -1; font-size:0.6875rem; line-height:1.7; }
+.growth-url-audit-result .growth-quality-rubric { grid-column:1 / -1; width:100%; }
 .growth-url-audit-result details p { margin:0 0 8px; }
 .growth-demo-launch { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:28px; padding:24px; margin-bottom:28px; border:1px solid var(--border); background:var(--surface); }
 .growth-demo-launch h2 { font-family:Georgia,serif; font-weight:400; font-size:1.5rem; line-height:1.2; margin:10px 0; }

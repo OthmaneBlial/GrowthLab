@@ -508,7 +508,11 @@ fn provenance_label(provenance: Provenance) -> &'static str {
     }
 }
 
-fn audit_markdown(path: &Path, rubric: &super::evaluation::SeoRubric) -> String {
+fn audit_markdown(
+    path: &Path,
+    rubric: &super::evaluation::SeoRubric,
+    quality: &super::evaluation::PageQualityRubric,
+) -> String {
     let mut output = format!(
         "# Local SEO page audit\n\n- File: `{}`\n- Score: **{} / {}**\n- Provenance: **{}**\n- Rubric: **{}** (`{}`)\n\n",
         path.display(),
@@ -545,6 +549,32 @@ fn audit_markdown(path: &Path, rubric: &super::evaluation::SeoRubric) -> String 
     for limitation in &rubric.limitations {
         output.push_str(&format!("- {limitation}\n"));
     }
+    output.push_str(&format!(
+        "\n## Page quality hints\n\n**{} / {}** — {}\n\n| Dimension | Score | Status | Evidence |\n| --- | ---: | --- | --- |\n",
+        quality.score, quality.max_score, quality.label
+    ));
+    for dimension in &quality.dimensions {
+        output.push_str(&format!(
+            "| {} | {}/{} | {} | {} |\n",
+            markdown_cell(&dimension.label),
+            dimension.score,
+            dimension.max_score,
+            markdown_cell(&dimension.status),
+            markdown_cell(&dimension.evidence.join(" "))
+        ));
+    }
+    output.push_str(&format!("\n**Calculation:** {}\n\n", quality.calculation));
+    if !quality.recommendations.is_empty() {
+        output.push_str("## Quality-hint next steps\n\n");
+        for recommendation in &quality.recommendations {
+            output.push_str(&format!("- {recommendation}\n"));
+        }
+        output.push('\n');
+    }
+    output.push_str("## Quality-hint limits\n\n");
+    for limitation in &quality.limitations {
+        output.push_str(&format!("- {limitation}\n"));
+    }
     output.push_str("\nThis is a local structural review of the supplied file. It does not fetch the web and does not claim rankings, traffic, or conversions.\n");
     output
 }
@@ -562,16 +592,22 @@ pub async fn seo_audit(args: SeoAuditArgs) -> Result<()> {
     }
     let html = read_audit_html(args.html.as_deref().expect("clap requires --html or --url"))?;
     let rubric = super::evaluation::seo_rubric(&html);
+    let quality = super::evaluation::page_quality_rubric(&html);
     match args.format {
         SeoAuditFormat::Json => print_json(&serde_json::json!({
             "path": args.html,
             "scope": "Local UTF-8 HTML file; no network request",
             "rubric": rubric,
+            "quality": quality,
         })),
         SeoAuditFormat::Markdown => {
             print!(
                 "{}",
-                audit_markdown(args.html.as_deref().expect("html was validated"), &rubric)
+                audit_markdown(
+                    args.html.as_deref().expect("html was validated"),
+                    &rubric,
+                    &quality
+                )
             );
             Ok(())
         }
@@ -1210,10 +1246,12 @@ mod tests {
         std::fs::write(&path, "<html lang=\"en\"><head><title>Local SEO page</title></head><body><h1>Find the right page</h1><p>Useful product copy for a local audit.</p></body></html>").unwrap();
         let html = read_audit_html(&path).unwrap();
         let rubric = super::super::evaluation::seo_rubric(&html);
-        let markdown = audit_markdown(&path, &rubric);
+        let quality = super::super::evaluation::page_quality_rubric(&html);
+        let markdown = audit_markdown(&path, &rubric, &quality);
         assert!(markdown.contains("# Local SEO page audit"));
         assert!(markdown.contains("Provenance: **ESTIMATED**"));
         assert!(markdown.contains("SEO page hygiene"));
+        assert!(markdown.contains("Page quality hints"));
         assert!(markdown.contains("does not claim rankings"));
         std::fs::remove_dir_all(dir).unwrap();
     }

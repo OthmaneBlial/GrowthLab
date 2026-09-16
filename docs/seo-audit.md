@@ -20,8 +20,10 @@ or external mutation is used.
 The JSON result includes the input path, the rubric id
 `seo-page-hygiene-v1`, the total score and eight inspectable dimensions:
 title, description, headings, document language, useful copy, canonical URL,
-useful links and image descriptions. Markdown is intended for a quick review
-or a local issue description.
+useful links and image descriptions. It also includes the
+`page-quality-hints-v1` companion with five source-level dimensions: mobile
+viewport, named controls, form labels, loading hints and claim guardrails.
+Markdown is intended for a quick review or a local issue description.
 
 When a dimension is partial or missing, the output adds a concrete next step,
 such as adjusting the title range, adding a description or giving images useful
@@ -30,7 +32,8 @@ were found; it still does not imply search performance.
 
 Every score is labeled **ESTIMATED**. The audit checks returned or supplied HTML
 only; it does not crawl, index, rank or measure traffic. It cannot predict
-search position or conversion, and it does not replace accessibility,
+search position or conversion, and its quality hints do not run Lighthouse, a
+browser timing trace or a screen reader. The hints do not replace accessibility,
 performance, structured-data, backlink or real-user measurement. A missing or
 weak signal is evidence for a page review, not evidence of a business outcome.
 

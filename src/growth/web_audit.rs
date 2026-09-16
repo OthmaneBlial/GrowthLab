@@ -2,8 +2,9 @@
 //!
 //! The fetcher performs one robots.txt request and one page request. It follows
 //! no redirects, sends no credentials, and refuses non-HTTPS URLs. The page is
-//! passed to the same structural SEO rubric used for local candidates; the
-//! result remains ESTIMATED and never represents ranking or traffic evidence.
+//! passed to the same structural SEO and page-quality rubrics used for local
+//! candidates; the result remains ESTIMATED and never represents ranking or
+//! traffic evidence.
 
 use futures::StreamExt;
 use reqwest::{Client, StatusCode, Url};
@@ -12,7 +13,7 @@ use serde::Serialize;
 use crate::error::{anyhow, Result};
 use crate::store::now_ms;
 
-use super::evaluation::{seo_rubric, SeoRubric};
+use super::evaluation::{page_quality_rubric, seo_rubric, PageQualityRubric, SeoRubric};
 use super::model::Provenance;
 
 const MAX_HTML_BYTES: usize = 4 * 1024 * 1024;
@@ -42,6 +43,7 @@ pub struct RemoteSeoAudit {
     pub scope: String,
     pub provenance: Provenance,
     pub rubric: SeoRubric,
+    pub quality: PageQualityRubric,
     pub limitations: Vec<String>,
 }
 
@@ -298,9 +300,10 @@ pub async fn fetch(raw: &str) -> Result<RemoteSeoAudit> {
         scope: "One public HTTPS page fetched read-only after a same-origin robots.txt check; no redirects, credentials or crawl are used.".into(),
         provenance: Provenance::Estimated,
         rubric: seo_rubric(&html),
+        quality: page_quality_rubric(&html),
         limitations: vec![
             "The structural rubric is ESTIMATED and reviews returned HTML only.".into(),
-            "No ranking, traffic, backlink, search-demand, accessibility certification or conversion result is measured.".into(),
+            "No ranking, traffic, backlink, search-demand, accessibility certification, performance or conversion result is measured.".into(),
             "The page may change after retrieval; the timestamp records this single observation.".into(),
         ],
     })
@@ -342,6 +345,31 @@ pub fn markdown(audit: &RemoteSeoAudit) -> String {
             dimension.status,
             dimension.evidence.join(" ").replace('|', "\\|")
         ));
+    }
+    output.push_str(&format!(
+        "\n## Page quality hints\n\n**{} / {}** — {}\n\n| Dimension | Score | Status | Evidence |\n| --- | ---: | --- | --- |\n",
+        audit.quality.score, audit.quality.max_score, audit.quality.label
+    ));
+    for dimension in &audit.quality.dimensions {
+        output.push_str(&format!(
+            "| {} | {}/{} | {} | {} |\n",
+            dimension.label,
+            dimension.score,
+            dimension.max_score,
+            dimension.status,
+            dimension.evidence.join(" ").replace('|', "\\|")
+        ));
+    }
+    output.push_str(&format!("\n{}\n", audit.quality.calculation));
+    if !audit.quality.recommendations.is_empty() {
+        output.push_str("\n### Quality-hint next steps\n\n");
+        for recommendation in &audit.quality.recommendations {
+            output.push_str(&format!("- {recommendation}\n"));
+        }
+    }
+    output.push_str("\n### Quality-hint limits\n\n");
+    for limitation in &audit.quality.limitations {
+        output.push_str(&format!("- {limitation}\n"));
     }
     output.push_str("\n## Limits\n\n");
     for limitation in &audit.limitations {
