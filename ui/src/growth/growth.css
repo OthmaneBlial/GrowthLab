@@ -52,6 +52,18 @@
 .growth-measurement-limit { margin-top:16px; color:var(--subtext); font-size:0.6875rem; }
 .growth-measurement-analysis { margin-top:18px; padding-top:16px; border-top:1px solid var(--border); font-size:0.6875rem; }
 .growth-measurement-analysis p { margin-top:10px; }
+.growth-experiment-map { margin-top:28px; }
+.growth-experiment-map > .growth-line { align-items:flex-start; gap:18px; }
+.growth-experiment-map h2 { margin-top:8px; }
+.growth-hypothesis-tree { margin-top:20px; }
+.growth-hypothesis-root { display:grid; gap:5px; padding:16px; border:1px solid var(--border-strong); background:var(--surface-bright); }
+.growth-hypothesis-root strong { font-size:1rem; }
+.growth-hypothesis-root small,.growth-hypothesis-node small { color:var(--subtext); }
+.growth-hypothesis-branches { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:12px; }
+.growth-hypothesis-node { min-width:0; padding:15px; border:1px solid var(--border); background:var(--surface); }
+.growth-hypothesis-node h3 { margin:10px 0 8px; }
+.growth-hypothesis-node p { margin:7px 0; }
+@media (max-width: 760px) { .growth-hypothesis-branches { grid-template-columns:1fr; } .growth-experiment-map > .growth-line { display:block; } .growth-experiment-map > .growth-line button { margin-top:14px; } }
 .growth-url-audit { margin-top:28px; }
 .growth-url-audit-intro { max-width:720px; }
 .growth-url-audit-form { max-width:700px; }

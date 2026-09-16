@@ -134,6 +134,8 @@ export const growth = {
   playbooks: (signal?: AbortSignal) => request<GrowthPlaybook[]>("/playbooks", "GET", undefined, signal),
   playbookRuns: (projectId: string, signal?: AbortSignal) => request<PlaybookRun[]>(`/workspaces/${id(projectId)}/playbooks`, "GET", undefined, signal),
   runPlaybook: (projectId: string, role: string, answers: string[] = []) => request<PlaybookRun>(`/workspaces/${id(projectId)}/playbooks/${id(role)}`, "POST", { answers }),
+  hypotheses: (projectId: string, signal?: AbortSignal) => request<Hypothesis[]>(`/workspaces/${id(projectId)}/hypotheses`, "GET", undefined, signal),
+  createHypotheses: (projectId: string) => request<Hypothesis[]>(`/workspaces/${id(projectId)}/hypotheses`, "POST"),
   urlAudit: (url: string) => request<RemoteSeoAudit>("/url-audit", "POST", { url }),
   repositoryAudit: (url: string) => request<PublicRepositoryAudit>("/repository-audit", "POST", { url }),
   repositoryImport: (input: { url: string; path: string; name?: string; audience?: string; goal?: string; description?: string; metric?: string; mode?: "analyze_only" | "draft" | "implementation"; allowedPaths?: string[]; deniedPaths?: string[]; commands?: string[]; shallow?: boolean }) => request<Workspace>("/repository-import", "POST", input),
