@@ -1,0 +1,26 @@
+name: Experiment or feature proposal
+description: Propose a concrete growth workflow and its evidence contract.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Product problem and audience
+    validations:
+      required: true
+  - type: textarea
+    id: hypothesis
+    attributes:
+      label: Hypothesis and expected mechanism
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: How would we evaluate it?
+      description: State metrics or proxy checks, evidence sources, guardrails, and limitations.
+    validations:
+      required: true
+  - type: textarea
+    id: permissions
+    attributes:
+      label: Required permissions and reproducibility

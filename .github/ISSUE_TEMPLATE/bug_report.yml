@@ -1,0 +1,26 @@
+name: Bug report
+description: Report a reproducible failure with nonprivate evidence.
+body:
+  - type: textarea
+    id: behavior
+    attributes:
+      label: What happened and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: Include commands and a synthetic fixture. Never include tokens or private product data.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Commit or version, OS, and agent harness
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted logs or screenshots

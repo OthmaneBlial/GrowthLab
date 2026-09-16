@@ -4,7 +4,7 @@ The full requirements live in [SPEC.md](SPEC.md). A phase is complete only when
 its working behavior and documented validation prove it. No release is claimed
 by this roadmap.
 
-- [ ] **0 — Foundation:** audit upstream internals/license, validate inherited
+- [x] **0 — Foundation:** audit upstream internals/license, validate inherited
   tests and isolated dashboard, preserve history, create public repository and
   remotes, publish attribution and migration map.
 - [ ] **1 — Growth domain:** native CLI, versioned `growthlab.yaml`, product
