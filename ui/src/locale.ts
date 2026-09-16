@@ -7,10 +7,15 @@ import {
 
 const listeners = new Set<() => void>();
 
-export function setLocale(next: Locale): void {
+function applyDocumentLocale(locale: Locale): void {
+  document.documentElement.lang = locale;
+  document.documentElement.dir = locale === "ar" || locale === "fa" ? "rtl" : "ltr";
+}
+
+export async function setLocale(next: Locale): Promise<void> {
   if (next === getLocale()) return;
-  void setParaglideLocale(next, { reload: false });
-  document.documentElement.lang = next;
+  await setParaglideLocale(next, { reload: false });
+  applyDocumentLocale(next);
   for (const listener of listeners) listener();
 }
 

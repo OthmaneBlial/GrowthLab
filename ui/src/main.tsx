@@ -10,7 +10,7 @@ import "./tailwind.css";
 
 const locale = getLocale();
 document.documentElement.lang = locale;
-document.documentElement.dir = "ltr";
+document.documentElement.dir = locale === "ar" || locale === "fa" ? "rtl" : "ltr";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
