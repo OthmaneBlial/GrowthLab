@@ -63,6 +63,11 @@ observations. The 100-point rubric checks page metadata and basic content shape;
 it does not estimate rankings, traffic or conversion and does not replace a
 real crawl, accessibility audit or performance measurement.
 
+For a quick review before creating a battle, run
+`growthlab seo-audit --html ./website/index.html`. Add `--format markdown` for a
+shareable local note. The command reads one regular UTF-8 file and makes no
+network request; see [seo-audit.md](seo-audit.md).
+
 Select a variant and switch between hypothesis/evidence, diff/files/logs and
 the optional static preview.
 The inspector reads verified archives or checkpoints, not mutable worktree files.

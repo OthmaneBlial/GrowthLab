@@ -44,6 +44,7 @@ const WHOLE_VERB_READS: &[&str] = &[
     "version",
     "experiments",
     "compare",
+    "seo-audit",
 ];
 
 /// Shell no-ops allowed as glue between read-only segments in a batch —

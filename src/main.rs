@@ -82,6 +82,9 @@ enum Command {
     Experiments(growth::cli::ExperimentsArgs),
     /// Compare sealed command evidence and eligible candidates.
     Compare(growth::cli::CompareArgs),
+    /// Audit one local HTML file with the explainable SEO page rubric.
+    #[command(name = "seo-audit")]
+    SeoAudit(growth::cli::SeoAuditArgs),
     /// Inspect a battle or request cancellation.
     #[command(name = "battle-status")]
     BattleStatus(growth::cli::BattleStatusArgs),
@@ -1048,6 +1051,7 @@ fn command_name(command: &Command) -> &'static str {
         Command::Run(_) => "run",
         Command::Experiments(_) => "experiments",
         Command::Compare(_) => "compare",
+        Command::SeoAudit(_) => "seo-audit",
         Command::BattleStatus(_) => "battle-status",
         Command::Recover(_) => "recover",
         Command::RecoverDelivery(_) => "recover-delivery",
@@ -1110,6 +1114,7 @@ async fn dispatch(command: Command) -> error::Result<()> {
         Command::Run(args) => growth::cli::battle_run(args).await,
         Command::Experiments(args) => growth::cli::experiments(args),
         Command::Compare(args) => growth::cli::compare(args),
+        Command::SeoAudit(args) => growth::cli::seo_audit(args),
         Command::BattleStatus(args) => growth::cli::battle_status(args),
         Command::Recover(args) => growth::cli::recover(args),
         Command::RecoverDelivery(args) => growth::cli::recover_delivery(args),
@@ -1170,6 +1175,7 @@ fn command_uses_lifecycle_lock(command: &Command) -> bool {
             | Command::Run(_)
             | Command::Experiments(_)
             | Command::Compare(_)
+            | Command::SeoAudit(_)
             | Command::BattleStatus(_)
             | Command::Recover(_)
             | Command::RecoverDelivery(_)
@@ -1407,6 +1413,29 @@ mod cli_tests {
                 clap::error::ErrorKind::UnknownArgument
             );
         }
+    }
+
+    #[test]
+    fn seo_audit_is_a_local_readonly_command() {
+        let cli = Cli::try_parse_from([
+            "growthlab",
+            "seo-audit",
+            "--html",
+            "website/index.html",
+            "--format",
+            "markdown",
+        ])
+        .unwrap();
+        let command = cli.command.unwrap();
+        assert_eq!(command_name(&command), "seo-audit");
+        assert!(!command_uses_lifecycle_lock(&command));
+        assert!(matches!(
+            command,
+            Command::SeoAudit(growth::cli::SeoAuditArgs {
+                format: growth::cli::SeoAuditFormat::Markdown,
+                ..
+            })
+        ));
     }
 
     #[test]

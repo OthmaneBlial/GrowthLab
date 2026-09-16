@@ -101,3 +101,9 @@ errors return 400, absent records 404 and unavailable storage 500. JSON errors
 contain an `error` string; framework body/query rejections may be plain text.
 No endpoint automatically publishes, messages, commits the original product,
 pushes to it, deploys or connects outcome telemetry.
+
+For a single page outside a battle, the local CLI also exposes
+`growthlab seo-audit --html ./path/to/index.html`. It uses the same
+`seo-page-hygiene-v1` rubric and supports `--format markdown`; it reads only a
+regular UTF-8 file up to 4 MiB and makes no network request. See
+[seo-audit.md](seo-audit.md).

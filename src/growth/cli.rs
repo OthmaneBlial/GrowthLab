@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use clap::{Args, Subcommand};
+use clap::{Args, Subcommand, ValueEnum};
 
 use crate::error::{anyhow, Result};
 use crate::local::model::LocalProject;
@@ -10,7 +10,7 @@ use crate::store::{now_ms, Store};
 use super::config::{
     Agents, Goal, GrowthConfig, Metrics, PermissionMode, Permissions, Product, Validation,
 };
-use super::model::{starter_hypotheses, GrowthWorkspace};
+use super::model::{starter_hypotheses, GrowthWorkspace, Provenance};
 
 #[derive(Debug, Args)]
 pub struct InitArgs {
@@ -144,6 +144,22 @@ pub struct BattleRunArgs {
 #[derive(Debug, Args)]
 pub struct CompareArgs {
     pub battle_id: String,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum SeoAuditFormat {
+    Json,
+    Markdown,
+}
+
+#[derive(Debug, Args)]
+pub struct SeoAuditArgs {
+    /// Read a regular local HTML file; no network request is made.
+    #[arg(long)]
+    pub html: PathBuf,
+    /// Choose machine-readable JSON or a compact Markdown review.
+    #[arg(long, value_enum, default_value = "json")]
+    pub format: SeoAuditFormat,
 }
 
 #[derive(Debug, Args)]
@@ -342,6 +358,84 @@ pub fn compare(args: CompareArgs) -> Result<()> {
     )?)
 }
 
+fn read_audit_html(path: &Path) -> Result<String> {
+    let metadata =
+        std::fs::symlink_metadata(path).map_err(|_| anyhow!("SEO audit input was not found"))?;
+    if !metadata.is_file() || metadata.file_type().is_symlink() {
+        return Err(anyhow!(
+            "SEO audit input must be a regular local HTML file, not a directory or symlink"
+        ));
+    }
+    const MAX_HTML_BYTES: u64 = 4 * 1024 * 1024;
+    if metadata.len() > MAX_HTML_BYTES {
+        return Err(anyhow!("SEO audit input must be at most 4 MiB"));
+    }
+    let bytes = std::fs::read(path).map_err(|_| anyhow!("SEO audit input could not be read"))?;
+    String::from_utf8(bytes).map_err(|_| anyhow!("SEO audit input must be UTF-8 HTML"))
+}
+
+fn markdown_cell(value: &str) -> String {
+    value.replace('|', "\\|").replace('\n', " ")
+}
+
+fn provenance_label(provenance: Provenance) -> &'static str {
+    match provenance {
+        Provenance::Measured => "MEASURED",
+        Provenance::Observed => "OBSERVED",
+        Provenance::Estimated => "ESTIMATED",
+        Provenance::Simulated => "SIMULATED",
+        Provenance::Untested => "UNTESTED",
+    }
+}
+
+fn audit_markdown(path: &Path, rubric: &super::evaluation::SeoRubric) -> String {
+    let mut output = format!(
+        "# Local SEO page audit\n\n- File: `{}`\n- Score: **{} / {}**\n- Provenance: **{}**\n- Rubric: **{}** (`{}`)\n\n",
+        path.display(),
+        rubric.score,
+        rubric.max_score,
+        provenance_label(rubric.provenance),
+        rubric.label,
+        rubric.id
+    );
+    output.push_str(
+        "## Dimensions\n\n| Dimension | Score | Status | Evidence |\n| --- | ---: | --- | --- |\n",
+    );
+    for dimension in &rubric.dimensions {
+        output.push_str(&format!(
+            "| {} | {}/{} | {} | {} |\n",
+            markdown_cell(&dimension.label),
+            dimension.score,
+            dimension.max_score,
+            markdown_cell(&dimension.status),
+            markdown_cell(&dimension.evidence.join(" "))
+        ));
+    }
+    output.push_str(&format!("\n**Calculation:** {}\n\n", rubric.calculation));
+    output.push_str("## Limits\n\n");
+    for limitation in &rubric.limitations {
+        output.push_str(&format!("- {limitation}\n"));
+    }
+    output.push_str("\nThis is a local structural review of the supplied file. It does not fetch the web and does not claim rankings, traffic, or conversions.\n");
+    output
+}
+
+pub fn seo_audit(args: SeoAuditArgs) -> Result<()> {
+    let html = read_audit_html(&args.html)?;
+    let rubric = super::evaluation::seo_rubric(&html);
+    match args.format {
+        SeoAuditFormat::Json => print_json(&serde_json::json!({
+            "path": args.html,
+            "scope": "Local UTF-8 HTML file; no network request",
+            "rubric": rubric,
+        })),
+        SeoAuditFormat::Markdown => {
+            print!("{}", audit_markdown(&args.html, &rubric));
+            Ok(())
+        }
+    }
+}
+
 pub fn experiments(args: ExperimentsArgs) -> Result<()> {
     let store = Store::open()?;
     let battles = store.list_growth_battles(args.project.as_deref())?;
@@ -513,6 +607,36 @@ fn print_json(value: &impl serde::Serialize) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn seo_audit_reads_local_html_and_formats_markdown() {
+        let dir =
+            std::env::temp_dir().join(format!("growthlab-seo-audit-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("index.html");
+        std::fs::write(&path, "<html lang=\"en\"><head><title>Local SEO page</title></head><body><h1>Find the right page</h1><p>Useful product copy for a local audit.</p></body></html>").unwrap();
+        let html = read_audit_html(&path).unwrap();
+        let rubric = super::super::evaluation::seo_rubric(&html);
+        let markdown = audit_markdown(&path, &rubric);
+        assert!(markdown.contains("# Local SEO page audit"));
+        assert!(markdown.contains("Provenance: **ESTIMATED**"));
+        assert!(markdown.contains("SEO page hygiene"));
+        assert!(markdown.contains("does not claim rankings"));
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn seo_audit_rejects_symlink_inputs() {
+        let dir = std::env::temp_dir().join(format!("growthlab-seo-link-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let target = dir.join("index.html");
+        let link = dir.join("link.html");
+        std::fs::write(&target, "<html></html>").unwrap();
+        std::os::unix::fs::symlink(&target, &link).unwrap();
+        assert!(read_audit_html(&link).is_err());
+        std::fs::remove_dir_all(dir).unwrap();
+    }
     #[test]
     fn imports_committed_context_without_touching_product_or_publication() {
         let dir = std::env::temp_dir().join(format!("growthlab-import-{}", uuid::Uuid::new_v4()));
