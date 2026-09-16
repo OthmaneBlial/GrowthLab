@@ -5,7 +5,7 @@
   "progressEstimate": 63,
   "progressExplanation": "Subjective estimate against the complete product specification, not a measured delivery metric.",
   "milestone": "Local-folder onboarding, playbook catalog and measurement analysis validated",
-  "validatedSourceCommit": "1b1da53f90eebd63231086c2eff65b2c95ab2437",
+  "validatedSourceCommit": "a98c124ad5b24bc15f688dcf2ddc69cb40efb253",
   "delivered": [
     "Local product import with reviewed growthlab.yaml permissions",
     "Three competing changes from one frozen starting point in isolated workspaces",
