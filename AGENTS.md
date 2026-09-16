@@ -26,6 +26,15 @@ The inherited `openresearch.sh` companion service is not a GrowthLab service. Do
   including release workflows that could invoke CI. Keep their definitions for
   future use, but do not enable or dispatch them without a new user instruction.
 
+- Latest publishing instruction (2026-09-16): keep the README and project website
+  current after every meaningful validated milestone. Update `docs/status.json`
+  and the detailed `docs/PROGRESS.md` from actual evidence, then run
+  `node scripts/sync-project-status.mjs` and its `--check` mode. Include the
+  synchronized README, badges and `site/` status copies in the focused commit.
+  Publish only the canonical `GrowthLab/` website folder and verify the live
+  status. Percentages stay explicitly subjective; never promote pending work to
+  passed or enable GitHub CI as part of synchronization.
+
 - For this task the user explicitly authorizes direct-main work with focused commits and frequent pushes to `OthmaneBlial/GrowthLab`. Inspect status/diffs and run relevant validation before each coherent commit. Verify the exact remote/head after pushing. Do not configure protection that prevents the authorized workflow.
 - If the user re-enables GitHub automation later, PR CI must test GitHub's simulated merge (`refs/pull/<number>/merge`), which `actions/checkout` selects by default for `pull_request` events, rather than checking out the PR head alone. Each run tests its merge candidate; subsequent changes to `main` do not automatically rerun open PRs.
 - Preserved workflow definitions include `main` CI and release checks on the commit being packaged. These are disabled now. If release automation is restored later, publishing requires its checks to succeed; keep `./ci` in cargo-dist's `global-artifacts-jobs` when regenerating the release workflow.

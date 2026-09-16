@@ -15,6 +15,13 @@ and credible release have not passed yet.
 
 ## Completed
 
+- Rebuilt the README around the working alpha: real variants, visible failure,
+  archived previews, current local validation and explicitly pending product work.
+  Added `docs/status.json` and a local-only synchronization command for README
+  progress, badges and website status copies. Future validated milestones must
+  update the shared status; no GitHub automation is enabled. Website publication
+  and the requested alpha release are being prepared separately.
+
 - Added opt-in `static_preview` configuration and CLI init flags. Candidate Git
   objects supply archived HTML/CSS/local assets, a bounded self-contained document
   and source/document hashes; mutable checkout contents cannot supply the preview.
