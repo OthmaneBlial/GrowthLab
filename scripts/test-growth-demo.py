@@ -99,6 +99,10 @@ def main():
                     assert render and render["id"] == "static-render-hints-v1"
                     assert render["provenance"] == "OBSERVED" and render["maxScore"] == 20
                     assert len(render["dimensions"]) == 4
+                    performance = row.get("performance")
+                    assert performance and performance["id"] == "browser-timing-hints-v1"
+                    assert performance["provenance"] == "OBSERVED" and performance["maxScore"] == 20
+                    assert len(performance["dimensions"]) == 4
                     assert screenshots, "A local Chromium capture was required but no PNG was archived."
                     assert {screenshot["path"] for screenshot in screenshots} == {
                         "preview/screenshot-desktop.png",
@@ -128,8 +132,9 @@ def main():
             report = get(f"/api/growth/battles/{battle}/report?format=html").decode()
             expected_report_labels = ["SIMULATED", "OBSERVED", "UNTESTED", "SEO page hygiene", "Hypothesis ID"]
             if os.environ.get("GROWTHLAB_REQUIRE_SCREENSHOT") == "1":
-                expected_report_labels.extend(["Static render checks", "static-render-hints-v1"])
-            assert all(label in report for label in expected_report_labels)
+                expected_report_labels.extend(["Static render checks", "static-render-hints-v1", "Local browser timing hints (observed)", "browser-timing-hints-v1"])
+            missing_report_labels = [label for label in expected_report_labels if label not in report]
+            assert not missing_report_labels, missing_report_labels
             assert "PatchKit" not in report and str(root) not in report
             products = list((root / "lab/growth-demo").glob("*/product"))
             assert len(products) == 1

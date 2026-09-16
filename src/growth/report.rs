@@ -60,6 +60,8 @@ pub struct ReportVariant {
     pub rubric: Option<SeoRubric>,
     pub quality: Option<PageQualityRubric>,
     pub render: Option<RenderRubric>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub performance: Option<RenderRubric>,
 }
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -239,6 +241,7 @@ pub fn build(store: &Store, id: &str, options: &ReportOptions) -> Result<BattleR
             rubric: row.rubric.clone(),
             quality: row.quality.clone(),
             render: row.render.clone(),
+            performance: row.performance.clone(),
         });
     }
     Ok(BattleReport {
@@ -303,10 +306,10 @@ pub fn markdown(report: &BattleReport) -> String {
         )),
         None => out.push_str("No candidate has been selected.\n\n"),
     }
-    out.push_str("| Variant | Hypothesis ID | Status | Configured checks | SEO page hygiene | Page quality hints | Static render | Eligible | Proposal | Checks | Outcome |\n|---|---|---|---|---|---|---|---|---|---|---|\n");
+    out.push_str("| Variant | Hypothesis ID | Status | Configured checks | SEO page hygiene | Page quality hints | Static render | Browser timing | Eligible | Proposal | Checks | Outcome |\n|---|---|---|---|---|---|---|---|---|---|---|---|\n");
     for row in &report.variants {
         out.push_str(&format!(
-            "| {} | {} | {} | {} / {} | {} | {} | {} | {} | {} | {} | {} |\n",
+            "| {} | {} | {} | {} / {} | {} | {} | {} | {} | {} | {} | {} | {} |\n",
             md(&row.label),
             md(row.hypothesis_id.as_deref().unwrap_or("Not recorded")),
             md(&row.status),
@@ -323,6 +326,13 @@ pub fn markdown(report: &BattleReport) -> String {
             row.render
                 .as_ref()
                 .map(|render| format!("{}/{} OBSERVED", render.score, render.max_score))
+                .unwrap_or_else(|| "—".into()),
+            row.performance
+                .as_ref()
+                .map(|performance| format!(
+                    "{}/{} OBSERVED",
+                    performance.score, performance.max_score
+                ))
                 .unwrap_or_else(|| "—".into()),
             if row.eligible { "Yes" } else { "No" },
             provenance(row.implementation_provenance),
@@ -451,6 +461,44 @@ pub fn markdown(report: &BattleReport) -> String {
             }
             out.push_str("### Static-render limits\n\n");
             for limitation in &render.limitations {
+                out.push_str(&format!("- {}\n", md(limitation)));
+            }
+            out.push('\n');
+        }
+        if let Some(performance) = &row.performance {
+            out.push_str(&format!(
+                "Browser timing hints: **{}/{}** (**OBSERVED**). {}\n\n",
+                performance.score,
+                performance.max_score,
+                md(&performance.calculation)
+            ));
+            for dimension in &performance.dimensions {
+                out.push_str(&format!(
+                    "- **{}**: {}/{} ({}) — {}\n",
+                    md(&dimension.label),
+                    dimension.score,
+                    dimension.max_score,
+                    md(&dimension.status),
+                    dimension
+                        .evidence
+                        .iter()
+                        .map(|evidence| md(evidence))
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                ));
+            }
+            out.push('\n');
+            out.push_str("### Browser-timing next steps\n\n");
+            if performance.recommendations.is_empty() {
+                out.push_str("- No gaps were found by these local timing hints.\n\n");
+            } else {
+                for recommendation in &performance.recommendations {
+                    out.push_str(&format!("- {}\n", md(recommendation)));
+                }
+                out.push('\n');
+            }
+            out.push_str("### Browser-timing limits\n\n");
+            for limitation in &performance.limitations {
                 out.push_str(&format!("- {}\n", md(limitation)));
             }
             out.push('\n');
@@ -673,8 +721,49 @@ pub fn document(report: &BattleReport) -> String {
                 limitations
             )
         }).unwrap_or_default();
-        out.push_str(&format!(r#"</div></details>{}{}{}<dl class="provenance"><dt>Proposal</dt><dd>{}</dd><dt>Checks</dt><dd>{}</dd><dt>Growth outcome</dt><dd>{}</dd></dl><p class="diff-summary"><strong>{}</strong> files changed <span>+{} / −{} text lines</span></p>"#,
-            rubric,quality,render,provenance(row.implementation_provenance),provenance(row.check_provenance),provenance(row.outcome_provenance),row.files_changed,row.lines_added,row.lines_removed));
+        let performance = row.performance.as_ref().map(|performance| {
+            let dimensions = performance
+                .dimensions
+                .iter()
+                .map(|dimension| {
+                    format!(
+                        "<li><strong>{}</strong> {}/{} · {}<span>{}</span></li>",
+                        html(&dimension.label),
+                        dimension.score,
+                        dimension.max_score,
+                        html(&dimension.status),
+                        html(&dimension.evidence.join(" "))
+                    )
+                })
+                .collect::<String>();
+            let limitations = performance
+                .limitations
+                .iter()
+                .map(|limitation| format!("<li>{}</li>", html(limitation)))
+                .collect::<String>();
+            let recommendations = if performance.recommendations.is_empty() {
+                "<li>No gaps were found by these local timing hints.</li>".into()
+            } else {
+                performance
+                    .recommendations
+                    .iter()
+                    .map(|recommendation| format!("<li>{}</li>", html(recommendation)))
+                    .collect::<String>()
+            };
+            format!(
+                r#"<details class="rubric performance"><summary><span>{}</span><strong>{}/{} · {}</strong></summary><p>{}</p><ul>{}</ul><p class="rubric-recommendations">Suggested next steps</p><ul>{}</ul><p class="rubric-limits">Limits</p><ul>{}</ul></details>"#,
+                html(&performance.label),
+                performance.score,
+                performance.max_score,
+                provenance(performance.provenance),
+                html(&performance.calculation),
+                dimensions,
+                recommendations,
+                limitations
+            )
+        }).unwrap_or_default();
+        out.push_str(&format!(r#"</div></details>{}{}{}{}<dl class="provenance"><dt>Proposal</dt><dd>{}</dd><dt>Checks</dt><dd>{}</dd><dt>Growth outcome</dt><dd>{}</dd></dl><p class="diff-summary"><strong>{}</strong> files changed <span>+{} / −{} text lines</span></p>"#,
+            rubric,quality,render,performance,provenance(row.implementation_provenance),provenance(row.check_provenance),provenance(row.outcome_provenance),row.files_changed,row.lines_added,row.lines_removed));
         if let Some(summary) = &row.implementation_summary {
             out.push_str(&format!(
                 "<p class=\"implementation\">{}</p>",

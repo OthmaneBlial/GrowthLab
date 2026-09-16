@@ -4,7 +4,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { isCurrentScope, workspaceKey, workspaceScope } from "../queries/client";
 import { useThemePreference } from "../theme";
 import { Spinner } from "../components/ui";
-import { growth, type ApplyPreview, type Execution, type Hypothesis, type Provenance, type GrowthPlaybook, type PlaybookRun, type PublicRepositoryAudit, type RemoteSeoAudit, type PageQualityRubric, type RenderRubric } from "./api";
+import { growth, type ApplyPreview, type Execution, type Hypothesis, type Provenance, type GrowthPlaybook, type PlaybookRun, type PublicRepositoryAudit, type RemoteSeoAudit, type PageQualityRubric, type RenderRubric, type PerformanceRubric } from "./api";
 import { inspectionTab, runPhase, selectedVariant, variantRun, type InspectionTab } from "./view";
 import { StaticPreviewPanel } from "./StaticPreviewPanel";
 import { MeasurementPanel } from "./MeasurementPanel";
@@ -28,7 +28,7 @@ function HypothesisEvidence({ hypothesis }: { hypothesis: Hypothesis }) {
     <div><span className="growth-eyebrow">Skeptic's notes</span><ul>{hypothesis.risks.map((risk) => <li key={risk}>{risk}</li>)}</ul></div>
   </div>;
 }
-function QualityRubricDetails({ rubric }: { rubric: PageQualityRubric | RenderRubric }) {
+function QualityRubricDetails({ rubric }: { rubric: PageQualityRubric | RenderRubric | PerformanceRubric }) {
   return <details className="growth-seo-rubric growth-quality-rubric"><summary><span>{rubric.label}</span><strong>{rubric.score} / {rubric.maxScore} · {rubric.provenance}</strong></summary><p className="growth-muted">{rubric.calculation}</p><div className="growth-seo-dimensions">{rubric.dimensions.map((dimension) => <article className={`growth-seo-dimension growth-seo-dimension-${dimension.status}`} key={dimension.key}><div className="growth-line"><strong>{dimension.label}</strong><span>{dimension.score} / {dimension.maxScore}</span></div>{dimension.evidence.map((evidence) => <p key={evidence}>{evidence}</p>)}</article>)}</div><div className="growth-seo-recommendations"><strong>Suggested next steps</strong><ul>{rubric.recommendations.length ? rubric.recommendations.map((recommendation) => <li key={recommendation}>{recommendation}</li>) : <li>No gaps were found by this local review.</li>}</ul></div><ul className="growth-seo-limitations">{rubric.limitations.map((limitation) => <li key={limitation}>{limitation}</li>)}</ul></details>;
 }
 
@@ -295,6 +295,7 @@ export function GrowthDashboard({ battleId, projectId }: { battleId?: string; pr
                 {row?.rubric && <details className="growth-seo-rubric"><summary><span>{row.rubric.label}</span><strong>{row.rubric.score} / {row.rubric.maxScore} · {row.rubric.provenance}</strong></summary><p className="growth-muted">{row.rubric.calculation}</p><div className="growth-seo-dimensions">{row.rubric.dimensions.map((dimension) => <article className={`growth-seo-dimension growth-seo-dimension-${dimension.status}`} key={dimension.key}><div className="growth-line"><strong>{dimension.label}</strong><span>{dimension.score} / {dimension.maxScore}</span></div>{dimension.evidence.map((evidence) => <p key={evidence}>{evidence}</p>)}</article>)}</div><div className="growth-seo-recommendations"><strong>Suggested next steps</strong><ul>{row.rubric.recommendations.length ? row.rubric.recommendations.map((recommendation) => <li key={recommendation}>{recommendation}</li>) : <li>No structural gaps were found by this local rubric.</li>}</ul></div><ul className="growth-seo-limitations">{row.rubric.limitations.map((limitation) => <li key={limitation}>{limitation}</li>)}</ul></details>}
                 {row?.quality && <QualityRubricDetails rubric={row.quality} />}
                 {row?.render && <QualityRubricDetails rubric={row.render} />}
+                {row?.performance && <QualityRubricDetails rubric={row.performance} />}
                 {captured?.run.error && <p className="growth-check-error">{captured.run.error}</p>}
                 <div className="growth-provenance"><div><span>Proposal</span><Mark value={captured?.run.provenance ?? "UNTESTED"} /></div><div><span>Growth outcome</span><Mark value={captured?.run.outcomeProvenance ?? "UNTESTED"} /></div><div><span>Confidence</span><strong>{row?.confidence.label ?? captured?.run.confidence.label ?? hypothesis.confidence.label}</strong></div></div>
                 <p className="growth-muted growth-confidence">{row?.confidence.rationale ?? hypothesis.confidence.rationale}</p><button className="growth-text-button" onClick={() => {setFocused(item.id); setTab("artifacts");}}>Inspect diff & captured logs →</button>

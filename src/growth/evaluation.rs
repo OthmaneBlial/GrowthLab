@@ -35,6 +35,8 @@ pub struct EvaluationRow {
     pub quality: Option<PageQualityRubric>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub render: Option<RenderRubric>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub performance: Option<RenderRubric>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -706,6 +708,172 @@ pub fn render_rubric(preview: &super::preview::PreviewRecord) -> Option<RenderRu
     })
 }
 
+/// Score timing observations from the local Chromium capture. The thresholds
+/// are deliberately small, transparent hints; they are not Web Vitals, a
+/// Lighthouse score, or evidence from real users.
+pub fn performance_rubric(preview: &super::preview::PreviewRecord) -> Option<RenderRubric> {
+    if preview.render_checks.is_empty()
+        || !preview.render_checks.iter().any(|check| {
+            check.dom_content_loaded_ms.is_some()
+                || check.load_ms.is_some()
+                || check.first_contentful_paint_ms.is_some()
+        })
+    {
+        return None;
+    }
+    let expected = ["desktop", "phone"];
+    let check_for = |viewport: &str| {
+        preview
+            .render_checks
+            .iter()
+            .find(|check| check.viewport == viewport)
+    };
+    let timing = |value: Option<u64>, fast: u64, acceptable: u64, slow: u64, max: u8| {
+        value.map_or(0, |value| {
+            if value <= fast {
+                max
+            } else if value <= acceptable {
+                max.saturating_sub(1)
+            } else if value <= slow {
+                1
+            } else {
+                0
+            }
+        })
+    };
+    let fcp_score = expected
+        .iter()
+        .map(|viewport| {
+            timing(
+                check_for(viewport).and_then(|check| check.first_contentful_paint_ms),
+                1200,
+                2500,
+                5000,
+                4,
+            )
+        })
+        .sum::<u8>();
+    let dom_score = expected
+        .iter()
+        .map(|viewport| {
+            timing(
+                check_for(viewport).and_then(|check| check.dom_content_loaded_ms),
+                1000,
+                2000,
+                4000,
+                2,
+            )
+        })
+        .sum::<u8>();
+    let load_score = expected
+        .iter()
+        .map(|viewport| {
+            timing(
+                check_for(viewport).and_then(|check| check.load_ms),
+                2000,
+                4000,
+                8000,
+                2,
+            )
+        })
+        .sum::<u8>();
+    let integrity_score = expected
+        .iter()
+        .filter(|viewport| {
+            check_for(viewport).is_some_and(|check| {
+                check.provenance == "OBSERVED"
+                    && !check.limitation.trim().is_empty()
+                    && check.dom_content_loaded_ms.is_some()
+                    && check.load_ms.is_some()
+                    && check.first_contentful_paint_ms.is_some()
+            })
+        })
+        .count() as u8
+        * 2;
+    let evidence_for = |viewport: &str| {
+        check_for(viewport).map_or_else(
+            || format!("{viewport}: no local timing check was archived."),
+            |check| {
+                format!(
+                    "{viewport}: DOM ready {} ms; load {} ms; first contentful paint {} ms.",
+                    check
+                        .dom_content_loaded_ms
+                        .map_or_else(|| "not recorded".into(), |value| value.to_string()),
+                    check
+                        .load_ms
+                        .map_or_else(|| "not recorded".into(), |value| value.to_string()),
+                    check
+                        .first_contentful_paint_ms
+                        .map_or_else(|| "not recorded".into(), |value| value.to_string()),
+                )
+            },
+        )
+    };
+    let dimensions = vec![
+        dimension(
+            "first-contentful-paint",
+            "First contentful paint",
+            fcp_score,
+            8,
+            expected.iter().map(|viewport| evidence_for(viewport)),
+        ),
+        dimension(
+            "dom-content-loaded",
+            "DOM content loaded",
+            dom_score,
+            4,
+            expected.iter().map(|viewport| evidence_for(viewport)),
+        ),
+        dimension(
+            "load-complete",
+            "Load complete",
+            load_score,
+            4,
+            expected.iter().map(|viewport| evidence_for(viewport)),
+        ),
+        dimension(
+            "timing-integrity",
+            "Timing metadata",
+            integrity_score,
+            4,
+            expected.iter().map(|viewport| evidence_for(viewport)),
+        ),
+    ];
+    let mut recommendations = Vec::new();
+    if fcp_score < 8 {
+        recommendations.push(
+            "Inspect blocking resources and first paint timing in the affected local capture."
+                .into(),
+        );
+    }
+    if dom_score < 4 {
+        recommendations.push("Reduce parser-blocking work before the DOM becomes ready.".into());
+    }
+    if load_score < 4 {
+        recommendations.push("Inspect local resource loading and defer non-essential work.".into());
+    }
+    if integrity_score < 4 {
+        recommendations.push(
+            "Keep complete observed timing metadata and limitations for both viewports.".into(),
+        );
+    }
+    Some(RenderRubric {
+        id: "browser-timing-hints-v1".into(),
+        label: "Local browser timing hints (observed)".into(),
+        score: dimensions.iter().map(|item| item.score as u16).sum::<u16>() as u8,
+        max_score: 20,
+        provenance: Provenance::Observed,
+        dimensions,
+        recommendations,
+        calculation: "20-point observed browser-timing review: first contentful paint 8, DOM content loaded 4, load complete 4 and timing metadata integrity 4. Thresholds are local hints and do not represent Lighthouse, Core Web Vitals or real-user performance.".into(),
+        limitations: vec![
+            "Timings come from one sanitized static document in the locally installed Chromium build; when file:// does not expose a paint entry, the first-paint value is a first rendered frame proxy. They are not field data or a Core Web Vital.".into(),
+            "The thresholds are heuristic and do not account for network conditions, device diversity, CPU contention or repeat-view caching.".into(),
+            "No Lighthouse audit, accessibility audit, visual regression comparison or growth outcome is included.".into(),
+        ],
+    })
+}
+
 fn html_for_run<'a>(
     battle: &GrowthBattle,
     run: &'a super::battle_model::BattleRun,
@@ -746,10 +914,10 @@ pub trait BattleEvaluator {
 pub struct ConfiguredCommandEvaluator;
 impl BattleEvaluator for ConfiguredCommandEvaluator {
     fn id(&self) -> &str {
-        "configured-command-pass-v1+seo-page-hygiene-v1+static-render-hints-v1"
+        "configured-command-pass-v1+seo-page-hygiene-v1+static-render-hints-v1+browser-timing-hints-v1"
     }
     fn calculation(&self) -> &str {
-        "Configured command pass fraction is shown alongside independent estimated SEO/page-quality hints and observed static-render checks. Eligibility requires a successful sealed run, the exact frozen command list and one immutable candidate commit; none of these signals proves traffic, ranking or conversion lift."
+        "Configured command pass fraction is shown alongside independent estimated SEO/page-quality hints, observed static-render checks and optional observed browser-timing hints. Eligibility requires a successful sealed run, the exact frozen command list and one immutable candidate commit; none of these signals proves traffic, ranking, performance, accessibility or conversion lift."
     }
     fn evaluate(
         &self,
@@ -782,7 +950,10 @@ impl BattleEvaluator for ConfiguredCommandEvaluator {
         let render = sealed
             .and_then(|sealed| sealed.run.static_preview.as_ref())
             .and_then(render_rubric);
-        EvaluationRow { variant_id:variant_id.into(),hypothesis_id:None,title:title.into(),status:run.map(|run|run.status.clone()).unwrap_or("untested".into()),passed_commands:passed,required_commands:required,pass_fraction:(!checks.is_empty() && required>0).then_some(passed as f64 / required.max(1) as f64),eligible:required>0 && matches && passed==required && run.is_some_and(|run|run.status=="done"),checks,implementation_provenance:run.map(|run|run.provenance).unwrap_or(Provenance::Untested),check_provenance:if run.is_some_and(|run|!run.validations.is_empty()) {Provenance::Observed} else {Provenance::Untested},outcome_provenance:Provenance::Untested,confidence:Confidence { label:ConfidenceLabel::Low,rationale:"Command checks and structural SEO, page-quality or static-render signals cannot establish outcome lift; candidate choice needs user review and real product evidence.".into() },archive_digest:sealed.map(|sealed|sealed.archive_digest.clone()),rubric,quality,render }
+        let performance = sealed
+            .and_then(|sealed| sealed.run.static_preview.as_ref())
+            .and_then(performance_rubric);
+        EvaluationRow { variant_id:variant_id.into(),hypothesis_id:None,title:title.into(),status:run.map(|run|run.status.clone()).unwrap_or("untested".into()),passed_commands:passed,required_commands:required,pass_fraction:(!checks.is_empty() && required>0).then_some(passed as f64 / required.max(1) as f64),eligible:required>0 && matches && passed==required && run.is_some_and(|run|run.status=="done"),checks,implementation_provenance:run.map(|run|run.provenance).unwrap_or(Provenance::Untested),check_provenance:if run.is_some_and(|run|!run.validations.is_empty()) {Provenance::Observed} else {Provenance::Untested},outcome_provenance:Provenance::Untested,confidence:Confidence { label:ConfidenceLabel::Low,rationale:"Command checks and structural SEO, page-quality or static-render signals cannot establish outcome lift; candidate choice needs user review and real product evidence.".into() },archive_digest:sealed.map(|sealed|sealed.archive_digest.clone()),rubric,quality,render,performance }
     }
 }
 
@@ -852,7 +1023,7 @@ pub fn compare_with(
 
 #[cfg(test)]
 mod tests {
-    use super::{page_quality_rubric, render_rubric, seo_rubric, Provenance};
+    use super::{page_quality_rubric, performance_rubric, render_rubric, seo_rubric, Provenance};
     use crate::growth::preview::{PreviewRecord, PreviewRenderCheck, PreviewStatus};
 
     #[test]
@@ -997,6 +1168,60 @@ mod tests {
             .limitations
             .iter()
             .any(|limitation| limitation.contains("Lighthouse")));
+    }
+
+    #[test]
+    fn performance_rubric_scores_complete_observed_timings_without_web_vitals_claims() {
+        let check = |viewport: &str| PreviewRenderCheck {
+            viewport: viewport.into(),
+            width: if viewport == "desktop" { 1280 } else { 390 },
+            height: if viewport == "desktop" { 900 } else { 844 },
+            viewport_matches: true,
+            body_text_chars: 240,
+            horizontal_overflow: false,
+            dom_content_loaded_ms: Some(80),
+            load_ms: Some(140),
+            first_contentful_paint_ms: Some(180),
+            provenance: "OBSERVED".into(),
+            limitation: "Local timing trace only.".into(),
+        };
+        let preview = PreviewRecord {
+            producer: "static-page-bundle-v1".into(),
+            status: PreviewStatus::Ready,
+            source_commit: "a".repeat(40),
+            document_digest: Some("b".repeat(64)),
+            sources: vec![],
+            screenshots: vec![],
+            render_checks: vec![check("desktop"), check("phone")],
+            blocked_resources: 0,
+            limitation: "Local static preview.".into(),
+        };
+        let rubric = performance_rubric(&preview).expect("timings produce a performance rubric");
+        assert_eq!(rubric.id, "browser-timing-hints-v1");
+        assert_eq!(rubric.provenance, Provenance::Observed);
+        assert_eq!(rubric.score, 20);
+        assert_eq!(rubric.max_score, 20);
+        assert!(rubric.recommendations.is_empty());
+        assert!(rubric
+            .limitations
+            .iter()
+            .any(|limitation| limitation.contains("Core Web Vital")));
+    }
+
+    #[test]
+    fn performance_rubric_stays_absent_without_timing_entries() {
+        let preview = PreviewRecord {
+            producer: "static-page-bundle-v1".into(),
+            status: PreviewStatus::Ready,
+            source_commit: "a".repeat(40),
+            document_digest: Some("b".repeat(64)),
+            sources: vec![],
+            screenshots: vec![],
+            render_checks: vec![],
+            blocked_resources: 0,
+            limitation: "Legacy archive.".into(),
+        };
+        assert!(performance_rubric(&preview).is_none());
     }
 
     #[test]

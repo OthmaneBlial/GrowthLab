@@ -485,16 +485,23 @@ fn audit_document(document: &[u8], width: u32) -> Option<Vec<u8>> {
     // inline probe below, then is discarded with the browser's private temp dir.
     html = html.replacen("script-src 'none'", "script-src 'unsafe-inline'", 1);
     let probe = r#"<script>(function(){
-const n=performance.getEntriesByType('navigation')[0];
-const p=performance.getEntriesByType('paint').find(function(e){return e.name==='first-contentful-paint'});
-const body=document.body;
-const root=document.documentElement;
-// Headless Chrome keeps a small layout viewport floor even when the archived
-// PNG is requested at a narrower phone width. Treat the requested width as
-// covered when the layout viewport is at least that wide; the PNG dimensions
-// are validated separately before the check is archived.
-const value={viewportMatches:window.innerWidth>=WIDTH,bodyTextChars:body?body.innerText.trim().length:0,horizontalOverflow:root.scrollWidth>window.innerWidth+1,domContentLoadedMs:n&&n.domContentLoadedEventEnd>0?Math.round(n.domContentLoadedEventEnd):null,loadMs:n&&n.loadEventEnd>0?Math.round(n.loadEventEnd):null,firstContentfulPaintMs:p&&p.startTime>0?Math.round(p.startTime):null};
-const out=document.createElement('pre');out.id='growthlab-render-audit';out.textContent='__GROWTHLAB_RENDER_AUDIT__'+JSON.stringify(value);(body||document.documentElement).append(out);
+let emitted=false;
+function emit(){
+  if(emitted)return;
+  emitted=true;
+  const n=performance.getEntriesByType('navigation')[0];
+  const p=performance.getEntriesByType('paint').find(function(e){return e.name==='first-contentful-paint'});
+  const body=document.body;
+  const root=document.documentElement;
+  // Headless Chrome keeps a small layout viewport floor even when the archived
+  // PNG is requested at a narrower phone width. Treat the requested width as
+  // covered when the layout viewport is at least that wide; the PNG dimensions
+  // are validated separately before the check is archived.
+  const value={viewportMatches:window.innerWidth>=WIDTH,bodyTextChars:body?body.innerText.trim().length:0,horizontalOverflow:root.scrollWidth>window.innerWidth+1,domContentLoadedMs:n&&n.domContentLoadedEventEnd>0?Math.round(n.domContentLoadedEventEnd):null,loadMs:n&&n.loadEventEnd>0?Math.round(n.loadEventEnd):null,firstContentfulPaintMs:p&&p.startTime>0?Math.round(p.startTime):Math.round(performance.now())};
+  const out=document.createElement('pre');out.id='growthlab-render-audit';out.textContent='__GROWTHLAB_RENDER_AUDIT__'+JSON.stringify(value);(body||document.documentElement).append(out);
+}
+window.addEventListener('load',function(){requestAnimationFrame(function(){setTimeout(emit,0)})},{once:true});
+setTimeout(emit,900);
 })();</script>"#;
     let probe = probe.replace("WIDTH", &width.to_string());
     let position = html.to_ascii_lowercase().rfind("</body>");
@@ -536,7 +543,7 @@ fn parse_render_check(
         load_ms: number("loadMs"),
         first_contentful_paint_ms: number("firstContentfulPaintMs"),
         provenance: "OBSERVED".into(),
-        limitation: "Local Chromium trace of the sanitized static document. It is not a Lighthouse score, Core Web Vital, accessibility audit, visual regression or real-user performance measurement.".into(),
+        limitation: "Local Chromium trace of the sanitized static document. When file:// does not expose a paint entry, first contentful paint uses the first rendered frame as a local proxy. It is not a Lighthouse score, Core Web Vital, accessibility audit, visual regression or real-user performance measurement.".into(),
     })
 }
 
@@ -677,7 +684,7 @@ fn bundle(
             }
         }
     }
-    let record = PreviewRecord { producer: PRODUCER.into(), status: PreviewStatus::Ready, source_commit: commit.into(), document_digest: Some(digest(&document_bytes)), sources, screenshots, render_checks, blocked_resources: resources.blocked.get(), limitation: "Archived static source with optional local Chromium render captures and static layout checks. PNGs are render artifacts; checks are OBSERVED local traces, not a visual regression result, Lighthouse score, accessibility audit, Core Web Vital, real-user performance measurement or growth outcome. Supported local styles/images/fonts are bundled; scripts, forms and navigation are removed, external/unsupported resources omitted. Display only in an opaque, inert sandbox frame. Dynamic apps and CSS image-set string sources are not reproduced. If no compatible browser is installed or it cannot render safely, no screenshot or render check is fabricated.".into() };
+    let record = PreviewRecord { producer: PRODUCER.into(), status: PreviewStatus::Ready, source_commit: commit.into(), document_digest: Some(digest(&document_bytes)), sources, screenshots, render_checks, blocked_resources: resources.blocked.get(), limitation: "Archived static source with optional local Chromium render captures and static layout checks. PNGs are render artifacts; checks are OBSERVED local traces, not a visual regression result, Lighthouse score, accessibility audit, Core Web Vital, real-user performance measurement or growth outcome. When file:// does not expose a paint entry, first contentful paint uses the first rendered frame as a local proxy. Supported local styles/images/fonts are bundled; scripts, forms and navigation are removed, external/unsupported resources omitted. Display only in an opaque, inert sandbox frame. Dynamic apps and CSS image-set string sources are not reproduced. If no compatible browser is installed or it cannot render safely, no screenshot or render check is fabricated.".into() };
     archived.insert(DOCUMENT.into(), document_bytes);
     archived.insert(METADATA.into(), serde_json::to_vec(&record)?);
     Ok((record, archived))
