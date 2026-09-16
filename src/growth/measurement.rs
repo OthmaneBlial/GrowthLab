@@ -14,6 +14,7 @@ const MAX_CSV_BYTES: u64 = 8 * 1024 * 1024;
 const MAX_ROWS: usize = 100_000;
 const MAX_COLUMNS: usize = 64;
 const MAX_FIELD_BYTES: usize = 4096;
+const NORMAL_95_Z: f64 = 1.959_963_984_540_054;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
 pub enum MeasurementFormat {
@@ -30,10 +31,26 @@ pub struct DateRange {
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
+pub struct MeasurementInterval {
+    pub lower: f64,
+    pub upper: f64,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct MeasurementAnalysis {
+    pub method: &'static str,
+    pub confidence_level_percent: u8,
+    pub assumptions: Vec<&'static str>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct MeasurementComparison {
     pub baseline_mean: f64,
     pub difference: f64,
     pub relative_change_percent: Option<f64>,
+    pub difference_interval_95: Option<MeasurementInterval>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -44,6 +61,8 @@ pub struct MeasurementGroup {
     pub sample_size: usize,
     pub total: f64,
     pub mean: f64,
+    pub sample_stddev: Option<f64>,
+    pub mean_interval_95: Option<MeasurementInterval>,
     pub comparison: Option<MeasurementComparison>,
 }
 
@@ -57,6 +76,7 @@ pub struct MeasurementReport {
     pub rows_included: usize,
     pub baseline_variant: String,
     pub date_range: Option<DateRange>,
+    pub analysis: MeasurementAnalysis,
     pub groups: Vec<MeasurementGroup>,
     pub warnings: Vec<String>,
 }
@@ -75,6 +95,71 @@ struct ColumnIndexes {
     value: usize,
     metric: Option<usize>,
     timestamp: Option<usize>,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct Accumulator {
+    sample_size: usize,
+    total: f64,
+    sum_squares: f64,
+}
+
+impl Accumulator {
+    fn add(&mut self, value: f64) -> Result<()> {
+        self.sample_size += 1;
+        self.total += value;
+        self.sum_squares += value * value;
+        if !self.total.is_finite() || !self.sum_squares.is_finite() {
+            return Err(anyhow!(
+                "Measurement totals exceed the supported numeric range"
+            ));
+        }
+        Ok(())
+    }
+
+    fn sample_stddev(self) -> Option<f64> {
+        if self.sample_size < 2 {
+            return None;
+        }
+        let n = self.sample_size as f64;
+        let numerator = self.sum_squares - self.total * self.total / n;
+        if !numerator.is_finite() {
+            return None;
+        }
+        Some((numerator.max(0.0) / (n - 1.0)).sqrt())
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct GroupStats {
+    sample_size: usize,
+    total: f64,
+    mean: f64,
+    sample_stddev: Option<f64>,
+}
+
+fn mean_interval(stats: GroupStats) -> Option<MeasurementInterval> {
+    let standard_error = stats.sample_stddev? / (stats.sample_size as f64).sqrt();
+    let margin = NORMAL_95_Z * standard_error;
+    let lower = stats.mean - margin;
+    let upper = stats.mean + margin;
+    (lower.is_finite() && upper.is_finite()).then_some(MeasurementInterval { lower, upper })
+}
+
+fn difference_interval(variant: GroupStats, baseline: GroupStats) -> Option<MeasurementInterval> {
+    if variant.sample_size < 2 || baseline.sample_size < 2 {
+        return None;
+    }
+    let variant_variance = variant.sample_stddev?.powi(2);
+    let baseline_variance = baseline.sample_stddev?.powi(2);
+    let standard_error = (variant_variance / variant.sample_size as f64
+        + baseline_variance / baseline.sample_size as f64)
+        .sqrt();
+    let margin = NORMAL_95_Z * standard_error;
+    let difference = variant.mean - baseline.mean;
+    let lower = difference - margin;
+    let upper = difference + margin;
+    (lower.is_finite() && upper.is_finite()).then_some(MeasurementInterval { lower, upper })
 }
 
 pub fn read_csv(path: &Path) -> Result<String> {
@@ -333,7 +418,7 @@ fn summarize(
     has_timestamp: bool,
 ) -> Result<MeasurementReport> {
     let baseline_variant = bounded_text(baseline_variant, "baseline variant")?;
-    let mut accumulators = std::collections::BTreeMap::<(String, String), (usize, f64)>::new();
+    let mut accumulators = std::collections::BTreeMap::<(String, String), Accumulator>::new();
     let mut dates = observations
         .iter()
         .filter_map(|observation| observation.timestamp.as_deref());
@@ -348,21 +433,23 @@ fn summarize(
     });
     for observation in observations {
         let key = (observation.metric.clone(), observation.variant.clone());
-        let entry = accumulators.entry(key).or_insert((0, 0.0));
-        entry.0 += 1;
-        entry.1 += observation.value;
-        if !entry.1.is_finite() {
-            return Err(anyhow!(
-                "Measurement totals exceed the supported numeric range"
-            ));
-        }
+        accumulators
+            .entry(key)
+            .or_default()
+            .add(observation.value)?;
     }
-    let means = accumulators
+    let stats = accumulators
         .iter()
-        .map(|((metric, variant), (sample_size, total))| {
+        .map(|((metric, variant), accumulator)| {
+            let mean = accumulator.total / accumulator.sample_size as f64;
             (
                 (metric.clone(), variant.clone()),
-                *total / *sample_size as f64,
+                GroupStats {
+                    sample_size: accumulator.sample_size,
+                    total: accumulator.total,
+                    mean,
+                    sample_stddev: accumulator.sample_stddev(),
+                },
             )
         })
         .collect::<std::collections::BTreeMap<_, _>>();
@@ -375,17 +462,24 @@ fn summarize(
         );
     }
     let mut groups = Vec::with_capacity(accumulators.len());
-    for ((metric, variant), (sample_size, total)) in accumulators {
-        let mean = total / sample_size as f64;
-        let comparison =
-            means
-                .get(&(metric.clone(), baseline_variant.clone()))
-                .map(|baseline_mean| MeasurementComparison {
-                    baseline_mean: *baseline_mean,
-                    difference: mean - baseline_mean,
-                    relative_change_percent: (*baseline_mean != 0.0)
-                        .then_some((mean - baseline_mean) / baseline_mean.abs() * 100.0),
-                });
+    for ((metric, variant), _) in accumulators {
+        let group_stats = stats
+            .get(&(metric.clone(), variant.clone()))
+            .copied()
+            .expect("stats for every accumulator");
+        let comparison = stats
+            .get(&(metric.clone(), baseline_variant.clone()))
+            .copied()
+            .map(|baseline_stats| MeasurementComparison {
+                baseline_mean: baseline_stats.mean,
+                difference: group_stats.mean - baseline_stats.mean,
+                relative_change_percent: (baseline_stats.mean != 0.0).then_some(
+                    (group_stats.mean - baseline_stats.mean) / baseline_stats.mean.abs() * 100.0,
+                ),
+                difference_interval_95: (variant != baseline_variant)
+                    .then(|| difference_interval(group_stats, baseline_stats))
+                    .flatten(),
+            });
         if variant != baseline_variant && comparison.is_none() {
             warnings.push(format!(
                 "Metric '{metric}' has no '{baseline_variant}' baseline; its variants are shown without comparison."
@@ -394,9 +488,11 @@ fn summarize(
         groups.push(MeasurementGroup {
             metric,
             variant,
-            sample_size,
-            total,
-            mean,
+            sample_size: group_stats.sample_size,
+            total: group_stats.total,
+            mean: group_stats.mean,
+            sample_stddev: group_stats.sample_stddev,
+            mean_interval_95: mean_interval(group_stats),
             comparison,
         });
     }
@@ -408,6 +504,16 @@ fn summarize(
         rows_included: observations.len(),
         baseline_variant,
         date_range,
+        analysis: MeasurementAnalysis {
+            method: "normal_approximation",
+            confidence_level_percent: 95,
+            assumptions: vec![
+                "Intervals are descriptive and use an independent-observation normal approximation.",
+                "A mean interval requires at least two observations in that group.",
+                "A difference interval requires at least two observations in both variant and baseline groups.",
+                "Intervals are not a significance test, causal estimate or winner decision.",
+            ],
+        },
         groups,
         warnings,
     })
@@ -451,6 +557,18 @@ fn markdown_number(value: f64) -> String {
         .to_owned()
 }
 
+fn markdown_interval(interval: Option<&MeasurementInterval>) -> String {
+    interval
+        .map(|interval| {
+            format!(
+                "[{}, {}]",
+                markdown_number(interval.lower),
+                markdown_number(interval.upper)
+            )
+        })
+        .unwrap_or_else(|| "—".into())
+}
+
 pub fn markdown(report: &MeasurementReport) -> String {
     let cell = |value: &str| value.replace('|', "\\|").replace('\n', " ");
     let mut output = format!(
@@ -462,32 +580,47 @@ pub fn markdown(report: &MeasurementReport) -> String {
         report.rows_included,
         report.baseline_variant
     );
-    output.push_str("## Observations\n\n| Metric | Variant | Mean | Sample size | Baseline mean | Difference | Relative change |\n| --- | --- | ---: | ---: | ---: | ---: | ---: |\n");
+    output.push_str("## Observations\n\n| Metric | Variant | Mean | Sample size | Sample SD | Mean 95% interval | Baseline mean | Difference | Difference 95% interval | Relative change |\n| --- | --- | ---: | ---: | ---: | --- | ---: | ---: | --- | ---: |\n");
     for group in &report.groups {
-        let (baseline, difference, relative) = group
+        let (baseline, difference, difference_interval, relative) = group
             .comparison
             .as_ref()
             .map(|comparison| {
                 (
                     markdown_number(comparison.baseline_mean),
                     markdown_number(comparison.difference),
+                    markdown_interval(comparison.difference_interval_95.as_ref()),
                     comparison
                         .relative_change_percent
                         .map(|value| format!("{}%", markdown_number(value)))
                         .unwrap_or_else(|| "—".into()),
                 )
             })
-            .unwrap_or_else(|| ("—".into(), "—".into(), "—".into()));
+            .unwrap_or_else(|| ("—".into(), "—".into(), "—".into(), "—".into()));
         output.push_str(&format!(
-            "| {} | {} | {} | {} | {} | {} | {} |\n",
+            "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |\n",
             cell(&group.metric),
             cell(&group.variant),
             markdown_number(group.mean),
             group.sample_size,
+            group
+                .sample_stddev
+                .map(markdown_number)
+                .unwrap_or_else(|| "—".into()),
+            markdown_interval(group.mean_interval_95.as_ref()),
             baseline,
             difference,
+            difference_interval,
             relative
         ));
+    }
+    output.push_str("\n## Exploratory interval method\n\n");
+    output.push_str(&format!(
+        "{}% normal approximation. Intervals are descriptive only; they do not establish statistical significance, causality or a winner.\n",
+        report.analysis.confidence_level_percent
+    ));
+    for assumption in &report.analysis.assumptions {
+        output.push_str(&format!("- {assumption}\n"));
     }
     output.push_str("\n## Date range\n\n");
     if let Some(date_range) = &report.date_range {
@@ -543,11 +676,64 @@ mod tests {
             .unwrap();
         assert_eq!(hero.sample_size, 1);
         assert_eq!(hero.mean, 15.0);
+        assert_eq!(hero.sample_stddev, None);
+        assert_eq!(hero.mean_interval_95, None);
         assert_eq!(hero.comparison.as_ref().unwrap().baseline_mean, 15.0);
         assert_eq!(
             hero.comparison.as_ref().unwrap().relative_change_percent,
             Some(0.0)
         );
+        assert_eq!(
+            hero.comparison.as_ref().unwrap().difference_interval_95,
+            None
+        );
+        let baseline = report
+            .groups
+            .iter()
+            .find(|group| group.variant == "baseline")
+            .unwrap();
+        assert_eq!(baseline.sample_stddev, Some(7.0710678118654755));
+        let interval = baseline.mean_interval_95.as_ref().unwrap();
+        assert!((interval.lower - 5.2).abs() < 0.01);
+        assert!((interval.upper - 24.8).abs() < 0.01);
+        assert_eq!(report.analysis.method, "normal_approximation");
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn computes_difference_interval_only_when_both_groups_have_repeated_observations() {
+        let (dir, path) = write_fixture(
+            "variant,value
+base,10
+base,20
+hero,14
+hero,22
+",
+        );
+        let report = import(
+            &path,
+            "base",
+            None,
+            "variant",
+            "value",
+            "metric",
+            "timestamp",
+        )
+        .unwrap();
+        let hero = report
+            .groups
+            .iter()
+            .find(|group| group.variant == "hero")
+            .unwrap();
+        let interval = hero
+            .comparison
+            .as_ref()
+            .unwrap()
+            .difference_interval_95
+            .as_ref()
+            .unwrap();
+        assert!((interval.lower + 9.55).abs() < 0.02);
+        assert!((interval.upper - 15.55).abs() < 0.02);
         std::fs::remove_dir_all(dir).unwrap();
     }
 

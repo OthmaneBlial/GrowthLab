@@ -50,6 +50,8 @@
 .growth-measurement-table th,.growth-measurement-table td { border-top:1px solid var(--border); padding:10px 8px; text-align:left; }
 .growth-measurement-table th { font-family:var(--mono); font-size:0.5625rem; text-transform:uppercase; letter-spacing:0.04em; }
 .growth-measurement-limit { margin-top:16px; color:var(--subtext); font-size:0.6875rem; }
+.growth-measurement-analysis { margin-top:18px; padding-top:16px; border-top:1px solid var(--border); font-size:0.6875rem; }
+.growth-measurement-analysis p { margin-top:10px; }
 .growth-demo-launch { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:28px; padding:24px; margin-bottom:28px; border:1px solid var(--border); background:var(--surface); }
 .growth-demo-launch h2 { font-family:Georgia,serif; font-weight:400; font-size:1.5rem; line-height:1.2; margin:10px 0; }
 .growth-demo-launch p { color:var(--subtext); font-size:0.75rem; line-height:1.8; max-width:620px; }

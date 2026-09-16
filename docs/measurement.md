@@ -21,11 +21,20 @@ timestamp,variant,metric,value
 ```
 
 The command reports each metric/variant mean, sample size, total, the supplied
-baseline mean, arithmetic difference and relative change. It also preserves
-the first and last timestamp labels when a timestamp column is present. Use
+baseline mean, arithmetic difference and relative change. Groups with at least
+two rows also include a sample standard deviation and an exploratory 95% mean
+interval. A variant/baseline difference interval is shown only when both groups
+have at least two rows. It also preserves the first and last timestamp labels
+when a timestamp column is present. Use
 `--metric qualified_signup` to inspect one metric from a multi-metric export.
 Column names can be changed with `--variant-column`, `--value-column`,
 `--metric-column` and `--timestamp-column`.
+
+The interval method is a 95% normal approximation over independent observations
+(z = 1.96). It is deliberately descriptive: small samples, assignment quality,
+non-normal outcomes and repeated measurements can make the interval unsuitable.
+No p-value, significance decision or automatic winner is produced; a missing
+interval is shown when the sample-size requirement is not met.
 
 Results are labelled **MEASURED** because they are calculated from numeric rows
 the user supplied. That label does not verify the analytics provider, identity,

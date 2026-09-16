@@ -111,7 +111,8 @@ regular UTF-8 file up to 4 MiB and makes no network request. See
 [seo-audit.md](seo-audit.md).
 
 For user-supplied outcome rows, `growthlab measure --csv ./telemetry.csv`
-produces a local descriptive comparison with sample sizes, optional date range
-and arithmetic baseline differences. It is labelled **MEASURED** from the
-supplied CSV, does not contact a provider, and does not establish causality or
-statistical significance. See [measurement.md](measurement.md).
+produces a local descriptive comparison with sample sizes, optional date range,
+arithmetic baseline differences and exploratory 95% intervals when samples allow.
+It is labelled **MEASURED** from the supplied CSV, does not contact a provider,
+and does not establish causality or statistical significance. See
+[measurement.md](measurement.md) for the documented normal-approximation limits.

@@ -73,10 +73,11 @@ network request; see [seo-audit.md](seo-audit.md).
 When a product already has a local telemetry export, use the **Bring a local
 outcome export** panel on Home or summarize it from the terminal with
 `growthlab measure --csv ./telemetry.csv --format markdown`. Both paths report
-descriptive means, sample sizes, date range and arithmetic baseline comparisons
-from the supplied rows; they are labelled **MEASURED** and do not claim
-attribution or statistical significance. The browser panel reads the selected
-CSV in memory and sends no rows to a provider. See [measurement.md](measurement.md).
+descriptive means, sample sizes, date range and arithmetic baseline comparisons,
+plus exploratory 95% intervals when sample sizes allow. They are labelled
+**MEASURED** and do not claim attribution or statistical significance. The
+browser panel reads the selected CSV in memory and sends no rows to a provider.
+See [measurement.md](measurement.md) for the interval assumptions.
 
 Select a variant and switch between hypothesis/evidence, diff/files/logs and
 the optional static preview.
