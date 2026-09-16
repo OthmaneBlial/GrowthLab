@@ -83,6 +83,15 @@ def main():
                 assert preview["record"]["documentDigest"] == hashlib.sha256(preview["html"].encode()).hexdigest()
                 assert "script-src 'none'" in preview["html"] and "data:text/css;charset=utf-8;base64," in preview["html"]
                 assert len(preview["record"]["sources"]) == 2
+                screenshots = preview["record"].get("screenshots", [])
+                if os.environ.get("GROWTHLAB_REQUIRE_SCREENSHOT") == "1":
+                    assert screenshots, "A local Chromium capture was required but no PNG was archived."
+                for screenshot in screenshots:
+                    viewport = "desktop" if screenshot["path"].endswith("screenshot-desktop.png") else "phone"
+                    image = get(f"/api/growth/variants/{variant}/static-preview/{viewport}")
+                    assert len(image) == screenshot["size"]
+                    assert hashlib.sha256(image).hexdigest() == screenshot["digest"]
+                    assert image.startswith(b"\x89PNG\r\n\x1a\n")
                 log = json.loads(get(f"/api/growth/variants/{variant}/artifact?name=validation-0.log"))["text"]
                 assert "exactlyOnePrimaryHeading" in log
             html = get(f"/growth/{battle}").decode()

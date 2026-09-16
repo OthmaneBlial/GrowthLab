@@ -62,7 +62,9 @@ the optional static preview.
 The inspector reads verified archives or checkpoints, not mutable worktree files.
 Artifacts are displayed as escaped text. Configured static pages have a separate
 restricted preview of archived source; scripts and external resources are blocked.
-This is not a saved screenshot or visual quality score. See
+Ready runs also expose a verified desktop PNG captured from that sealed source
+when local Chromium is available. It is a render artifact, not a visual quality
+score. See
 [static-previews.md](static-previews.md). Private prompts and policy files are
 excluded from this viewer. Keyboard arrows, Home and End move between the three
 inspection tabs.
@@ -90,7 +92,7 @@ data-directory move. Project admission prevents local deletion during owned work
 This is not complete cross-process coordination for every inherited or CLI path.
 
 The source-alpha screens are English. Localization of GrowthLab screens, experiment
-tree, richer evaluators, automatic candidate screenshots, broader inputs, real
+tree, richer evaluators, concise recording, broader inputs, real
 telemetry and release packaging remain required
 work. The inherited eager UI bundle still produces a size warning. Linux confinement
 requires native runtime proof; Windows validation is unsupported. Resource quotas

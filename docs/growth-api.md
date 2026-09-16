@@ -22,6 +22,7 @@ to 1 MiB. The existing loopback/origin and remote-host authentication guards app
 | GET | `/variants/{id}/artifacts` | Verified checkpoint/archive entries, sizes, digests and seal status |
 | GET | `/variants/{id}/artifact?name=…` | Verified UTF-8 text artifact; refuses traversal, private prompts and policies |
 | GET | `/variants/{id}/static-preview` | Verified JSON `{html, record, archiveDigest, sealed}` for a ready archived static preview; 404 when absent/unavailable |
+| GET | `/variants/{id}/static-preview/{viewport}` | Verified `image/png` capture for `desktop` or `phone` when that viewport was archived; 404 when unavailable |
 | POST | `/variants/{id}/select` | Record an eligible reviewed candidate |
 | GET | `/variants/{id}/apply-preview` | Read-only selected-patch preview and baseline checks |
 | POST | `/variants/{id}/apply` | Explicit selected working-tree apply with `{ "confirmed": true }` |
@@ -67,14 +68,17 @@ Artifact reads verify every archive byte, frozen contract/run serialization and
 recorded confinement policy digests and optional static-preview source metadata.
 Only `implementation.diff`, `agent.log`, `validation-{index}.log`, `files/…`,
 `preview/document.html` and `preview/metadata.json` are text viewer entries;
-the complete raw preview-source bundle is not exposed by this viewer. Binary text reads are
-refused. Never use this text endpoint as an executable HTML preview.
+the complete raw preview-source bundle and PNG captures are not exposed by this
+text viewer. Binary text reads are refused. Never use this text endpoint as an
+executable HTML preview.
 
 The separate static-preview route also returns JSON, preserving the server's
 HTML response protections. Display its document only in an opaque, inert iframe
 with an empty sandbox; the archived CSP blocks scripts and external resources.
 The [preview contract](static-previews.md) documents limits and unsupported input.
-This is archived static source, not a saved screenshot or visual quality score.
+If present, `GET /api/growth/variants/{id}/static-preview/desktop` returns the
+verified archived PNG with `image/png`; it remains a render artifact, not a
+visual quality score or measured growth result.
 
 Dashboard delivery requires the latest completed selection to match the requested
 variant. Confirmation does not bypass clean-baseline, permission or seal checks.

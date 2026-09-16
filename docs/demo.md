@@ -63,9 +63,10 @@ preparation may leave only its newly owned partial fixture there. macOS runtime
 isolation is locally validated; Linux runtime verification remains pending, and
 Windows validation isolation is unsupported. Candidate HTML is inspectable
 as sealed source text and a restricted desktop/phone preview of archived static
-source. See [static-previews.md](static-previews.md); no saved candidate screenshot
-or visual quality result is implied. Automatic screenshot archives, richer
-evaluators and a release installer remain in progress.
+source. See [static-previews.md](static-previews.md). When local Chromium is
+available, each ready candidate also archives a verified desktop PNG from that
+sealed source; it remains a render artifact rather than a visual quality result.
+Richer evaluators, a concise recording and a release installer remain in progress.
 
 Real local captures show the [Home launch screen](screenshots/growth-demo-home.png),
 [running checks](screenshots/growth-demo-live.png),

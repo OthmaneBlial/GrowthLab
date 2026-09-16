@@ -242,7 +242,7 @@ pub fn build(store: &Store, id: &str, options: &ReportOptions) -> Result<BattleR
         limitations:vec![
             "Command checks are observations on immutable source snapshots. They do not establish conversion lift, accessibility, performance or market validation.".into(),
             "Eligibility requires every configured command to pass on a successful sealed candidate. Ties require user review; this report contains no combined growth score.".into(),
-            "Diff counts summarize the archived Git diff; binary changes are not line-counted. Render screenshots have not been captured for these attempts.".into(),
+            "Diff counts summarize the archived Git diff; binary changes are not line-counted. A sealed run may include a local desktop PNG render when a compatible browser was available; that image is not a visual quality result or measured growth outcome.".into(),
             "Private product metadata, prompts, raw logs and model identifiers are withheld. Explicit context export discloses goal, variant titles, summaries and commands; that text may contain identifying names or paths.".into(),
             "Replay proposals are declared simulations. Actual configured checks are observed; growth outcomes remain untested. Inspect each check's isolation metadata. Archived checks without it predate confinement; their host isolation is unverified. Resource quotas are not provided.".into(),
         ],

@@ -138,6 +138,9 @@
 .growth-static-preview .growth-preview-note { margin:14px 0 20px; color:var(--subtext); line-height:1.7; }
 .growth-preview-stage { position:relative; width:100%; min-width:0; overflow:hidden; background:var(--surface); border:1px solid var(--border); }
 .growth-preview-stage iframe { position:absolute; top:0; left:50%; border:0; max-width:none; transform-origin:top center; pointer-events:none; }
+.growth-preview-capture { margin:20px 0 0; padding:16px; border:1px solid var(--border); background:var(--surface); }
+.growth-preview-capture img { display:block; width:100%; height:auto; max-height:520px; object-fit:contain; object-position:top center; background:var(--base); }
+.growth-preview-capture figcaption { margin-top:10px; color:var(--subtext); font-family:var(--mono); font-size:0.625rem; overflow-wrap:anywhere; }
 .growth-static-preview .growth-local-metadata p { margin:12px 0; line-height:1.7; }
 .growth-local-metadata { margin-top:26px; padding-top:20px; border-top:1px solid var(--border); font-size:0.6875rem; color:var(--subtext); }
 .growth-local-metadata dl { display:grid; grid-template-columns:1fr 1fr; gap:14px 25px; }

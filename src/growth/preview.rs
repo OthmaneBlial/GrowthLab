@@ -1,7 +1,10 @@
-//! Immutable static-page source bundles. These are not saved browser screenshots.
+//! Immutable static-page source bundles with optional local render captures.
 use std::cell::{Cell, RefCell};
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::process::{Child, Command, Stdio};
+use std::thread;
+use std::time::{Duration, Instant};
 
 use base64::Engine;
 use cssparser::{Parser, ParserInput, Token};
@@ -17,9 +20,12 @@ use crate::error::{anyhow, Result};
 pub const PRODUCER: &str = "static-page-bundle-v1";
 pub const DOCUMENT: &str = "preview/document.html";
 pub const METADATA: &str = "preview/metadata.json";
+pub const SCREENSHOT_DESKTOP: &str = "preview/screenshot-desktop.png";
+pub const SCREENSHOT_PHONE: &str = "preview/screenshot-phone.png";
 pub const CSP: &str = "default-src 'none'; script-src 'none'; style-src data: 'unsafe-inline'; img-src data:; font-src data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'";
 const FILE_CAP: usize = 4 * 1024 * 1024;
 const TOTAL_CAP: usize = 8 * 1024 * 1024;
+const SCREENSHOT_TIMEOUT: Duration = Duration::from_secs(15);
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -36,6 +42,16 @@ pub struct PreviewSource {
     pub size: usize,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PreviewScreenshot {
+    pub path: String,
+    pub width: u32,
+    pub height: u32,
+    pub digest: String,
+    pub size: usize,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct PreviewRecord {
@@ -44,6 +60,8 @@ pub struct PreviewRecord {
     pub source_commit: String,
     pub document_digest: Option<String>,
     pub sources: Vec<PreviewSource>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub screenshots: Vec<PreviewScreenshot>,
     pub blocked_resources: usize,
     pub limitation: String,
 }
@@ -376,6 +394,124 @@ fn document(source: &str, entry: &str, resources: &Resources<'_>) -> Result<Stri
     Ok(output)
 }
 
+fn browser_executable() -> Option<PathBuf> {
+    if let Some(path) = std::env::var_os("GROWTHLAB_CHROME") {
+        let path = PathBuf::from(path);
+        if path.is_file() {
+            return Some(path);
+        }
+    }
+    let known = [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "/Applications/Chromium.app/Contents/MacOS/Chromium",
+        "/usr/bin/google-chrome",
+        "/usr/bin/chromium",
+        "/usr/bin/chromium-browser",
+    ];
+    if let Some(path) = known.iter().map(PathBuf::from).find(|path| path.is_file()) {
+        return Some(path);
+    }
+    let path = std::env::var_os("PATH")?;
+    for directory in std::env::split_paths(&path) {
+        for name in ["google-chrome", "chromium", "chromium-browser"] {
+            let candidate = directory.join(name);
+            if candidate.is_file() {
+                return Some(candidate);
+            }
+        }
+    }
+    None
+}
+
+struct PreviewTempDir(PathBuf);
+impl Drop for PreviewTempDir {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
+}
+
+fn png_dimensions(bytes: &[u8]) -> Option<(u32, u32)> {
+    if bytes.len() < 24 || &bytes[..8] != b"\x89PNG\r\n\x1a\n" || &bytes[12..16] != b"IHDR" {
+        return None;
+    }
+    Some((
+        u32::from_be_bytes(bytes[16..20].try_into().ok()?),
+        u32::from_be_bytes(bytes[20..24].try_into().ok()?),
+    ))
+}
+
+fn wait_for_screenshot(child: &mut Child, output: &Path) -> bool {
+    let deadline = Instant::now() + SCREENSHOT_TIMEOUT;
+    loop {
+        if output.is_file() {
+            // Chrome can write the PNG immediately before its headless parent
+            // finishes shutting down. Give it a short settle window, then
+            // terminate only this private child if the process remains stuck.
+            thread::sleep(Duration::from_millis(50));
+            if let Ok(Some(status)) = child.try_wait() {
+                return status.success();
+            }
+            if let Ok(bytes) = std::fs::read(output) {
+                if !bytes.is_empty() {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    return true;
+                }
+            }
+        }
+        match child.try_wait() {
+            Ok(Some(status)) => return status.success() && output.is_file(),
+            Ok(None) if Instant::now() < deadline => thread::sleep(Duration::from_millis(50)),
+            _ => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return false;
+            }
+        }
+    }
+}
+
+fn render_screenshot(document: &[u8], width: u32, height: u32) -> Option<Vec<u8>> {
+    let browser = browser_executable()?;
+    let directory =
+        std::env::temp_dir().join(format!("growthlab-preview-{}", uuid::Uuid::new_v4()));
+    crate::growth::archive::private_directory(&directory).ok()?;
+    let _temporary = PreviewTempDir(directory.clone());
+    let document_path = directory.join("document.html");
+    let screenshot_path = directory.join("screenshot.png");
+    std::fs::write(&document_path, document).ok()?;
+    let url = url::Url::from_file_path(&document_path).ok()?.to_string();
+    let mut child = Command::new(browser)
+        .args([
+            "--headless=new",
+            "--incognito",
+            "--disable-gpu",
+            "--hide-scrollbars",
+            "--no-first-run",
+            "--no-default-browser-check",
+            "--disable-crash-reporter",
+            "--disable-extensions",
+            "--disable-background-networking",
+            "--disable-sync",
+            "--disable-translate",
+            "--mute-audio",
+            "--virtual-time-budget=1000",
+            "--force-device-scale-factor=1",
+        ])
+        .arg(format!("--window-size={width},{height}"))
+        .arg(format!("--screenshot={}", screenshot_path.display()))
+        .arg(url)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .ok()?;
+    if !wait_for_screenshot(&mut child, &screenshot_path) {
+        return None;
+    }
+    let bytes = std::fs::read(screenshot_path).ok()?;
+    (bytes.len() <= FILE_CAP && png_dimensions(&bytes) == Some((width, height))).then_some(bytes)
+}
+
 fn bundle(
     root: &Path,
     commit: &str,
@@ -427,8 +563,26 @@ fn bundle(
         packed: Cell::new(0),
     };
     let output = document(html, &spec.entry, &resources)?;
-    let record = PreviewRecord { producer: PRODUCER.into(), status: PreviewStatus::Ready, source_commit: commit.into(), document_digest: Some(digest(output.as_bytes())), sources, blocked_resources: resources.blocked.get(), limitation: "Archived static source, not a saved browser screenshot or measured quality result. Supported local styles/images/fonts are bundled; scripts, forms and navigation are removed, external/unsupported resources omitted. Display only in an opaque, inert sandbox frame. Dynamic apps and CSS image-set string sources are not reproduced.".into() };
-    archived.insert(DOCUMENT.into(), output.into_bytes());
+    let document_bytes = output.into_bytes();
+    let mut screenshots = vec![];
+    // Unit tests exercise archive determinism and run concurrently; keep them
+    // independent of an installed browser. The release binary and real demo
+    // path execute this same capture branch and verify the resulting PNG over
+    // HTTP.
+    if !cfg!(test) {
+        if let Some(bytes) = render_screenshot(&document_bytes, 1280, 900) {
+            screenshots.push(PreviewScreenshot {
+                path: SCREENSHOT_DESKTOP.into(),
+                width: 1280,
+                height: 900,
+                digest: digest(&bytes),
+                size: bytes.len(),
+            });
+            archived.insert(SCREENSHOT_DESKTOP.into(), bytes);
+        }
+    }
+    let record = PreviewRecord { producer: PRODUCER.into(), status: PreviewStatus::Ready, source_commit: commit.into(), document_digest: Some(digest(&document_bytes)), sources, screenshots, blocked_resources: resources.blocked.get(), limitation: "Archived static source with an optional local Chromium render capture. A PNG is a render artifact, not a visual regression result, accessibility audit, performance measurement or growth outcome. Supported local styles/images/fonts are bundled; scripts, forms and navigation are removed, external/unsupported resources omitted. Display only in an opaque, inert sandbox frame. Dynamic apps and CSS image-set string sources are not reproduced. If no compatible browser is installed or it cannot render safely, no screenshot is fabricated.".into() };
+    archived.insert(DOCUMENT.into(), document_bytes);
     archived.insert(METADATA.into(), serde_json::to_vec(&record)?);
     Ok((record, archived))
 }
@@ -448,7 +602,7 @@ pub fn capture(
             Ok(Some(record))
         }
         Err(_) => {
-            let record = PreviewRecord { producer: PRODUCER.into(), status: PreviewStatus::Unavailable, source_commit: commit.into(), document_digest: None, sources: vec![], blocked_resources: 0, limitation: "Configured static preview could not be packaged within its allowed-source, HTML/CSS or size limits. No preview or screenshot was fabricated; configured validation remains separate.".into() };
+            let record = PreviewRecord { producer: PRODUCER.into(), status: PreviewStatus::Unavailable, source_commit: commit.into(), document_digest: None, sources: vec![], screenshots: vec![], blocked_resources: 0, limitation: "Configured static preview could not be packaged within its allowed-source, HTML/CSS or size limits. No preview or screenshot was fabricated; configured validation remains separate.".into() };
             files.insert(METADATA.into(), serde_json::to_vec(&record)?);
             Ok(Some(record))
         }
@@ -514,6 +668,28 @@ pub fn verify(
             }
             if !entry || total > TOTAL_CAP {
                 return Err(anyhow!("Static preview source set is invalid"));
+            }
+            let mut screenshot_paths = BTreeSet::new();
+            for screenshot in &record.screenshots {
+                if !matches!(
+                    screenshot.path.as_str(),
+                    SCREENSHOT_DESKTOP | SCREENSHOT_PHONE
+                ) || !screenshot_paths.insert(&screenshot.path)
+                    || screenshot.width == 0
+                    || screenshot.height == 0
+                    || screenshot.size > FILE_CAP
+                {
+                    return Err(anyhow!("Static preview screenshot metadata is invalid"));
+                }
+                let bytes = files
+                    .get(&screenshot.path)
+                    .ok_or_else(|| anyhow!("Static preview screenshot is missing"))?;
+                if bytes.len() != screenshot.size
+                    || digest(bytes) != screenshot.digest
+                    || png_dimensions(bytes) != Some((screenshot.width, screenshot.height))
+                {
+                    return Err(anyhow!("Static preview screenshot digest mismatch"));
+                }
             }
         }
         PreviewStatus::Unavailable

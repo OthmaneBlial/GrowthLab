@@ -216,6 +216,10 @@ where
             "/api/growth/variants/{id}/static-preview",
             get(static_preview),
         )
+        .route(
+            "/api/growth/variants/{id}/static-preview/{viewport}",
+            get(static_preview_screenshot),
+        )
         .route("/api/growth/variants/{id}/select", post(select_variant))
         .route(
             "/api/growth/variants/{id}/apply-preview",
@@ -824,6 +828,58 @@ async fn static_preview(State(state): State<GrowthState>, Path(id): Path<String>
         )
         .map_err(|_| bad_request("Archived static preview is not UTF-8."))?;
         value(json!({"html":html,"record":record,"archiveDigest":hash,"sealed":sealed}))
+    })
+    .await
+}
+
+async fn static_preview_screenshot(
+    State(state): State<GrowthState>,
+    Path((id, viewport)): Path<(String, String)>,
+) -> std::result::Result<Response, ApiError> {
+    with_store(state, None, move |store| {
+        let path = match viewport.as_str() {
+            "desktop" => crate::growth::preview::SCREENSHOT_DESKTOP,
+            "phone" => crate::growth::preview::SCREENSHOT_PHONE,
+            _ => return Err(bad_request("Unknown static preview screenshot viewport.")),
+        };
+        let CapturedVariant {
+            run,
+            digest: _hash,
+            files,
+            sealed,
+        } = variant_files(store, &id)?;
+        let record = run
+            .static_preview
+            .as_ref()
+            .filter(|record| record.status == crate::growth::preview::PreviewStatus::Ready)
+            .ok_or_else(|| not_found("Archived static preview"))?;
+        let screenshot = record
+            .screenshots
+            .iter()
+            .find(|screenshot| screenshot.path == path)
+            .ok_or_else(|| not_found("Archived static preview screenshot"))?;
+        let bytes = files
+            .get(path)
+            .filter(|bytes| {
+                bytes.len() == screenshot.size
+                    && crate::growth::archive::digest(bytes) == screenshot.digest
+            })
+            .ok_or_else(|| {
+                bad_request("Archived static preview screenshot failed verification.")
+            })?;
+        let mut response = bytes.clone().into_response();
+        response
+            .headers_mut()
+            .insert(header::CONTENT_TYPE, HeaderValue::from_static("image/png"));
+        response.headers_mut().insert(
+            header::CACHE_CONTROL,
+            HeaderValue::from_static(if sealed {
+                "private, max-age=31536000, immutable"
+            } else {
+                "private, no-cache"
+            }),
+        );
+        Ok(response)
     })
     .await
 }

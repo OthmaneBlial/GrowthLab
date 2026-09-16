@@ -20,6 +20,7 @@ export function StaticPreviewPanel({ variantId, record, digest, configured, trus
   });
   const data = preview.data;
   const ready = trusted && data?.archiveDigest === digest && data.record.documentDigest === record?.documentDigest;
+  const desktopScreenshot = record?.screenshots?.find((screenshot) => screenshot.path.endsWith("screenshot-desktop.png"));
   useEffect(() => {
     if (!ready || !stage.current) return;
     const observer = new ResizeObserver(([entry]) => setAvailableWidth(entry.contentRect.width));
@@ -43,11 +44,15 @@ export function StaticPreviewPanel({ variantId, record, digest, configured, trus
       </div>
       <span className="growth-muted">{data.sealed ? "Sealed static source" : "Verified source checkpoint"}</span>
     </div>
-    <p className="growth-preview-note">Live browser preview of archived static source. One viewport; no saved screenshot or visual quality score yet. Scripts, forms and navigation are disabled.</p>
+    <p className="growth-preview-note">Live browser preview of archived static source. Scripts, forms and navigation are disabled. {desktopScreenshot ? "A desktop PNG was captured locally from this sealed document." : "No compatible local browser produced a PNG for this run."}</p>
     <div ref={stage} className="growth-preview-stage" style={{ height: Math.max(1, size.height * scale) }}>
       <iframe title="Archived candidate static page" srcDoc={data.html} sandbox="" inert tabIndex={-1} referrerPolicy="no-referrer"
         style={{ width: size.width, height: size.height, transform: `translateX(-50%) scale(${scale})` }} />
     </div>
+    {desktopScreenshot && <figure className="growth-preview-capture">
+      <img src={`/api/growth/variants/${encodeURIComponent(variantId)}/static-preview/desktop`} alt="Captured desktop render of the archived candidate page" loading="lazy" />
+      <figcaption>Captured PNG · {desktopScreenshot.width} × {desktopScreenshot.height} · SHA-256 {desktopScreenshot.digest}</figcaption>
+    </figure>}
     <details className="growth-local-metadata"><summary>Preview source and limitations</summary>
       <p>{record.limitation}</p><p>{record.sources.length} archived source files · {record.blockedResources} omitted resource references · {record.producer}</p>
       <dl><div className="growth-digest"><dt>Candidate commit</dt><dd>{record.sourceCommit}</dd></div>

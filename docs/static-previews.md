@@ -23,11 +23,14 @@ the battle's allowed/denied-path checks. Limits are 128 files, 4 MiB per file,
 8 MiB total source and a 4 MiB packaged document. Resource expansion is bounded.
 
 The **Static preview** inspection tab displays that document at a real desktop
-1280 × 900 or phone 390 × 844 CSS viewport, scaled to fit the inspector. This is
-a live browser view of archived static source, **not a saved screenshot**, visual
-regression result, accessibility audit or measured growth outcome. Preview
-availability does not change validation eligibility; a failed candidate can
-still have an inspectable page.
+1280 × 900 or phone 390 × 844 CSS viewport, scaled to fit the inspector. When a
+local Chromium-compatible browser is available, the battle engine also captures
+the sealed document at 1280 × 900 as `preview/screenshot-desktop.png`. Its
+dimensions, size and SHA-256 are stored in `preview/metadata.json` and verified
+with the archive. This PNG is a render artifact, **not a visual regression
+result**, accessibility audit or measured growth outcome. Preview availability
+does not change validation eligibility; a failed candidate can still have an
+inspectable page.
 
 Phone-sized dashboards initially choose the phone viewport. Controls let you
 inspect either size. The inert preview shows one viewport; use captured source
@@ -43,18 +46,20 @@ HTML response protections are preserved.
 Dynamic applications, SVG assets and CSS `image-set()` string sources are not
 reproduced. Browser rendering and installed system fonts can vary. Missing,
 denied, oversized or unsafe-to-package input records an unavailable preview;
-no successful render or screenshot is fabricated. Omitted resource counts and
-limitations are inspectable with the candidate commit, document SHA-256 and
-archive SHA-256. Artifact readers, comparison and recovery verify the metadata
-and archived source/document hashes.
+missing browsers or failed local renders leave `screenshots` empty and no
+screenshot is fabricated. Omitted resource counts and limitations are
+inspectable with the candidate commit, document SHA-256 and archive SHA-256.
+Artifact readers, comparison and recovery verify the metadata, archived source,
+document and PNG hashes.
 
 Private reports do not include these source documents or renderings by default.
-Automatic PNG capture and explicit visual report disclosure remain pending.
+The dashboard exposes a verified desktop PNG only inside the local candidate
+inspector; explicit visual report disclosure remains pending.
 
 Real manual captures show the [desktop candidate](screenshots/growth-preview-desktop.jpg),
 [deliberately failed candidate](screenshots/growth-preview-failed.jpg) and
 [phone preview](screenshots/growth-preview-phone.jpg). Their
 [capture metadata](screenshots/growth-preview-capture.json) ties each JPEG to its
 fictional candidate commit and verified source document. These documentation
-images are separate from the immutable run archive and do not claim automatic
-per-run screenshot capture.
+images are separate from the immutable run archive. New battle archives may
+also contain an automatic desktop PNG when local browser capture succeeds.

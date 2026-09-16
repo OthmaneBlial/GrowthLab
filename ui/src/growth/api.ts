@@ -51,6 +51,7 @@ export interface Run {
 export interface StaticPreviewRecord {
   producer: string; status: "ready" | "unavailable"; sourceCommit: string;
   documentDigest: string | null; sources: { path: string; digest: string; size: number }[];
+  screenshots?: { path: string; width: number; height: number; digest: string; size: number }[];
   blockedResources: number; limitation: string;
 }
 export interface StaticPreviewData {
