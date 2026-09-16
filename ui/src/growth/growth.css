@@ -59,8 +59,12 @@
 .growth-hypothesis-root { display:grid; gap:5px; padding:16px; border:1px solid var(--border-strong); background:var(--surface-bright); }
 .growth-hypothesis-root strong { font-size:1rem; }
 .growth-hypothesis-root small,.growth-hypothesis-node small { color:var(--subtext); }
-.growth-hypothesis-branches { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:12px; }
-.growth-hypothesis-node { min-width:0; padding:15px; border:1px solid var(--border); background:var(--surface); }
+.growth-hypothesis-branches { list-style:none; padding:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:12px 0 0; }
+.growth-hypothesis-branch { min-width:0; border:1px solid var(--border); background:var(--surface); }
+.growth-hypothesis-branch > details > summary { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:13px 15px; cursor:pointer; font-weight:600; }
+.growth-hypothesis-branch > details > summary small { color:var(--subtext); font-weight:400; }
+.growth-hypothesis-children { padding:0 12px 12px; }
+.growth-hypothesis-node { min-width:0; padding:15px; border:1px solid var(--border); background:var(--surface-bright); }
 .growth-hypothesis-node h3 { margin:10px 0 8px; }
 .growth-hypothesis-node p { margin:7px 0; }
 @media (max-width: 760px) { .growth-hypothesis-branches { grid-template-columns:1fr; } .growth-experiment-map > .growth-line { display:block; } .growth-experiment-map > .growth-line button { margin-top:14px; } }
