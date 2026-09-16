@@ -5,7 +5,7 @@
   "progressEstimate": 78,
   "progressExplanation": "Subjective estimate against the complete product specification, not a measured delivery metric.",
   "milestone": "Public repository review, manual-brief onboarding, executable playbooks, public checkout import and distribution-aware measurement analysis validated",
-  "validatedSourceCommit": "d1d10a62eedcc6bee24564229bafd28ccbf8f747",
+  "validatedSourceCommit": "ddf0e63b2a75785744309693c21e20bbe9694d96",
   "delivered": [
     "Local product import with reviewed growthlab.yaml permissions",
     "Three competing changes from one frozen starting point in isolated workspaces",
@@ -145,8 +145,8 @@
   },
   "release": {
     "published": true,
-    "version": "0.1.0-alpha.12",
-    "url": "https://github.com/OthmaneBlial/GrowthLab/releases/tag/v0.1.0-alpha.12",
+    "version": "0.1.0-alpha.13",
+    "url": "https://github.com/OthmaneBlial/GrowthLab/releases/tag/v0.1.0-alpha.13",
     "platform": "Source prerelease",
     "limitation": "Tagged source archives; no standalone binaries or installers. Provider adapters, native-agent verification and cross-platform packaging remain pending."
   }
