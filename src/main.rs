@@ -85,6 +85,9 @@ enum Command {
     /// Audit one local HTML file with the explainable SEO page rubric.
     #[command(name = "seo-audit")]
     SeoAudit(growth::cli::SeoAuditArgs),
+    /// Inspect one public GitHub repository's metadata without cloning it.
+    #[command(name = "repo-audit")]
+    RepoAudit(growth::cli::RepoAuditArgs),
     /// Summarize user-supplied local CSV telemetry without network access.
     Measure(growth::cli::MeasureArgs),
     /// Inspect a battle or request cancellation.
@@ -1054,6 +1057,7 @@ fn command_name(command: &Command) -> &'static str {
         Command::Experiments(_) => "experiments",
         Command::Compare(_) => "compare",
         Command::SeoAudit(_) => "seo-audit",
+        Command::RepoAudit(_) => "repo-audit",
         Command::Measure(_) => "measure",
         Command::BattleStatus(_) => "battle-status",
         Command::Recover(_) => "recover",
@@ -1118,6 +1122,7 @@ async fn dispatch(command: Command) -> error::Result<()> {
         Command::Experiments(args) => growth::cli::experiments(args),
         Command::Compare(args) => growth::cli::compare(args),
         Command::SeoAudit(args) => growth::cli::seo_audit(args).await,
+        Command::RepoAudit(args) => growth::cli::repo_audit(args).await,
         Command::Measure(args) => growth::cli::measure(args),
         Command::BattleStatus(args) => growth::cli::battle_status(args),
         Command::Recover(args) => growth::cli::recover(args),
@@ -1180,6 +1185,7 @@ fn command_uses_lifecycle_lock(command: &Command) -> bool {
             | Command::Experiments(_)
             | Command::Compare(_)
             | Command::SeoAudit(_)
+            | Command::RepoAudit(_)
             | Command::Measure(_)
             | Command::BattleStatus(_)
             | Command::Recover(_)

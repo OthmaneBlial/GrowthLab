@@ -10,6 +10,8 @@ to 1 MiB. The existing loopback/origin and remote-host authentication guards app
 | GET | `/capabilities` | OS isolation availability and tools-disabled harness capabilities; not authentication/provider proof |
 | POST | `/demo` | Accept `{}` to create a new owned fictional product and launch its three declared replay proposals; HTTP 202 returns `projectId`, `battleId`, `accepted` |
 | GET / POST | `/workspaces` | List imported contexts / import `{ "path": "/local/product", "initializeGit": false }`; set `initializeGit` explicitly to create a local snapshot for a non-Git folder |
+| POST | `/briefs` | Create a private local analysis workspace from `{ "name": "…", "audience": "…", "goal": "…", "description": "…", "metric": "qualified_signup", "mode": "analyze_only" }`; no remote or provider request |
+| POST | `/repository-audit` | Inspect one public GitHub URL with a single unauthenticated metadata request; no clone, checkout, execution or workspace registration |
 | GET | `/workspaces/{id}` | Read the recorded committed product context |
 | GET / POST | `/workspaces/{id}/hypotheses` | List / create three UNTESTED starter hypotheses |
 | GET / POST | `/battles` | List (optional `projectId` query) / prepare `{ "projectId": "…", "goal": "…" }` |
@@ -111,6 +113,15 @@ For a single page outside a battle, the local CLI also exposes
 read-only, checks same-origin `robots.txt`, follows no redirects and makes one
 bounded HTTPS request; local-file analysis remains network-free. See
 [seo-audit.md](seo-audit.md).
+
+For a public repository starting point, use
+`growthlab repo-audit --url https://github.com/owner/product` or
+`POST /api/growth/repository-audit`. The target must be a canonical HTTPS
+`github.com/owner/repository` URL without credentials, query parameters or
+fragments. The response is **OBSERVED** public metadata only; no source files
+are fetched and no growth claim is inferred. A manual brief can be created
+locally with `growthlab workspace brief` or `POST /api/growth/briefs`; it is
+analysis-only/draft context with a generated local snapshot and no remote.
 
 For user-supplied outcome rows, `growthlab measure --csv ./telemetry.csv`
 produces a local descriptive comparison with sample sizes, optional date range,

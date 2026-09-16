@@ -72,6 +72,11 @@ export interface RemoteSeoAudit {
   robots: { url: string; status: number; allowed: boolean; matchedRule: string | null; retrievedAt: number; limitation: string };
   scope: string; provenance: Provenance; rubric: SeoRubric; limitations: string[];
 }
+export interface PublicRepositoryAudit {
+  url: string; apiUrl: string; owner: string; repository: string; fullName: string; htmlUrl: string;
+  description: string | null; defaultBranch: string | null; license: string | null;
+  archived: boolean; fork: boolean; retrievedAt: number; scope: string; provenance: Provenance; limitations: string[];
+}
 export interface Comparison {
   battleId: string; label: string; evaluator: string; calculation: string; limitations: string[];
   recommendedCandidates: string[];
@@ -122,6 +127,8 @@ export const growth = {
   capabilities: (signal?: AbortSignal) => request<Capabilities>("/capabilities", "GET", undefined, signal),
   playbooks: (signal?: AbortSignal) => request<GrowthPlaybook[]>("/playbooks", "GET", undefined, signal),
   urlAudit: (url: string) => request<RemoteSeoAudit>("/url-audit", "POST", { url }),
+  repositoryAudit: (url: string) => request<PublicRepositoryAudit>("/repository-audit", "POST", { url }),
+  createBrief: (brief: { name: string; audience: string; goal: string; description: string; metric: string }) => request<Workspace>("/briefs", "POST", brief),
   battles: (signal?: AbortSignal) => request<Battle[]>("/battles", "GET", undefined, signal),
   prepare: (projectId: string, goal: string) => request<{battle: Battle; variants: Variant[]}>("/battles", "POST", { projectId, goal }),
   status: (battleId: string, signal?: AbortSignal) => request<BattleStatus>(`/battles/${id(battleId)}`, "GET", undefined, signal),

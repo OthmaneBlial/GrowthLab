@@ -26,6 +26,13 @@ local snapshot after rejecting protected paths and never configures a remote.
 Import records the committed context and baseline; it does not publish the product.
 Existing workspaces are accessible from Home on desktop and phone layouts.
 
+Home also supports two read-only starting points. **Review a public repository**
+checks one canonical GitHub URL and returns observed public metadata without
+cloning or running source. **Start from a manual brief** creates a private local
+analysis workspace from a product name, audience, goal and metric; it makes no
+provider request and has no product files to modify. These paths help shape an
+SEO or activation question before a configured checkout is imported.
+
 Home's **Run bundled demo** starts a real replay battle on a newly created
 fictional product without a provider key. One proposal deliberately fails a
 heading check. See [demo.md](demo.md) for expected results and limitations;

@@ -196,6 +196,8 @@ where
         .route("/api/growth/capabilities", get(capabilities))
         .route("/api/growth/playbooks", get(playbooks))
         .route("/api/growth/url-audit", post(url_audit))
+        .route("/api/growth/repository-audit", post(repository_audit))
+        .route("/api/growth/briefs", post(create_brief_workspace))
         .route(
             "/api/growth/workspaces",
             get(workspaces).post(import_workspace),
@@ -357,6 +359,24 @@ async fn url_audit(Json(request): Json<UrlAuditRequest>) -> ApiResult {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct RepositoryAuditRequest {
+    url: String,
+}
+
+/// Inspect public GitHub metadata only. Source files are never cloned or run.
+async fn repository_audit(Json(request): Json<RepositoryAuditRequest>) -> ApiResult {
+    if request.url.len() > 2048 {
+        return Err(bad_request("Public repository URL is too long"));
+    }
+    value(
+        crate::growth::github_audit::fetch(&request.url)
+            .await
+            .map_err(domain_error)?,
+    )
+}
+
+#[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct DemoRequest {}
 
@@ -433,6 +453,49 @@ struct ImportRequest {
     /// Explicitly authorize creating a local repository and initial snapshot.
     #[serde(default)]
     initialize_git: bool,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct BriefRequest {
+    name: String,
+    audience: String,
+    goal: String,
+    #[serde(default)]
+    description: String,
+    #[serde(default = "default_brief_metric")]
+    metric: String,
+    #[serde(default = "default_brief_mode")]
+    mode: crate::growth::config::PermissionMode,
+}
+
+fn default_brief_metric() -> String {
+    "qualified_signup".into()
+}
+
+fn default_brief_mode() -> crate::growth::config::PermissionMode {
+    crate::growth::config::PermissionMode::AnalyzeOnly
+}
+
+async fn create_brief_workspace(
+    State(state): State<GrowthState>,
+    Json(request): Json<BriefRequest>,
+) -> ApiResult {
+    with_store(state, None, move |store| {
+        value(
+            cli::create_brief(
+                store,
+                &request.name,
+                &request.audience,
+                &request.goal,
+                &request.description,
+                &request.metric,
+                request.mode,
+            )
+            .map_err(domain_error)?,
+        )
+    })
+    .await
 }
 async fn import_workspace(
     State(state): State<GrowthState>,

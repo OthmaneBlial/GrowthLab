@@ -99,6 +99,23 @@ pub enum WorkspaceCommand {
         #[arg(long)]
         init_git: bool,
     },
+    /// Create a local, analysis-only workspace from a manually entered brief.
+    /// The generated repository stays inside GrowthLab's data directory and
+    /// has no remote; it is a structured starting point, not a product clone.
+    Brief {
+        #[arg(long)]
+        name: String,
+        #[arg(long)]
+        audience: String,
+        #[arg(long)]
+        goal: String,
+        #[arg(long, default_value = "")]
+        description: String,
+        #[arg(long, default_value = "qualified_signup")]
+        metric: String,
+        #[arg(long, value_enum, default_value = "analyze-only")]
+        mode: PermissionMode,
+    },
     List,
     View {
         project_id: String,
@@ -165,6 +182,16 @@ pub struct SeoAuditArgs {
     /// Fetch one public HTTPS page after checking its same-origin robots.txt.
     #[arg(long, conflicts_with = "html", required_unless_present = "html")]
     pub url: Option<String>,
+    /// Choose machine-readable JSON or a compact Markdown review.
+    #[arg(long, value_enum, default_value = "json")]
+    pub format: SeoAuditFormat,
+}
+
+#[derive(Debug, Args)]
+pub struct RepoAuditArgs {
+    /// Inspect one public GitHub repository metadata page without cloning it.
+    #[arg(long)]
+    pub url: String,
     /// Choose machine-readable JSON or a compact Markdown review.
     #[arg(long, value_enum, default_value = "json")]
     pub format: SeoAuditFormat,
@@ -494,6 +521,17 @@ pub async fn seo_audit(args: SeoAuditArgs) -> Result<()> {
     }
 }
 
+pub async fn repo_audit(args: RepoAuditArgs) -> Result<()> {
+    let audit = super::github_audit::fetch(&args.url).await?;
+    match args.format {
+        SeoAuditFormat::Json => print_json(&audit),
+        SeoAuditFormat::Markdown => {
+            print!("{}", super::github_audit::markdown(&audit));
+            Ok(())
+        }
+    }
+}
+
 pub fn measure(args: MeasureArgs) -> Result<()> {
     let report = super::measurement::import(
         &args.csv,
@@ -755,6 +793,22 @@ pub fn workspace(args: WorkspaceArgs) -> Result<()> {
         WorkspaceCommand::Import { path, init_git } => {
             print_json(&import_with_options(&store, &path, init_git)?)
         }
+        WorkspaceCommand::Brief {
+            name,
+            audience,
+            goal,
+            description,
+            metric,
+            mode,
+        } => print_json(&create_brief(
+            &store,
+            &name,
+            &audience,
+            &goal,
+            &description,
+            &metric,
+            mode,
+        )?),
         WorkspaceCommand::List => print_json(&store.list_growth_workspaces()?),
         WorkspaceCommand::View { project_id } => print_json(
             &store
@@ -762,6 +816,141 @@ pub fn workspace(args: WorkspaceArgs) -> Result<()> {
                 .ok_or_else(|| anyhow!("Growth workspace not found"))?,
         ),
     }
+}
+
+/// Create a self-contained workspace from user-entered product context. The
+/// brief is deliberately local and analysis-only by default: no provider,
+/// network request, remote, deployment or product checkout is touched.
+pub fn create_brief(
+    store: &Store,
+    name: &str,
+    audience: &str,
+    goal: &str,
+    description: &str,
+    metric: &str,
+    mode: PermissionMode,
+) -> Result<GrowthWorkspace> {
+    for (label, value, limit) in [
+        ("name", name, 512usize),
+        ("audience", audience, 2048usize),
+        ("goal", goal, 4096usize),
+        ("description", description, 8192usize),
+        ("metric", metric, 256usize),
+    ] {
+        if value.trim().is_empty() && label != "description" {
+            return Err(anyhow!("Manual brief {label} must not be empty"));
+        }
+        if value.len() > limit {
+            return Err(anyhow!(
+                "Manual brief {label} exceeds the {limit}-byte limit"
+            ));
+        }
+        if super::redaction::contains_secret(value) {
+            return Err(anyhow!(
+                "Manual brief {label} contains a possible credential"
+            ));
+        }
+    }
+    // Implementation mode is allowed only when a concrete path and command
+    // contract exist. A manual brief has neither, so downgrade that request
+    // with an explicit error instead of creating an unusable battle workspace.
+    if mode == PermissionMode::Implement {
+        return Err(anyhow!(
+            "Manual briefs start in analyze-only or draft mode; import a configured repository for implementation battles"
+        ));
+    }
+    let config = GrowthConfig {
+        version: 1,
+        product: Product {
+            name: name.trim().into(),
+            audience: audience.trim().into(),
+            description: description.trim().into(),
+        },
+        goal: Goal {
+            primary: goal.trim().into(),
+        },
+        permissions: Permissions {
+            mode,
+            allowed_paths: Vec::new(),
+            denied_paths: Vec::new(),
+        },
+        validation: Validation::default(),
+        metrics: Metrics {
+            primary: metric.trim().into(),
+            guardrails: vec!["page_load_time".into()],
+        },
+        agents: Agents { parallelism: 3 },
+        static_preview: None,
+    };
+    config.validate()?;
+
+    let id = uuid::Uuid::new_v4().to_string();
+    let root = store.data_root().join("growth-briefs").join(&id);
+    std::fs::create_dir_all(&root)?;
+    let result = (|| -> Result<GrowthWorkspace> {
+        config.write_new(&root)?;
+        let brief = format!(
+            "# {}\n\nAudience: {}\n\nGoal: {}\n\n{}\n",
+            config.product.name,
+            config.product.audience,
+            config.goal.primary,
+            config.product.description
+        );
+        std::fs::write(root.join("BRIEF.md"), brief)?;
+        crate::local::git::git(Some(&root), &["init", "-b", "main"])
+            .or_else(|_| crate::local::git::git(Some(&root), &["init"]))?;
+        crate::local::git::git(Some(&root), &["add", "growthlab.yaml", "BRIEF.md"])?;
+        crate::local::git::git(
+            Some(&root),
+            &[
+                "-c",
+                "user.name=GrowthLab brief",
+                "-c",
+                "user.email=brief@growthlab.local",
+                "-c",
+                "commit.gpgsign=false",
+                "-c",
+                "core.hooksPath=.growthlab-no-hooks",
+                "commit",
+                "-m",
+                "Create local product brief",
+            ],
+        )?;
+        let commit = git(&root, &["rev-parse", "HEAD"])?.trim().to_string();
+        let now = now_ms();
+        let workspace = GrowthWorkspace {
+            project_id: id.clone(),
+            config,
+            source_snapshot_commit: commit,
+            created_at: now,
+        };
+        let project = LocalProject {
+            id,
+            name: workspace.config.product.name.clone(),
+            slug: format!(
+                "{}-{}",
+                crate::local::slugify(&workspace.config.product.name),
+                &workspace.project_id[..8]
+            ),
+            github_owner: String::new(),
+            github_repo: String::new(),
+            github_sync_enabled: false,
+            baseline_branch: git(&root, &["symbolic-ref", "--short", "HEAD"])?
+                .trim()
+                .to_string(),
+            repo_path: root.to_string_lossy().to_string(),
+            run_command: None,
+            paper_id: None,
+            created_at: now,
+            updated_at: now,
+        };
+        store.register_growth_workspace(&project, &workspace)?;
+        Ok(workspace)
+    })();
+    if result.is_err() {
+        let _ = std::fs::remove_dir_all(&root);
+    }
+    result
 }
 
 pub fn hypotheses(args: HypothesesArgs) -> Result<()> {
@@ -957,6 +1146,66 @@ mod tests {
             .to_string();
         assert!(error.contains("protected path"));
         assert!(git(&product, &["rev-parse", "--verify", "HEAD"]).is_err());
+        drop(store);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn creates_a_local_manual_brief_without_remote_or_implementation_permission() {
+        let dir = std::env::temp_dir().join(format!("growthlab-brief-{}", uuid::Uuid::new_v4()));
+        let store = Store::open_at(dir.join("store")).unwrap();
+        let workspace = create_brief(
+            &store,
+            "Brief product",
+            "Indie makers",
+            "Increase qualified signups",
+            "A local-first product brief.",
+            "qualified_signup",
+            PermissionMode::AnalyzeOnly,
+        )
+        .unwrap();
+        assert_eq!(
+            workspace.config.permissions.mode,
+            PermissionMode::AnalyzeOnly
+        );
+        assert_eq!(workspace.source_snapshot_commit.len(), 40);
+        let project = store
+            .get_local_project(&workspace.project_id)
+            .unwrap()
+            .unwrap();
+        let root = PathBuf::from(project.repo_path);
+        assert!(root.join("BRIEF.md").is_file());
+        assert_eq!(git(&root, &["remote"]).unwrap(), "");
+        assert_eq!(git(&root, &["status", "--porcelain"]).unwrap(), "");
+        assert!(create_brief(
+            &store,
+            "Product",
+            "Audience",
+            "Goal",
+            "Description",
+            "metric",
+            PermissionMode::Implement,
+        )
+        .is_err());
+        drop(store);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn manual_brief_rejects_credential_like_text() {
+        let dir =
+            std::env::temp_dir().join(format!("growthlab-brief-secret-{}", uuid::Uuid::new_v4()));
+        let store = Store::open_at(dir.join("store")).unwrap();
+        let result = create_brief(
+            &store,
+            "Product",
+            "Audience",
+            "Goal",
+            "API_KEY=should-not-be-stored",
+            "metric",
+            PermissionMode::AnalyzeOnly,
+        );
+        assert!(result.is_err());
         drop(store);
         std::fs::remove_dir_all(dir).unwrap();
     }

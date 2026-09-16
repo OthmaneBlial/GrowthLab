@@ -834,3 +834,74 @@ async fn url_audit_refuses_non_https_input_without_network_access() {
         .unwrap()
         .is_empty());
 }
+
+#[tokio::test]
+async fn api_creates_an_analysis_workspace_from_a_manual_brief() {
+    let fixture = Fixture::new(false).await;
+    let workspace = fixture
+        .post(
+            "/briefs",
+            Some(json!({
+                "name": "Brief product",
+                "audience": "Indie makers",
+                "goal": "Increase qualified signups",
+                "description": "A local-first product brief.",
+                "metric": "qualified_signup"
+            })),
+            200,
+        )
+        .await;
+    assert_eq!(workspace["config"]["permissions"]["mode"], "analyze_only");
+    let project_id = workspace["projectId"].as_str().unwrap();
+    let repo_path = fixture.get(&format!("/workspaces/{project_id}")).await["config"].clone();
+    assert_eq!(repo_path["product"]["name"], "Brief product");
+    let path = fixture
+        .get("/workspaces")
+        .await
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|item| item["projectId"] == project_id)
+        .map(|_| {
+            // The API intentionally does not expose the generated local path;
+            // inspect it through the store root below to keep private paths out
+            // of the response contract.
+            fixture
+                .state
+                .data_root()
+                .join("growth-briefs")
+                .join(project_id)
+        })
+        .expect("manual brief workspace is listed");
+    assert!(path.join("growthlab.yaml").is_file());
+    assert_eq!(
+        crate::local::git::git(Some(&path), &["remote"]).unwrap(),
+        ""
+    );
+    assert_eq!(
+        crate::local::git::git(Some(&path), &["status", "--porcelain"]).unwrap(),
+        ""
+    );
+    assert_eq!(repo_path["product"]["audience"], "Indie makers");
+}
+
+#[tokio::test]
+async fn repository_audit_rejects_non_github_input_without_network_access() {
+    let fixture = Fixture::new(false).await;
+    let response = fixture
+        .post(
+            "/repository-audit",
+            Some(json!({"url":"https://gitlab.com/acme/product"})),
+            400,
+        )
+        .await;
+    assert!(response["error"]
+        .as_str()
+        .is_some_and(|message| message.contains("github.com")));
+    assert!(fixture
+        .get("/workspaces")
+        .await
+        .as_array()
+        .unwrap()
+        .is_empty());
+}

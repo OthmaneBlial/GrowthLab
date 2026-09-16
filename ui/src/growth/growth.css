@@ -230,3 +230,9 @@
 .growth-playbook-role { color:var(--accent-strong); }
 .growth-playbook-template { color:var(--subtext); }
 .growth-playbook-card > .growth-muted { margin-top:16px; font-size:0.62rem; }
+.growth-repository-audit { margin-top:28px; border-top:1px solid var(--border); }
+.growth-repository-audit-result { margin-top:24px; padding:18px; border:1px solid var(--border); background:var(--surface); }
+.growth-repository-audit-result p { margin:10px 0 0; font-size:0.75rem; line-height:1.7; overflow-wrap:anywhere; }
+.growth-repository-audit-result details { margin-top:16px; font-size:0.6875rem; line-height:1.7; }
+.growth-repository-audit-result ul { margin:8px 0 0; padding-left:18px; color:var(--subtext); }
+.growth-help form { margin-top:20px; }

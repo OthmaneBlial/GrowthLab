@@ -109,8 +109,36 @@ protected paths such as `.env`, credentials and key files, and makes one local
 snapshot commit. It does not configure a remote or publish anything. If the
 folder already has a repository, `--init-git` does not auto-commit it; commit
 the reviewed configuration with the product's normal Git workflow first.
-Public repository URLs, website analysis and manual briefs remain onboarding
-work in the roadmap.
+For a product that is not checked out locally yet, inspect one public GitHub
+repository without cloning or executing it:
+
+```sh
+growthlab repo-audit --url https://github.com/owner/product --format markdown
+```
+
+This makes one unauthenticated GitHub metadata request, refuses credentials,
+queries, redirects and non-GitHub hosts, and labels the response **OBSERVED**.
+It reports public description, default branch, license and archive/fork flags;
+it does not infer adoption or growth and does not create a workspace. Bring a
+reviewed checkout through `workspace import` when implementation is justified.
+
+You can also start with a manually entered brief. GrowthLab creates a private,
+local Git snapshot under its data directory, with no remote and no provider
+request:
+
+```sh
+growthlab workspace brief \
+  --name Acme --audience 'Open-source maintainers' \
+  --goal 'Increase qualified signups' \
+  --description 'A local developer tool' \
+  --metric qualified_signup
+```
+
+Manual briefs default to `analyze_only` (or may use `--mode draft`). They are
+structured context for hypotheses and playbooks; they have no product files to
+modify, no validation command and no outcome evidence. The Home dashboard and
+`POST /api/growth/briefs` expose the same flow. Credentials are rejected before
+the local snapshot is created.
 
 `hypotheses` creates three deterministic starter templates: outcome-first
 positioning, verifiable proof, and faster first success. It does not claim an
