@@ -5,7 +5,7 @@
   "progressEstimate": 72,
   "progressExplanation": "Subjective estimate against the complete product specification, not a measured delivery metric.",
   "milestone": "Public repository review, manual-brief onboarding, executable playbooks, read-only URL audit and distribution-aware measurement analysis validated",
-  "validatedSourceCommit": "3281b6b6b13ff136cac7dcfff8290ce1c6868dee",
+  "validatedSourceCommit": "de7c26b",
   "delivered": [
     "Local product import with reviewed growthlab.yaml permissions",
     "Three competing changes from one frozen starting point in isolated workspaces",
