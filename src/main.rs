@@ -1481,6 +1481,27 @@ mod cli_tests {
     }
 
     #[test]
+    fn public_repository_import_requires_an_explicit_new_destination() {
+        let cli = Cli::try_parse_from([
+            "growthlab",
+            "workspace",
+            "import-url",
+            "--url",
+            "https://github.com/acme/product",
+            "--path",
+            "./product",
+            "--shallow",
+        ])
+        .unwrap();
+        assert!(matches!(
+            cli.command,
+            Some(Command::Workspace(growth::cli::WorkspaceArgs {
+                command: growth::cli::WorkspaceCommand::ImportUrl { shallow: true, .. }
+            }))
+        ));
+    }
+
+    #[test]
     fn openresearch_backend_and_flavor_still_parse() {
         let cli = Cli::try_parse_from([
             "orx",

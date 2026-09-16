@@ -136,6 +136,7 @@ export const growth = {
   runPlaybook: (projectId: string, role: string, answers: string[] = []) => request<PlaybookRun>(`/workspaces/${id(projectId)}/playbooks/${id(role)}`, "POST", { answers }),
   urlAudit: (url: string) => request<RemoteSeoAudit>("/url-audit", "POST", { url }),
   repositoryAudit: (url: string) => request<PublicRepositoryAudit>("/repository-audit", "POST", { url }),
+  repositoryImport: (input: { url: string; path: string; name?: string; audience?: string; goal?: string; description?: string; metric?: string; mode?: "analyze_only" | "draft" | "implementation"; allowedPaths?: string[]; deniedPaths?: string[]; commands?: string[]; shallow?: boolean }) => request<Workspace>("/repository-import", "POST", input),
   createBrief: (brief: { name: string; audience: string; goal: string; description: string; metric: string }) => request<Workspace>("/briefs", "POST", brief),
   battles: (signal?: AbortSignal) => request<Battle[]>("/battles", "GET", undefined, signal),
   prepare: (projectId: string, goal: string) => request<{battle: Battle; variants: Variant[]}>("/battles", "POST", { projectId, goal }),

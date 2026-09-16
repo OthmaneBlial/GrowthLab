@@ -20,6 +20,25 @@ not establish stars, traffic, adoption, rankings, conversion or revenue. For
 implementation, review a checkout containing a committed `growthlab.yaml` and
 use `growthlab workspace import`.
 
+When you explicitly want a local checkout, use the separate import command with
+a new destination. A repository that already contains `growthlab.yaml` is
+imported as-is:
+
+```sh
+growthlab workspace import-url \
+  --url https://github.com/owner/product \
+  --path ./product \
+  --shallow
+```
+
+If the public repository has no GrowthLab contract, add `--name`, `--audience`
+and `--goal` (plus `--allow` and `--validate` when implementation mode is
+needed). GrowthLab writes and commits that configuration only inside the new
+local checkout. It never pushes, deploys, executes repository code or sends a
+provider request. The destination must not already exist, which prevents an
+accidental overwrite.
+
 The Home screen and `POST /api/growth/repository-audit` expose the same
-read-only path. Invalid hosts, credentials, query strings, fragments, `.git`
+read-only path. `POST /api/growth/repository-import` exposes the explicit local
+checkout flow. Invalid hosts, credentials, query strings, fragments, `.git`
 suffixes and non-HTTPS URLs are refused before any network request.

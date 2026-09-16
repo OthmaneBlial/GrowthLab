@@ -197,6 +197,7 @@ where
         .route("/api/growth/playbooks", get(playbooks))
         .route("/api/growth/url-audit", post(url_audit))
         .route("/api/growth/repository-audit", post(repository_audit))
+        .route("/api/growth/repository-import", post(repository_import))
         .route("/api/growth/briefs", post(create_brief_workspace))
         .route(
             "/api/growth/workspaces",
@@ -369,6 +370,33 @@ struct RepositoryAuditRequest {
     url: String,
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct RepositoryImportRequest {
+    url: String,
+    path: PathBuf,
+    #[serde(default)]
+    name: Option<String>,
+    #[serde(default)]
+    audience: Option<String>,
+    #[serde(default)]
+    goal: Option<String>,
+    #[serde(default)]
+    description: String,
+    #[serde(default = "default_brief_metric")]
+    metric: String,
+    #[serde(default = "default_brief_mode")]
+    mode: crate::growth::config::PermissionMode,
+    #[serde(default)]
+    allowed_paths: Vec<String>,
+    #[serde(default)]
+    denied_paths: Vec<String>,
+    #[serde(default)]
+    commands: Vec<String>,
+    #[serde(default)]
+    shallow: bool,
+}
+
 /// Inspect public GitHub metadata only. Source files are never cloned or run.
 async fn repository_audit(Json(request): Json<RepositoryAuditRequest>) -> ApiResult {
     if request.url.len() > 2048 {
@@ -379,6 +407,39 @@ async fn repository_audit(Json(request): Json<RepositoryAuditRequest>) -> ApiRes
             .await
             .map_err(domain_error)?,
     )
+}
+
+/// Clone and register a public repository only when the caller explicitly
+/// supplies a destination. Existing local configuration is preserved; a
+/// missing one can be created from the supplied brief fields.
+async fn repository_import(
+    State(state): State<GrowthState>,
+    Json(request): Json<RepositoryImportRequest>,
+) -> ApiResult {
+    if request.url.len() > 2048 || request.path.to_string_lossy().len() > 4096 {
+        return Err(bad_request("Public repository import input is too long"));
+    }
+    with_store(state, None, move |store| {
+        value(
+            cli::import_public(
+                store,
+                &request.url,
+                &request.path,
+                request.name.as_deref(),
+                request.audience.as_deref(),
+                request.goal.as_deref(),
+                &request.description,
+                &request.metric,
+                request.mode,
+                &request.allowed_paths,
+                &request.denied_paths,
+                &request.commands,
+                request.shallow,
+            )
+            .map_err(domain_error)?,
+        )
+    })
+    .await
 }
 
 #[derive(Deserialize)]

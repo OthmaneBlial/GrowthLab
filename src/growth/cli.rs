@@ -99,6 +99,40 @@ pub enum WorkspaceCommand {
         #[arg(long)]
         init_git: bool,
     },
+    /// Clone one public GitHub repository into a chosen local folder, then
+    /// import its committed GrowthLab context (or create one locally).
+    ImportUrl {
+        /// Canonical public GitHub page URL; credentials and tracking suffixes are refused.
+        #[arg(long)]
+        url: String,
+        /// New or empty local destination for the checkout.
+        #[arg(long)]
+        path: PathBuf,
+        /// Product name used when the checkout does not already contain growthlab.yaml.
+        #[arg(long)]
+        name: Option<String>,
+        /// Audience used when creating a local configuration for the checkout.
+        #[arg(long)]
+        audience: Option<String>,
+        /// Growth goal used when creating a local configuration for the checkout.
+        #[arg(long)]
+        goal: Option<String>,
+        #[arg(long, default_value = "")]
+        description: String,
+        #[arg(long, default_value = "qualified_signup")]
+        metric: String,
+        #[arg(long, value_enum, default_value = "analyze-only")]
+        mode: PermissionMode,
+        #[arg(long = "allow")]
+        allowed_paths: Vec<String>,
+        #[arg(long = "deny")]
+        denied_paths: Vec<String>,
+        #[arg(long = "validate")]
+        commands: Vec<String>,
+        /// Request a single-branch depth-one clone to reduce local disk use.
+        #[arg(long)]
+        shallow: bool,
+    },
     /// Create a local, analysis-only workspace from a manually entered brief.
     /// The generated repository stays inside GrowthLab's data directory and
     /// has no remote; it is a structured starting point, not a product clone.
@@ -741,6 +775,119 @@ pub fn import_with_options(
     Ok(workspace)
 }
 
+/// Clone a public GitHub repository into a new local folder and register it as
+/// a GrowthLab workspace. A checkout that already carries `growthlab.yaml` is
+/// imported as-is; otherwise the supplied brief is written and committed only
+/// to the new local clone. No provider, deployment or remote push is performed.
+#[allow(clippy::too_many_arguments)]
+pub fn import_public(
+    store: &Store,
+    url: &str,
+    destination: &Path,
+    name: Option<&str>,
+    audience: Option<&str>,
+    goal: Option<&str>,
+    description: &str,
+    metric: &str,
+    mode: PermissionMode,
+    allowed_paths: &[String],
+    denied_paths: &[String],
+    commands: &[String],
+    shallow: bool,
+) -> Result<GrowthWorkspace> {
+    let canonical = super::github_audit::canonical_url(url)?;
+    let destination = if destination.is_absolute() {
+        destination.to_path_buf()
+    } else {
+        std::env::current_dir()?.join(destination)
+    };
+    if destination.exists() {
+        return Err(anyhow!(
+            "Public repository destination already exists; choose a new empty path"
+        ));
+    }
+    if let Some(parent) = destination.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    if let Err(error) = crate::local::git::clone_public(&canonical, &destination, shallow) {
+        let _ = std::fs::remove_dir_all(&destination);
+        return Err(error);
+    }
+
+    let config_path = destination.join(CONFIG_FILE);
+    let has_config = std::fs::symlink_metadata(&config_path)
+        .map(|metadata| metadata.is_file() && !metadata.file_type().is_symlink())
+        .unwrap_or(false);
+    if !has_config {
+        let (Some(name), Some(audience), Some(goal)) = (name, audience, goal) else {
+            return Err(anyhow!(
+                "The public checkout has no growthlab.yaml; provide --name, --audience and --goal to create a local contract"
+            ));
+        };
+        let config = GrowthConfig {
+            version: 1,
+            product: Product {
+                name: name.to_owned(),
+                audience: audience.to_owned(),
+                description: description.to_owned(),
+            },
+            goal: Goal {
+                primary: goal.to_owned(),
+            },
+            permissions: Permissions {
+                mode,
+                allowed_paths: allowed_paths.to_vec(),
+                denied_paths: denied_paths.to_vec(),
+            },
+            validation: Validation {
+                commands: commands.to_vec(),
+                ..Validation::default()
+            },
+            metrics: Metrics {
+                primary: metric.to_owned(),
+                guardrails: vec!["page_load_time".into()],
+            },
+            agents: Agents { parallelism: 3 },
+            static_preview: None,
+        };
+        config.write_new(&destination)?;
+        commit_local_config(&destination)?;
+    }
+    import_with_options(store, &destination, false)
+}
+
+fn commit_local_config(root: &Path) -> Result<()> {
+    crate::local::git::git(Some(root), &["add", "--", CONFIG_FILE])?;
+    let staged = crate::local::git::git(Some(root), &["diff", "--cached", "--name-only", "-z"])?;
+    if staged
+        .split('\0')
+        .filter(|path| !path.is_empty())
+        .collect::<Vec<_>>()
+        != [CONFIG_FILE]
+    {
+        return Err(anyhow!(
+            "The local public checkout configuration could not be isolated for commit"
+        ));
+    }
+    crate::local::git::git(
+        Some(root),
+        &[
+            "-c",
+            "user.name=GrowthLab local importer",
+            "-c",
+            "user.email=growthlab@localhost",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "core.hooksPath=.growthlab-no-hooks",
+            "commit",
+            "-m",
+            "Add local GrowthLab product contract",
+        ],
+    )?;
+    Ok(())
+}
+
 fn initialize_local_repository(root: &Path) -> Result<()> {
     match crate::local::git::own_repository_state(root) {
         crate::local::git::RepositoryState::Invalid => {
@@ -817,6 +964,34 @@ pub fn workspace(args: WorkspaceArgs) -> Result<()> {
         WorkspaceCommand::Import { path, init_git } => {
             print_json(&import_with_options(&store, &path, init_git)?)
         }
+        WorkspaceCommand::ImportUrl {
+            url,
+            path,
+            name,
+            audience,
+            goal,
+            description,
+            metric,
+            mode,
+            allowed_paths,
+            denied_paths,
+            commands,
+            shallow,
+        } => print_json(&import_public(
+            &store,
+            &url,
+            &path,
+            name.as_deref(),
+            audience.as_deref(),
+            goal.as_deref(),
+            &description,
+            &metric,
+            mode,
+            &allowed_paths,
+            &denied_paths,
+            &commands,
+            shallow,
+        )?),
         WorkspaceCommand::Brief {
             name,
             audience,
@@ -1083,6 +1258,59 @@ mod tests {
         assert!(markdown.contains("Provenance: **MEASURED**"));
         assert!(markdown.contains("Relative change"));
         assert!(markdown.contains("does not establish causality"));
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn imports_a_public_checkout_without_pushing_or_overwriting_the_source() {
+        let dir =
+            std::env::temp_dir().join(format!("growthlab-public-import-{}", uuid::Uuid::new_v4()));
+        let source = dir.join("source");
+        let destination = dir.join("checkout");
+        std::fs::create_dir_all(&source).unwrap();
+        let config = super::super::config::fixture();
+        config.write_new(&source).unwrap();
+        std::fs::write(source.join("README.md"), "Public fixture\n").unwrap();
+        crate::local::git::git(Some(&source), &["init", "-b", "main"]).unwrap();
+        crate::local::git::git(Some(&source), &["add", "growthlab.yaml", "README.md"]).unwrap();
+        crate::local::git::git(
+            Some(&source),
+            &[
+                "-c",
+                "user.name=fixture",
+                "-c",
+                "user.email=fixture@growthlab.local",
+                "commit",
+                "-m",
+                "fixture",
+            ],
+        )
+        .unwrap();
+        let store = Store::open_at(dir.join("store")).unwrap();
+        let source_url = source.to_string_lossy().to_string();
+        let workspace = import_public(
+            &store,
+            &source_url,
+            &destination,
+            None,
+            None,
+            None,
+            "",
+            "qualified_signup",
+            PermissionMode::AnalyzeOnly,
+            &[],
+            &[],
+            &[],
+            false,
+        )
+        .unwrap();
+        assert_eq!(workspace.config, config);
+        assert!(destination.join(".git").is_dir());
+        assert_eq!(store.list_growth_workspaces().unwrap().len(), 1);
+        assert_eq!(
+            git(&source, &["rev-parse", "HEAD"]).unwrap().trim().len(),
+            40
+        );
         std::fs::remove_dir_all(dir).unwrap();
     }
     #[test]

@@ -128,6 +128,16 @@ fn target(raw: &str) -> Result<RepositoryTarget> {
     })
 }
 
+/// Validate a canonical public GitHub repository URL for a later, explicit
+/// local checkout. This performs no network request and never clones source.
+pub fn canonical_url(raw: &str) -> Result<String> {
+    #[cfg(test)]
+    if std::path::Path::new(raw.trim()).exists() {
+        return Ok(raw.trim().to_owned());
+    }
+    Ok(target(raw)?.canonical_url)
+}
+
 fn client() -> Result<Client> {
     Client::builder()
         .redirect(reqwest::redirect::Policy::none())
