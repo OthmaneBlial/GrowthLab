@@ -32,7 +32,8 @@ On the workspace screen, inspect permissions and commands, enter a goal, and
 prepare a landing-page battle. The three initial hypotheses are deterministic
 **UNTESTED** templates. Each competitor receives the same frozen source and
 contract, and an isolated worktree. Worktree execution requires implementation
-permission; broader analysis-only and draft playbooks remain pending.
+permission. The playbook catalog is available in every mode; analysis-only and
+Draft artifact execution remain a separate product gate.
 
 ## Execute and inspect
 
@@ -78,6 +79,12 @@ plus exploratory 95% intervals when sample sizes allow. They are labelled
 **MEASURED** and do not claim attribution or statistical significance. The
 browser panel reads the selected CSV in memory and sends no rows to a provider.
 See [measurement.md](measurement.md) for the interval assumptions.
+
+The Home screen also exposes ten reusable growth playbooks: strategist, researcher,
+positioning, conversion, ethical SEO, onboarding, pricing, launch, evaluator and
+skeptic. Each card shows the questions, outputs and guardrails for that role. They
+are templates only; reading them makes no provider request and creates no outcome
+claim. See [playbooks.md](playbooks.md).
 
 Select a variant and switch between hypothesis/evidence, diff/files/logs and
 the optional static preview.

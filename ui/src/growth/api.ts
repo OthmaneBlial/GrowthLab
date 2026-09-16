@@ -81,6 +81,10 @@ export interface ArtifactList {
 export interface Artifact { name: string; text: string; digest: string; archiveDigest: string; sealed: boolean }
 export interface ApplyPreview { variantId: string; sourceCommit: string; candidateCommit: string; patchDigest: string; changedFiles: string[]; operation: string }
 export interface Capabilities { isolationAvailable: boolean; platform: string; harnesses: { id: string; toolsDisabledProposals: boolean }[]; limitation: string }
+export interface GrowthPlaybook {
+  id: string; title: string; role: string; focus: string; summary: string;
+  questions: string[]; outputs: string[]; guardrails: string[];
+}
 export type Execution = { mode: "replay"; plan: unknown } | { mode: "native"; harness: string; model: string | null; agentTimeoutSeconds: number };
 
 const prefix = "/api/growth";
@@ -111,6 +115,7 @@ export const growth = {
   workspaces: (signal?: AbortSignal) => request<Workspace[]>("/workspaces", "GET", undefined, signal),
   import: (path: string) => request<Workspace>("/workspaces", "POST", { path }),
   capabilities: (signal?: AbortSignal) => request<Capabilities>("/capabilities", "GET", undefined, signal),
+  playbooks: (signal?: AbortSignal) => request<GrowthPlaybook[]>("/playbooks", "GET", undefined, signal),
   battles: (signal?: AbortSignal) => request<Battle[]>("/battles", "GET", undefined, signal),
   prepare: (projectId: string, goal: string) => request<{battle: Battle; variants: Variant[]}>("/battles", "POST", { projectId, goal }),
   status: (battleId: string, signal?: AbortSignal) => request<BattleStatus>(`/battles/${id(battleId)}`, "GET", undefined, signal),

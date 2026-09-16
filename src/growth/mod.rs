@@ -13,6 +13,7 @@ pub mod demo;
 pub mod evaluation;
 pub mod measurement;
 pub mod model;
+pub mod playbooks;
 pub mod preview;
 pub mod recovery;
 pub mod redaction;

@@ -748,3 +748,37 @@ async fn events_resync_persisted_state_and_cross_origin_mutations_are_refused() 
     );
     assert!(fixture.state.host.status(id).is_none());
 }
+
+#[tokio::test]
+async fn playbook_catalog_is_read_only_and_covers_the_initial_growth_roles() {
+    let fixture = Fixture::new(false).await;
+    let response = fixture.get("/playbooks").await;
+    let playbooks = response.as_array().unwrap();
+    assert_eq!(playbooks.len(), 10);
+    let ids: std::collections::HashSet<_> = playbooks
+        .iter()
+        .map(|playbook| playbook["id"].as_str().unwrap())
+        .collect();
+    assert_eq!(ids.len(), 10);
+    assert!(playbooks.iter().any(|playbook| {
+        playbook["id"] == "seo"
+            && playbook["role"] == "seo"
+            && playbook["guardrails"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|guardrail| guardrail.as_str().unwrap().contains("keyword"))
+    }));
+    for playbook in playbooks {
+        assert!(!playbook["questions"].as_array().unwrap().is_empty());
+        assert!(!playbook["outputs"].as_array().unwrap().is_empty());
+        assert!(!playbook["guardrails"].as_array().unwrap().is_empty());
+    }
+    assert!(fixture
+        .get("/workspaces")
+        .await
+        .as_array()
+        .unwrap()
+        .is_empty());
+    assert!(fixture.state.host.workers.lock().unwrap().is_empty());
+}

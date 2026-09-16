@@ -4,13 +4,14 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { isCurrentScope, workspaceKey, workspaceScope } from "../queries/client";
 import { useThemePreference } from "../theme";
 import { Spinner } from "../components/ui";
-import { growth, type ApplyPreview, type Execution, type Hypothesis, type Provenance } from "./api";
+import { growth, type ApplyPreview, type Execution, type Hypothesis, type Provenance, type GrowthPlaybook } from "./api";
 import { inspectionTab, runPhase, selectedVariant, variantRun, type InspectionTab } from "./view";
 import { StaticPreviewPanel } from "./StaticPreviewPanel";
 import { MeasurementPanel } from "./MeasurementPanel";
 import "./growth.css";
 
 function Mark({ value }: { value: Provenance }) { return <span className={`growth-mark growth-mark-${value.toLowerCase()}`}>{value}</span>; }
+function roleLabel(role: string) { return role.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }
 function Digest({ label, value }: { label: string; value?: string | null }) {
   return <div className="growth-digest"><dt>{label}</dt><dd>{value ?? "Not recorded"}</dd></div>;
 }
@@ -60,6 +61,7 @@ export function GrowthDashboard({ battleId, projectId }: { battleId?: string; pr
   const workspaces = useQuery({ queryKey: workspaceKey("growth", "workspaces"), queryFn: ({ signal }) => growth.workspaces(signal) });
   const battles = useQuery({ queryKey: workspaceKey("growth", "battles"), queryFn: ({ signal }) => growth.battles(signal) });
   const capabilities = useQuery({ queryKey: workspaceKey("growth", "capabilities"), queryFn: ({ signal }) => growth.capabilities(signal) });
+  const playbooks = useQuery({ queryKey: workspaceKey("growth", "playbooks"), queryFn: ({ signal }) => growth.playbooks(signal) });
   const status = useQuery({
     queryKey: workspaceKey("growth", "status", battleId), queryFn: ({ signal }) => growth.status(battleId!, signal),
     enabled: !!battleId, refetchInterval: 1500,
@@ -91,7 +93,7 @@ export function GrowthDashboard({ battleId, projectId }: { battleId?: string; pr
   const evidenceTrusted = !!status.data && !status.error && !comparison.error;
   const eligible = evidenceTrusted && (comparison.data?.rows.find((item) => item.variantId === variant?.id)?.eligible ?? false);
   const running = status.data?.controller?.running || battle?.status === "running";
-  const queryError = workspaces.error ?? battles.error ?? capabilities.error ?? status.error ?? comparison.error;
+  const queryError = workspaces.error ?? battles.error ?? capabilities.error ?? playbooks.error ?? status.error ?? comparison.error;
   const refresh = () => client.invalidateQueries({ queryKey: workspaceKey("growth") });
 
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
@@ -192,6 +194,7 @@ export function GrowthDashboard({ battleId, projectId }: { battleId?: string; pr
           </section>
           <div className="growth-home-grid"><section className="growth-panel"><span className="growth-section-number">01 / START WITH YOUR PRODUCT</span><h2>Import a local Git repository</h2><p>Use a reviewed, committed <code>growthlab.yaml</code>. Import records the brief and baseline without publishing your product.</p><form onSubmit={importProduct}><label htmlFor="growth-import">Repository root</label><input id="growth-import" value={importPath} onChange={(event) => setImportPath(event.target.value)} placeholder="/path/to/your/product" required /><button className="growth-button" disabled={!!busy || !importPath.trim()}>Import product <span aria-hidden="true">↗</span></button></form><details className="growth-help"><summary>Prepare the configuration</summary><p>Run <code>growthlab init --help</code> in your product, choose permissions and validation commands, then review and commit <code>growthlab.yaml</code> before import.</p><p>Keep credentials and production data out of the source snapshot. URL and non-Git onboarding are not available yet.</p></details></section><section className="growth-panel growth-principles"><span className="growth-section-number">02 / READ THE EVIDENCE</span><h2>A candidate earns its place.</h2><p>File changes run in isolated worktrees. Validation runs on recorded candidate snapshots. Every finished attempt is sealed for inspection.</p><div><Mark value="SIMULATED" /><p>Declared replay proposals; real edits still execute.</p></div><div><Mark value="OBSERVED" /><p>Actual configured checks and their exit codes.</p></div><div><Mark value="UNTESTED" /><p>Growth outcomes until real telemetry is supplied.</p></div></section></div>
           <MeasurementPanel />
+          <section className="growth-playbooks" aria-labelledby="growth-playbooks-title"><div className="growth-playbooks-intro"><span className="growth-section-number">04 / CHOOSE A GROWTH ANGLE</span><h2 id="growth-playbooks-title">Start with a focused playbook.</h2><p>Use one clear role at a time: ask better questions, collect evidence, and keep the next experiment within your product's boundaries.</p></div><div className="growth-playbook-grid">{(playbooks.data ?? []).map((playbook: GrowthPlaybook) => <article className="growth-playbook-card" key={playbook.id}><div className="growth-line"><span className="growth-playbook-role">{roleLabel(playbook.role)}</span><span className="growth-playbook-template">Template</span></div><h3>{playbook.title}</h3><p className="growth-playbook-focus">{playbook.focus}</p><p>{playbook.summary}</p><details><summary>Questions to answer</summary><ul>{playbook.questions.map((question) => <li key={question}>{question}</li>)}</ul></details><details><summary>Outputs and guardrails</summary><strong>Outputs</strong><ul>{playbook.outputs.map((output) => <li key={output}>{output}</li>)}</ul><strong>Guardrails</strong><ul>{playbook.guardrails.map((guardrail) => <li key={guardrail}>{guardrail}</li>)}</ul></details><p className="growth-muted">A reusable template; no provider request or outcome claim.</p></article>)}</div></section>
           {!!workspaces.data?.length && <section className="growth-recent"><h2>Your product workspaces</h2>{workspaces.data.map((item) => <Link className="growth-recent-row" key={item.projectId} to="/growth/workspaces/$projectId" params={{ projectId: item.projectId }}><span>{item.config.product.name}<small>{item.config.product.audience}</small></span><span>{item.config.permissions.mode.replaceAll("_", " ")} <span aria-hidden="true">↗</span></span></Link>)}</section>}
           {!!battles.data?.length && <section className="growth-recent"><h2>Recent battles</h2>{battles.data.map((item) => <Link className="growth-recent-row" key={item.id} to="/growth/$battleId" params={{ battleId: item.id }}><span>{item.contract.goal}<small>{item.contract.config.product.name}</small></span><span>{item.status} <span aria-hidden="true">↗</span></span></Link>)}</section>}
         </> : !config ? <div className="growth-empty"><h1>{status.isPending ? "Opening battle…" : "Workspace unavailable"}</h1><p>Check the local API error or return to product workspaces.</p><Link to="/">Product workspaces</Link></div> : <>

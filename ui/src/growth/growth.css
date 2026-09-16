@@ -199,3 +199,21 @@
 @media (max-width:520px) { .growth-header { min-height:60px; padding:0 16px; } .growth-alpha,.growth-local { display:none; } .growth-main { padding:22px 18px 0; } .growth-page-top { align-items:flex-start; margin-bottom:26px; } .growth-page-top .growth-eyebrow { max-width:150px; } .growth-connection { text-align:right; max-width:120px; } .growth-intro { margin-bottom:30px; } .growth-intro h1 { font-size:2.7rem; } .growth-intro p { font-size:0.875rem; } .growth-panel,.growth-inspector,.growth-execution { padding:22px; } .growth-workspace-heading { flex-direction:column; gap:14px; } .growth-workspace-heading h1 { font-size:2.4rem; } .growth-contract summary>span { float:none; display:block; margin-top:9px; } .growth-contract-grid,.growth-evidence,.growth-delivery-controls,.growth-local-metadata dl,.growth-seo-dimensions { grid-template-columns:1fr; } .growth-battle-actions,.growth-delivery { flex-direction:column; align-items:flex-start; } .growth-delivery .growth-button { width:100%; } .growth-footer { flex-direction:column; gap:8px; } .growth-tab-bar { gap:18px; } .growth-inspector-top { flex-direction:column; align-items:flex-start; } .growth-button { gap:12px; white-space:normal; } .growth-apply-review { padding:18px; } .growth-line { flex-wrap:wrap; } }
 @media (prefers-reduced-motion:reduce) { .growth-main { scroll-behavior:auto; } }
 }
+.growth-playbooks { margin-top:32px; padding:28px 0 8px; border-top:1px solid var(--border); }
+.growth-playbooks-intro { max-width:680px; }
+.growth-playbooks-intro h2 { margin:10px 0 8px; font-family:Georgia,serif; font-weight:400; font-size:1.5rem; line-height:1.2; }
+.growth-playbooks-intro p { color:var(--subtext); font-size:0.75rem; line-height:1.8; }
+.growth-playbook-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-top:22px; }
+.growth-playbook-card { min-width:0; padding:18px; border:1px solid var(--border); background:var(--surface); }
+.growth-playbook-card h3 { margin:14px 0 5px; font-family:Georgia,serif; font-weight:400; font-size:1.15rem; }
+.growth-playbook-card p { margin:7px 0; color:var(--subtext); font-size:0.7rem; line-height:1.65; }
+.growth-playbook-card .growth-playbook-focus { margin-top:0; color:var(--text); font-family:var(--mono); font-size:0.58rem; text-transform:uppercase; letter-spacing:0.04em; }
+.growth-playbook-card details { margin-top:13px; border-top:1px solid var(--border); padding-top:10px; font-size:0.67rem; }
+.growth-playbook-card summary { cursor:pointer; font-weight:600; }
+.growth-playbook-card ul { margin:8px 0 12px; padding-left:18px; color:var(--subtext); line-height:1.6; }
+.growth-playbook-card li + li { margin-top:4px; }
+.growth-playbook-card strong { display:block; margin-top:8px; font-size:0.62rem; text-transform:uppercase; letter-spacing:0.04em; }
+.growth-playbook-role, .growth-playbook-template { font-family:var(--mono); font-size:0.56rem; text-transform:uppercase; letter-spacing:0.04em; }
+.growth-playbook-role { color:var(--accent-strong); }
+.growth-playbook-template { color:var(--subtext); }
+.growth-playbook-card > .growth-muted { margin-top:16px; font-size:0.62rem; }
