@@ -2,7 +2,7 @@
 //! Prompts, raw logs, product names and paths are never included.
 use super::archive;
 use super::battle_model::ValidationRecord;
-use super::evaluation::{PageQualityRubric, SeoRubric};
+use super::evaluation::{PageQualityRubric, RenderRubric, SeoRubric};
 use super::model::{Confidence, Provenance};
 use super::redaction::{contains_secret, redact};
 use super::selection::{self, SelectionStatus};
@@ -57,6 +57,7 @@ pub struct ReportVariant {
     pub implementation_summary: Option<String>,
     pub rubric: Option<SeoRubric>,
     pub quality: Option<PageQualityRubric>,
+    pub render: Option<RenderRubric>,
 }
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -234,6 +235,7 @@ pub fn build(store: &Store, id: &str, options: &ReportOptions) -> Result<BattleR
             },
             rubric: row.rubric.clone(),
             quality: row.quality.clone(),
+            render: row.render.clone(),
         });
     }
     Ok(BattleReport {
@@ -298,10 +300,10 @@ pub fn markdown(report: &BattleReport) -> String {
         )),
         None => out.push_str("No candidate has been selected.\n\n"),
     }
-    out.push_str("| Variant | Status | Configured checks | SEO page hygiene | Page quality hints | Eligible | Proposal | Checks | Outcome |\n|---|---|---|---|---|---|---|---|---|\n");
+    out.push_str("| Variant | Status | Configured checks | SEO page hygiene | Page quality hints | Static render | Eligible | Proposal | Checks | Outcome |\n|---|---|---|---|---|---|---|---|---|---|\n");
     for row in &report.variants {
         out.push_str(&format!(
-            "| {} | {} | {} / {} | {} | {} | {} | {} | {} | {} |\n",
+            "| {} | {} | {} / {} | {} | {} | {} | {} | {} | {} | {} |\n",
             md(&row.label),
             md(&row.status),
             row.passed_commands,
@@ -313,6 +315,10 @@ pub fn markdown(report: &BattleReport) -> String {
             row.quality
                 .as_ref()
                 .map(|quality| format!("{}/{} ESTIMATED", quality.score, quality.max_score))
+                .unwrap_or_else(|| "—".into()),
+            row.render
+                .as_ref()
+                .map(|render| format!("{}/{} OBSERVED", render.score, render.max_score))
                 .unwrap_or_else(|| "—".into()),
             if row.eligible { "Yes" } else { "No" },
             provenance(row.implementation_provenance),
@@ -403,6 +409,44 @@ pub fn markdown(report: &BattleReport) -> String {
             }
             out.push_str("### Quality-hint limits\n\n");
             for limitation in &quality.limitations {
+                out.push_str(&format!("- {}\n", md(limitation)));
+            }
+            out.push('\n');
+        }
+        if let Some(render) = &row.render {
+            out.push_str(&format!(
+                "Static render checks: **{}/{}** (**OBSERVED**). {}\n\n",
+                render.score,
+                render.max_score,
+                md(&render.calculation)
+            ));
+            for dimension in &render.dimensions {
+                out.push_str(&format!(
+                    "- **{}**: {}/{} ({}) — {}\n",
+                    md(&dimension.label),
+                    dimension.score,
+                    dimension.max_score,
+                    md(&dimension.status),
+                    dimension
+                        .evidence
+                        .iter()
+                        .map(|evidence| md(evidence))
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                ));
+            }
+            out.push('\n');
+            out.push_str("### Static-render next steps\n\n");
+            if render.recommendations.is_empty() {
+                out.push_str("- No gaps were found by this local render review.\n\n");
+            } else {
+                for recommendation in &render.recommendations {
+                    out.push_str(&format!("- {}\n", md(recommendation)));
+                }
+                out.push('\n');
+            }
+            out.push_str("### Static-render limits\n\n");
+            for limitation in &render.limitations {
                 out.push_str(&format!("- {}\n", md(limitation)));
             }
             out.push('\n');
@@ -580,8 +624,49 @@ pub fn document(report: &BattleReport) -> String {
                 limitations
             )
         }).unwrap_or_default();
-        out.push_str(&format!(r#"</div></details>{}{}<dl class="provenance"><dt>Proposal</dt><dd>{}</dd><dt>Checks</dt><dd>{}</dd><dt>Growth outcome</dt><dd>{}</dd></dl><p class="diff-summary"><strong>{}</strong> files changed <span>+{} / −{} text lines</span></p>"#,
-            rubric,quality,provenance(row.implementation_provenance),provenance(row.check_provenance),provenance(row.outcome_provenance),row.files_changed,row.lines_added,row.lines_removed));
+        let render = row.render.as_ref().map(|render| {
+            let dimensions = render
+                .dimensions
+                .iter()
+                .map(|dimension| {
+                    format!(
+                        "<li><strong>{}</strong> {}/{} · {}<span>{}</span></li>",
+                        html(&dimension.label),
+                        dimension.score,
+                        dimension.max_score,
+                        html(&dimension.status),
+                        html(&dimension.evidence.join(" "))
+                    )
+                })
+                .collect::<String>();
+            let limitations = render
+                .limitations
+                .iter()
+                .map(|limitation| format!("<li>{}</li>", html(limitation)))
+                .collect::<String>();
+            let recommendations = if render.recommendations.is_empty() {
+                "<li>No gaps were found by this local render review.</li>".into()
+            } else {
+                render
+                    .recommendations
+                    .iter()
+                    .map(|recommendation| format!("<li>{}</li>", html(recommendation)))
+                    .collect::<String>()
+            };
+            format!(
+                r#"<details class="rubric render"><summary><span>{}</span><strong>{}/{} · {}</strong></summary><p>{}</p><ul>{}</ul><p class="rubric-recommendations">Suggested next steps</p><ul>{}</ul><p class="rubric-limits">Limits</p><ul>{}</ul></details>"#,
+                html(&render.label),
+                render.score,
+                render.max_score,
+                provenance(render.provenance),
+                html(&render.calculation),
+                dimensions,
+                recommendations,
+                limitations
+            )
+        }).unwrap_or_default();
+        out.push_str(&format!(r#"</div></details>{}{}{}<dl class="provenance"><dt>Proposal</dt><dd>{}</dd><dt>Checks</dt><dd>{}</dd><dt>Growth outcome</dt><dd>{}</dd></dl><p class="diff-summary"><strong>{}</strong> files changed <span>+{} / −{} text lines</span></p>"#,
+            rubric,quality,render,provenance(row.implementation_provenance),provenance(row.check_provenance),provenance(row.outcome_provenance),row.files_changed,row.lines_added,row.lines_removed));
         if let Some(summary) = &row.implementation_summary {
             out.push_str(&format!(
                 "<p class=\"implementation\">{}</p>",

@@ -57,7 +57,9 @@ missing browsers or failed local renders leave `screenshots` empty and no
 screenshot is fabricated. Omitted resource counts and limitations are
 inspectable with the candidate commit, document SHA-256 and archive SHA-256.
 Artifact readers, comparison and recovery verify the metadata, archived source,
-document and PNG hashes.
+document and PNG hashes. Comparisons can summarize available checks with the
+`static-render-hints-v1` rubric; its `OBSERVED` score remains an inspection aid,
+not a combined growth score.
 
 Private reports do not include these source documents or renderings by default.
 The dashboard exposes a verified desktop PNG only inside the local candidate

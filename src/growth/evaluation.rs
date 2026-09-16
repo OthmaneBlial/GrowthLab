@@ -31,6 +31,8 @@ pub struct EvaluationRow {
     pub rubric: Option<SeoRubric>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub quality: Option<PageQualityRubric>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub render: Option<RenderRubric>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -61,6 +63,20 @@ pub struct SeoRubric {
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct PageQualityRubric {
+    pub id: String,
+    pub label: String,
+    pub score: u8,
+    pub max_score: u8,
+    pub provenance: Provenance,
+    pub dimensions: Vec<RubricDimension>,
+    pub recommendations: Vec<String>,
+    pub calculation: String,
+    pub limitations: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RenderRubric {
     pub id: String,
     pub label: String,
     pub score: u8,
@@ -550,6 +566,144 @@ pub fn page_quality_rubric(html: &str) -> PageQualityRubric {
     }
 }
 
+/// Score the evidence captured by the local static-preview renderer. This is
+/// deliberately an observed inspection rubric: it rewards complete desktop
+/// and phone captures, a page that fits the browser viewport and non-empty
+/// visible copy, while keeping performance and accessibility claims out of the
+/// score.
+pub fn render_rubric(preview: &super::preview::PreviewRecord) -> Option<RenderRubric> {
+    if preview.render_checks.is_empty() {
+        return None;
+    }
+    let expected = [("desktop", 1280_u32, 900_u32), ("phone", 390_u32, 844_u32)];
+    let check_for = |viewport: &str| {
+        preview
+            .render_checks
+            .iter()
+            .find(|check| check.viewport == viewport)
+    };
+    let evidence_for = |viewport: &str, check: Option<&super::preview::PreviewRenderCheck>| {
+        check.map_or_else(
+            || format!("{viewport}: no local render check was archived."),
+            |check| {
+                format!(
+                    "{viewport}: {} × {} PNG target; viewport coverage {}; {} visible text characters; horizontal overflow {}.",
+                    check.width,
+                    check.height,
+                    if check.viewport_matches { "confirmed" } else { "not confirmed" },
+                    check.body_text_chars,
+                    if check.horizontal_overflow { "detected" } else { "not detected" },
+                )
+            },
+        )
+    };
+
+    let viewport_score = expected
+        .iter()
+        .filter(|(viewport, width, height)| {
+            check_for(viewport).is_some_and(|check| {
+                check.viewport_matches && check.width == *width && check.height == *height
+            })
+        })
+        .count() as u8
+        * 4;
+    let overflow_score = expected
+        .iter()
+        .filter(|(viewport, _, _)| {
+            check_for(viewport).is_some_and(|check| !check.horizontal_overflow)
+        })
+        .count() as u8
+        * 3;
+    let copy_score = expected
+        .iter()
+        .filter(|(viewport, _, _)| {
+            check_for(viewport).is_some_and(|check| check.body_text_chars > 0)
+        })
+        .count() as u8
+        * 2;
+    let integrity_score = expected
+        .iter()
+        .filter(|(viewport, _, _)| {
+            check_for(viewport).is_some_and(|check| {
+                check.provenance == "OBSERVED" && !check.limitation.trim().is_empty()
+            })
+        })
+        .count() as u8;
+    let dimensions = vec![
+        dimension(
+            "viewport-coverage",
+            "Viewport coverage",
+            viewport_score,
+            8,
+            expected
+                .iter()
+                .map(|(viewport, _, _)| evidence_for(viewport, check_for(viewport))),
+        ),
+        dimension(
+            "horizontal-overflow",
+            "Horizontal overflow",
+            overflow_score,
+            6,
+            expected
+                .iter()
+                .map(|(viewport, _, _)| evidence_for(viewport, check_for(viewport))),
+        ),
+        dimension(
+            "visible-copy",
+            "Visible copy",
+            copy_score,
+            4,
+            expected
+                .iter()
+                .map(|(viewport, _, _)| evidence_for(viewport, check_for(viewport))),
+        ),
+        dimension(
+            "capture-integrity",
+            "Capture metadata",
+            integrity_score,
+            2,
+            expected
+                .iter()
+                .map(|(viewport, _, _)| evidence_for(viewport, check_for(viewport))),
+        ),
+    ];
+    let mut recommendations = Vec::new();
+    if viewport_score < 8 {
+        recommendations.push("Run a fresh local Chromium capture for both 1280 × 900 desktop and 390 × 844 phone targets.".into());
+    }
+    if overflow_score < 6 {
+        recommendations.push(
+            "Inspect the overflowing elements at the affected viewport before shipping.".into(),
+        );
+    }
+    if copy_score < 4 {
+        recommendations.push(
+            "Confirm that the page exposes meaningful visible copy in each captured viewport."
+                .into(),
+        );
+    }
+    if integrity_score < 2 {
+        recommendations.push(
+            "Keep provenance and a limitation attached to every local render observation.".into(),
+        );
+    }
+    Some(RenderRubric {
+        id: "static-render-hints-v1".into(),
+        label: "Static render checks (observed)".into(),
+        score: dimensions.iter().map(|item| item.score as u16).sum::<u16>() as u8,
+        max_score: 20,
+        provenance: Provenance::Observed,
+        dimensions,
+        recommendations,
+        calculation: "20-point observed static-render review: viewport coverage 8, horizontal overflow 6, visible copy 4 and capture metadata 2. It summarizes local Chromium inspection and never infers performance, accessibility or growth lift.".into(),
+        limitations: vec![
+            "The check covers one sanitized static document in the locally installed Chromium build; it is not a Lighthouse score, Core Web Vital or real-user performance measurement.".into(),
+            "PNG dimensions are validated separately; browser layout floors can make a requested phone width a covered minimum rather than an exact CSS layout width.".into(),
+            "No screenshot comparison, screen-reader run, interaction test, network waterfall or growth outcome is included.".into(),
+        ],
+    })
+}
+
 fn html_for_run<'a>(
     battle: &GrowthBattle,
     run: &'a super::battle_model::BattleRun,
@@ -590,10 +744,10 @@ pub trait BattleEvaluator {
 pub struct ConfiguredCommandEvaluator;
 impl BattleEvaluator for ConfiguredCommandEvaluator {
     fn id(&self) -> &str {
-        "configured-command-pass-v1+seo-page-hygiene-v1"
+        "configured-command-pass-v1+seo-page-hygiene-v1+static-render-hints-v1"
     }
     fn calculation(&self) -> &str {
-        "Configured command pass fraction is shown alongside independent estimated SEO page-hygiene and page-quality hints. Eligibility requires a successful sealed run, the exact frozen command list and one immutable candidate commit; neither signal proves traffic, ranking or conversion lift."
+        "Configured command pass fraction is shown alongside independent estimated SEO/page-quality hints and observed static-render checks. Eligibility requires a successful sealed run, the exact frozen command list and one immutable candidate commit; none of these signals proves traffic, ranking or conversion lift."
     }
     fn evaluate(
         &self,
@@ -623,7 +777,10 @@ impl BattleEvaluator for ConfiguredCommandEvaluator {
         let html = run.and_then(|run| html_for_run(battle, run));
         let rubric = html.map(seo_rubric);
         let quality = html.map(page_quality_rubric);
-        EvaluationRow { variant_id:variant_id.into(),title:title.into(),status:run.map(|run|run.status.clone()).unwrap_or("untested".into()),passed_commands:passed,required_commands:required,pass_fraction:(!checks.is_empty() && required>0).then_some(passed as f64 / required.max(1) as f64),eligible:required>0 && matches && passed==required && run.is_some_and(|run|run.status=="done"),checks,implementation_provenance:run.map(|run|run.provenance).unwrap_or(Provenance::Untested),check_provenance:if run.is_some_and(|run|!run.validations.is_empty()) {Provenance::Observed} else {Provenance::Untested},outcome_provenance:Provenance::Untested,confidence:Confidence { label:ConfidenceLabel::Low,rationale:"Command checks and structural SEO or page-quality signals cannot establish outcome lift; candidate choice needs user review and real product evidence.".into() },archive_digest:sealed.map(|sealed|sealed.archive_digest.clone()),rubric,quality }
+        let render = sealed
+            .and_then(|sealed| sealed.run.static_preview.as_ref())
+            .and_then(render_rubric);
+        EvaluationRow { variant_id:variant_id.into(),title:title.into(),status:run.map(|run|run.status.clone()).unwrap_or("untested".into()),passed_commands:passed,required_commands:required,pass_fraction:(!checks.is_empty() && required>0).then_some(passed as f64 / required.max(1) as f64),eligible:required>0 && matches && passed==required && run.is_some_and(|run|run.status=="done"),checks,implementation_provenance:run.map(|run|run.provenance).unwrap_or(Provenance::Untested),check_provenance:if run.is_some_and(|run|!run.validations.is_empty()) {Provenance::Observed} else {Provenance::Untested},outcome_provenance:Provenance::Untested,confidence:Confidence { label:ConfidenceLabel::Low,rationale:"Command checks and structural SEO, page-quality or static-render signals cannot establish outcome lift; candidate choice needs user review and real product evidence.".into() },archive_digest:sealed.map(|sealed|sealed.archive_digest.clone()),rubric,quality,render }
     }
 }
 
@@ -691,7 +848,8 @@ pub fn compare_with(
 
 #[cfg(test)]
 mod tests {
-    use super::{page_quality_rubric, seo_rubric, Provenance};
+    use super::{page_quality_rubric, render_rubric, seo_rubric, Provenance};
+    use crate::growth::preview::{PreviewRecord, PreviewRenderCheck, PreviewStatus};
 
     #[test]
     fn seo_rubric_exposes_each_structural_signal_and_estimated_provenance() {
@@ -798,5 +956,58 @@ mod tests {
             .recommendations
             .iter()
             .any(|recommendation| recommendation.contains("absolute")));
+    }
+
+    #[test]
+    fn render_rubric_scores_observed_desktop_and_phone_checks_without_perf_claims() {
+        let check = |viewport: &str, width: u32, height: u32| PreviewRenderCheck {
+            viewport: viewport.into(),
+            width,
+            height,
+            viewport_matches: true,
+            body_text_chars: 240,
+            horizontal_overflow: false,
+            dom_content_loaded_ms: None,
+            load_ms: None,
+            first_contentful_paint_ms: None,
+            provenance: "OBSERVED".into(),
+            limitation: "Local trace only.".into(),
+        };
+        let preview = PreviewRecord {
+            producer: "static-page-bundle-v1".into(),
+            status: PreviewStatus::Ready,
+            source_commit: "a".repeat(40),
+            document_digest: Some("b".repeat(64)),
+            sources: vec![],
+            screenshots: vec![],
+            render_checks: vec![check("desktop", 1280, 900), check("phone", 390, 844)],
+            blocked_resources: 0,
+            limitation: "Local static preview.".into(),
+        };
+        let rubric = render_rubric(&preview).expect("render checks produce a rubric");
+        assert_eq!(rubric.provenance, Provenance::Observed);
+        assert_eq!(rubric.score, 20);
+        assert_eq!(rubric.max_score, 20);
+        assert!(rubric.recommendations.is_empty());
+        assert!(rubric
+            .limitations
+            .iter()
+            .any(|limitation| limitation.contains("Lighthouse")));
+    }
+
+    #[test]
+    fn render_rubric_stays_absent_for_legacy_preview_archives() {
+        let preview = PreviewRecord {
+            producer: "static-page-bundle-v1".into(),
+            status: PreviewStatus::Ready,
+            source_commit: "a".repeat(40),
+            document_digest: Some("b".repeat(64)),
+            sources: vec![],
+            screenshots: vec![],
+            render_checks: vec![],
+            blocked_resources: 0,
+            limitation: "Legacy archive.".into(),
+        };
+        assert!(render_rubric(&preview).is_none());
     }
 }

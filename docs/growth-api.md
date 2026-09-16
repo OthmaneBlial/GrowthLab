@@ -94,7 +94,9 @@ HTML. The `rubric.id` is `seo-page-hygiene-v1`, its `provenance` is `ESTIMATED`,
 and `dimensions` contains the inspectable `key`, `label`, `score`, `maxScore`,
 `status` and `evidence` for title, description, headings, language, useful copy,
 canonical URL, links and image descriptions. `recommendations` contains
-deterministic next steps for partial or missing dimensions. The 100-point total
+deterministic next steps for partial or missing dimensions. Comparison rows may
+also include an observed `render` rubric (`static-render-hints-v1`) when sealed
+Chromium checks are available. The 100-point total
 is a structural page review; it is never a ranking, traffic, accessibility or
 conversion result.
 

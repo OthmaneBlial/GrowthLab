@@ -93,6 +93,10 @@ def main():
                 assert len(preview["record"]["sources"]) == 2
                 screenshots = preview["record"].get("screenshots", [])
                 if os.environ.get("GROWTHLAB_REQUIRE_SCREENSHOT") == "1":
+                    render = row.get("render")
+                    assert render and render["id"] == "static-render-hints-v1"
+                    assert render["provenance"] == "OBSERVED" and render["maxScore"] == 20
+                    assert len(render["dimensions"]) == 4
                     assert screenshots, "A local Chromium capture was required but no PNG was archived."
                     assert {screenshot["path"] for screenshot in screenshots} == {
                         "preview/screenshot-desktop.png",
