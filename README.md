@@ -1,9 +1,10 @@
 # GrowthLab
 
-### Your growth ideas. Real diffs.
+### Growth experiments you can review.
 
-Run competing product changes from the same Git baseline. Inspect the code,
-checks and evidence behind each one. Choose what ships.
+Turn product growth questions into competing implementations from the same Git
+baseline. Compare positioning, onboarding, pricing pages and launch surfaces;
+inspect the checks and evidence behind each one, then choose what ships.
 
 **Local-first · Rust + SQLite · Isolated Git worktrees · No Docker**
 
@@ -16,7 +17,11 @@ checks and evidence behind each one. Choose what ships.
 An AI proposal is a starting point. GrowthLab makes it reviewable: actual changed
 files, a fixed evaluation contract, captured command output, immutable evidence
 and an explicit delivery decision. It is being built as an open-source growth
-team for developers, indie hackers and small product teams.
+team for developers, indie hackers and small product teams. SEO can be one
+optional playbook; GrowthLab is a general growth experimentation lab.
+
+A diff is simply the technical record of what changed. The product value is the
+safe comparison of growth approaches and the evidence that helps you decide.
 
 The working alpha includes a key-free replay demo. Its proposals are declared
 fixtures; its edits, commits, checks and archives execute for real in Rust.
@@ -28,8 +33,9 @@ Native-agent battles are still awaiting verification.
    permitted paths and validation commands in `growthlab.yaml`.
 2. **Run three approaches.** Each competitor gets the same contract and its own
    isolated Git worktree. Checks execute on the recorded candidate snapshot.
-3. **Inspect the tradeoffs.** Compare results, source previews, diffs, evidence
-   and logs. A failed check stays visible and makes that candidate ineligible.
+3. **Inspect the tradeoffs.** Compare results, source previews, change records,
+   evidence and logs. A failed check stays visible and makes that candidate
+   ineligible.
 4. **Make the decision.** Select a candidate, export its patch or explicitly
    apply it to a clean matching product checkout. No automatic commit or push.
 5. **Keep the evidence.** Export an offline HTML/Markdown report with private
@@ -37,7 +43,7 @@ Native-agent battles are still awaiting verification.
 
 | A useful proposal needs… | GrowthLab supplies today |
 | --- | --- |
-| An implementation you can review | Real files and diffs from committed candidate objects |
+| An implementation you can review | Real files and change records from committed candidate objects |
 | A fair comparison | One frozen source snapshot and validation contract for all competitors |
 | Evidence behind a recommendation | Actual exit codes, logs, provenance and verified archive digests |
 | Room for your judgment | Explicit candidate selection and guarded apply/export |
