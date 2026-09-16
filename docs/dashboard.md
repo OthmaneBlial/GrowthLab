@@ -148,9 +148,10 @@ lease pins API operations and running controllers against another dashboard's
 data-directory move. Project admission prevents local deletion during owned work.
 This is not complete cross-process coordination for every inherited or CLI path.
 
-The source-alpha screens are English. Localization of GrowthLab screens, experiment
-tree, richer evaluators, cautious statistical analysis, provider adapters,
-broader inputs, real telemetry integrations and release packaging remain required
+The source-alpha screens are English. The experiment tree branches and exported
+reports retain persisted hypothesis IDs so lineage remains inspectable. Localization
+of GrowthLab screens, experiment tree, richer evaluators, cautious statistical
+analysis, provider adapters, broader inputs, real telemetry integrations and release packaging remain required
 work. The inherited eager UI bundle still produces a size warning. Linux confinement
 requires native runtime proof; Windows validation is unsupported. Resource quotas
 are not provided. GitHub Actions stays disabled; all checks run locally.

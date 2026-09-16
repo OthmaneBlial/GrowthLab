@@ -69,7 +69,9 @@ def main():
             assert not record["selections"], "The demo must not automatically select or apply."
             comparison = json.loads(get(f"/api/growth/battles/{battle}/compare"))
             assert len(comparison["recommendedCandidates"]) == 2
+            hypothesis_ids = [hypothesis["id"] for hypothesis in record["battle"]["contract"]["hypotheses"]]
             for index, row in enumerate(comparison["rows"]):
+                assert row["hypothesisId"] == hypothesis_ids[index]
                 assert row["implementationProvenance"] == "SIMULATED"
                 assert row["checkProvenance"] == "OBSERVED" and row["outcomeProvenance"] == "UNTESTED"
                 assert row["eligible"] == (index != 1)
@@ -124,7 +126,7 @@ def main():
             assert current_module and module.group(1) == current_module.group(1), "The dashboard must serve the latest built asset path."
             assert get(module.group(1)) == (ui_root / module.group(1).lstrip("/")).read_bytes(), "The dashboard server must serve the current built asset."
             report = get(f"/api/growth/battles/{battle}/report?format=html").decode()
-            expected_report_labels = ["SIMULATED", "OBSERVED", "UNTESTED", "SEO page hygiene"]
+            expected_report_labels = ["SIMULATED", "OBSERVED", "UNTESTED", "SEO page hygiene", "Hypothesis ID"]
             if os.environ.get("GROWTHLAB_REQUIRE_SCREENSHOT") == "1":
                 expected_report_labels.extend(["Static render checks", "static-render-hints-v1"])
             assert all(label in report for label in expected_report_labels)

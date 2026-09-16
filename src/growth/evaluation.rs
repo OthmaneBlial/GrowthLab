@@ -15,6 +15,8 @@ use super::model::{Confidence, ConfidenceLabel, Provenance};
 #[serde(rename_all = "camelCase")]
 pub struct EvaluationRow {
     pub variant_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hypothesis_id: Option<String>,
     pub title: String,
     pub status: String,
     pub checks: Vec<ValidationRecord>,
@@ -780,7 +782,7 @@ impl BattleEvaluator for ConfiguredCommandEvaluator {
         let render = sealed
             .and_then(|sealed| sealed.run.static_preview.as_ref())
             .and_then(render_rubric);
-        EvaluationRow { variant_id:variant_id.into(),title:title.into(),status:run.map(|run|run.status.clone()).unwrap_or("untested".into()),passed_commands:passed,required_commands:required,pass_fraction:(!checks.is_empty() && required>0).then_some(passed as f64 / required.max(1) as f64),eligible:required>0 && matches && passed==required && run.is_some_and(|run|run.status=="done"),checks,implementation_provenance:run.map(|run|run.provenance).unwrap_or(Provenance::Untested),check_provenance:if run.is_some_and(|run|!run.validations.is_empty()) {Provenance::Observed} else {Provenance::Untested},outcome_provenance:Provenance::Untested,confidence:Confidence { label:ConfidenceLabel::Low,rationale:"Command checks and structural SEO, page-quality or static-render signals cannot establish outcome lift; candidate choice needs user review and real product evidence.".into() },archive_digest:sealed.map(|sealed|sealed.archive_digest.clone()),rubric,quality,render }
+        EvaluationRow { variant_id:variant_id.into(),hypothesis_id:None,title:title.into(),status:run.map(|run|run.status.clone()).unwrap_or("untested".into()),passed_commands:passed,required_commands:required,pass_fraction:(!checks.is_empty() && required>0).then_some(passed as f64 / required.max(1) as f64),eligible:required>0 && matches && passed==required && run.is_some_and(|run|run.status=="done"),checks,implementation_provenance:run.map(|run|run.provenance).unwrap_or(Provenance::Untested),check_provenance:if run.is_some_and(|run|!run.validations.is_empty()) {Provenance::Observed} else {Provenance::Untested},outcome_provenance:Provenance::Untested,confidence:Confidence { label:ConfidenceLabel::Low,rationale:"Command checks and structural SEO, page-quality or static-render signals cannot establish outcome lift; candidate choice needs user review and real product evidence.".into() },archive_digest:sealed.map(|sealed|sealed.archive_digest.clone()),rubric,quality,render }
     }
 }
 
@@ -822,13 +824,15 @@ pub fn compare_with(
         .iter()
         .zip(&battle.contract.hypotheses)
         .map(|(variant, hypothesis)| {
-            evaluator.evaluate(
+            let mut row = evaluator.evaluate(
                 &battle,
                 runs.iter()
                     .find(|sealed| sealed.run.variant_id == variant.id),
                 &hypothesis.title,
                 &variant.id,
-            )
+            );
+            row.hypothesis_id = Some(hypothesis.id.clone());
+            row
         })
         .collect();
     Ok(Comparison {

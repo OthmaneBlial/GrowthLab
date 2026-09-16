@@ -174,6 +174,19 @@ async fn interrupted_jobs_wait_then_recover_sealed_context_without_rerunning_or_
         "interrupted attempts must never be promoted to success"
     );
     assert_eq!(comparison.rows[1].checks[0].exit_code, Some(2));
+    assert_eq!(
+        comparison
+            .rows
+            .iter()
+            .map(|row| row.hypothesis_id.as_deref())
+            .collect::<Vec<_>>(),
+        battle
+            .contract
+            .hypotheses
+            .iter()
+            .map(|hypothesis| Some(hypothesis.id.as_str()))
+            .collect::<Vec<_>>()
+    );
     super::report::export(
         &fixture.store,
         &battle.id,
@@ -578,6 +591,10 @@ async fn selected_apply_delivers_additions_empty_text_and_deletions() {
     .unwrap();
     assert_eq!(report.variants[0].files_changed, 4);
     assert_eq!(
+        report.variants[0].hypothesis_id.as_deref(),
+        Some(battle.contract.hypotheses[0].id.as_str())
+    );
+    assert_eq!(
         report.variants[0].lines_added, 3,
         "diff body lines starting with ++ must count as additions"
     );
@@ -791,7 +808,9 @@ async fn reports_withhold_private_context_escape_explicit_context_and_verify_sea
         assert!(text.contains(&battle.contract_digest));
     }
     assert!(output.contains("Suggested next steps"));
+    assert!(output.contains("Hypothesis ID:"));
     assert!(markdown.contains("Suggested next steps"));
+    assert!(markdown.contains("Hypothesis ID"));
     assert_eq!(report.variants[1].checks[0].exit_code, Some(2));
     let disclosed = super::report::build(
         &fixture.store,

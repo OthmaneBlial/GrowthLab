@@ -89,6 +89,10 @@ coverage, visible text length, horizontal overflow and optional navigation/paint
 timings. They are inspection traces of the sanitized document, not Lighthouse,
 Core Web Vitals, accessibility, visual-regression, real-user or growth evidence.
 
+Each comparison row includes `hypothesisId` when it was prepared from the
+persisted workspace experiment map. This opaque ID links the visible branch to
+the frozen battle contract and is carried into JSON, Markdown and HTML reports.
+
 Each comparison row may include `rubric` when the sealed implementation contains
 HTML. The `rubric.id` is `seo-page-hygiene-v1`, its `provenance` is `ESTIMATED`,
 and `dimensions` contains the inspectable `key`, `label`, `score`, `maxScore`,

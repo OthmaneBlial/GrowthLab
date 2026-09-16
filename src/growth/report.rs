@@ -37,6 +37,8 @@ pub struct ReportCheck {
 #[serde(rename_all = "camelCase")]
 pub struct ReportVariant {
     pub number: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hypothesis_id: Option<String>,
     pub label: String,
     pub status: String,
     pub selected: bool,
@@ -191,6 +193,7 @@ pub fn build(store: &Store, id: &str, options: &ReportOptions) -> Result<BattleR
         let (files_changed, lines_added, lines_removed) = diff_stats(&diff);
         variants.push(ReportVariant {
             number: index + 1,
+            hypothesis_id: row.hypothesis_id.clone(),
             label: if options.include_context {
                 redact(&row.title)
             } else {
@@ -300,11 +303,12 @@ pub fn markdown(report: &BattleReport) -> String {
         )),
         None => out.push_str("No candidate has been selected.\n\n"),
     }
-    out.push_str("| Variant | Status | Configured checks | SEO page hygiene | Page quality hints | Static render | Eligible | Proposal | Checks | Outcome |\n|---|---|---|---|---|---|---|---|---|---|\n");
+    out.push_str("| Variant | Hypothesis ID | Status | Configured checks | SEO page hygiene | Page quality hints | Static render | Eligible | Proposal | Checks | Outcome |\n|---|---|---|---|---|---|---|---|---|---|---|\n");
     for row in &report.variants {
         out.push_str(&format!(
-            "| {} | {} | {} / {} | {} | {} | {} | {} | {} | {} | {} |\n",
+            "| {} | {} | {} | {} / {} | {} | {} | {} | {} | {} | {} | {} |\n",
             md(&row.label),
+            md(row.hypothesis_id.as_deref().unwrap_or("Not recorded")),
             md(&row.status),
             row.passed_commands,
             row.required_commands,
@@ -532,6 +536,10 @@ pub fn document(report: &BattleReport) -> String {
         out.push_str(&format!(r#"<article class="variant {}"><div class="variant-top"><span class="number">{:02}</span><span class="state {state}">{}</span></div><h3>{}</h3><p class="status">Execution: <strong>{}</strong>{}</p><details class="checks"><summary><span>Configured checks</span><strong>{} <small>/ {}</small></strong></summary><div class="check-content"><p class="explanation">{}</p>"#,
             if row.selected {"is-selected"} else {""},row.number,if row.eligible {"Eligible candidate"} else {"Not eligible"},
             html(&row.label),html(&row.status),if row.selected {" · Selected"} else {""},row.passed_commands,row.required_commands,html(&report.calculation)));
+        out.push_str(&format!(
+            "<p class=\"lineage\">Hypothesis ID: <code>{}</code></p>",
+            html(row.hypothesis_id.as_deref().unwrap_or("Not recorded"))
+        ));
         for check in &row.checks {
             out.push_str(&format!(r#"<div class="check"><p><strong>{}</strong><span>{} · exit {}</span></p><p>{}{} · {}</p><p class="timestamp">UTC Unix ms {}–{}</p><dl><dt>Commit</dt><dd>{}</dd><dt>Source SHA-256</dt><dd>{}</dd><dt>Isolation</dt><dd>{}</dd><dt>Policy SHA-256</dt><dd>{}</dd></dl></div>"#,
                 html(&check.label),html(&check.status),check.exit_code.map(|code|code.to_string()).unwrap_or("unavailable".into()),

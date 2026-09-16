@@ -85,7 +85,7 @@ export interface PublicRepositoryAudit {
 export interface Comparison {
   battleId: string; label: string; evaluator: string; calculation: string; limitations: string[];
   recommendedCandidates: string[];
-  rows: { variantId: string; title: string; status: string; checks: Check[];
+  rows: { variantId: string; hypothesisId?: string; title: string; status: string; checks: Check[];
     passedCommands: number; requiredCommands: number; eligible: boolean; archiveDigest: string | null;
     implementationProvenance: Provenance; checkProvenance: Provenance; outcomeProvenance: Provenance; confidence: Confidence; rubric?: SeoRubric; quality?: PageQualityRubric; render?: RenderRubric }[];
 }
