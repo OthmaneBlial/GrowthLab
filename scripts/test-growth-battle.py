@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Run a real three-worktree replay battle with an intentional validation failure."""
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -55,6 +56,12 @@ def main():
         assert all(row["implementationProvenance"] == "SIMULATED" and row["checkProvenance"] == "OBSERVED" and row["outcomeProvenance"] == "UNTESTED" for row in comparison["rows"])
         status = json.loads(run("battle-status", battle))
         assert len(status["runs"]) == 3
+        for row in comparison["rows"]:
+            isolation = row["checks"][0]["confinement"]
+            assert isolation["backend"] in ["macos-seatbelt-v1", "linux-bubblewrap-v1"]
+            archive = root / "lab/growth-archives" / row["archiveDigest"]
+            policy = (archive / "validation-0.policy.json").read_bytes()
+            assert hashlib.sha256(policy).hexdigest() == isolation["policyDigest"]
         run("run", battle, "--replay", str(plan), succeeds=False)
         assert len(json.loads(run("experiments", "--project", project))) == 1
         assert git("rev-parse", "HEAD") == commit and git("status", "--porcelain") == "" and git("remote") == ""
@@ -78,6 +85,8 @@ def main():
         for text in [report.read_text(), markdown.read_text()]:
             assert all(label in text for label in ["SIMULATED", "OBSERVED", "UNTESTED"])
             assert "Synthetic developer tool" not in text and "website/index.html" not in text and str(product) not in text
+            assert str(root / "lab") not in text and "Policy SHA-256" in text
+            assert all(row["checks"][0]["confinement"]["policyDigest"] in text for row in comparison["rows"])
         run("report", battle, "--output", str(report), succeeds=False)
         applied = json.loads(run("apply", variant))
         assert applied["status"] == "done" and applied["decision"] == "ship"
@@ -97,7 +106,7 @@ def main():
         run("compare", battle, succeeds=False)
         run("report", battle, "--output", str(root / "tampered.html"), succeeds=False)
         run("export", variant, "--output", str(root / "tampered.patch"), succeeds=False)
-        print("Growth Battle CLI smoke passed: 3 worktrees, observed failure, explicit selection/export/apply, private-context omission, overwrite/tamper refusal; HEAD/index/remotes preserved.")
+        print("Growth Battle CLI smoke passed: 3 worktrees, observed failure, archived isolation policies, explicit selection/export/apply, private-context omission, overwrite/tamper refusal; HEAD/index/remotes preserved.")
 
 
 if __name__ == "__main__":

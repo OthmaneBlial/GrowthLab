@@ -1,10 +1,12 @@
 # GrowthLab progress
 
-Current milestone: **Phase 2 — Attempt checkpoints and interrupted-job recovery** (2026-09-16).
+Current milestone: **Phase 2 — Required validation isolation, verified on macOS** (2026-09-16).
 Overall completion: **about 30%, subjective estimate against the full specification**.
 The configuration/import and three-variant replay CLI slices pass locally.
 Selected delivery and report behavior pass local Rust, real CLI and browser checks.
 Recovery passes local Rust and real CLI interruption/legacy-archive checks.
+Validation commands now require an OS confinement driver. macOS isolation and
+sealed policy digests pass local checks; Linux runtime verification remains pending.
 GitHub Actions is disabled at the user's request.
 The complete dashboard/native-agent/visual-demo vertical slice and credible release
 have not passed yet.
@@ -45,7 +47,7 @@ have not passed yet.
   exit codes, bounded logs, timeout and cancellation remain inspectable.
 - Added independent timeout watchdogs, descendant termination, exclusive
   execution leases and terminal-attempt rerun refusal using inherited job/run
-  primitives. This is not host filesystem/network confinement.
+  primitives. Host confinement is provided separately by the validation policy below.
 - Sealed contract, proposal context/instructions, diffs, committed file artifacts
   and validation logs in digest-verified archives. SQLite rejects sealed run
   updates; comparison refuses tampered evidence.
@@ -76,24 +78,36 @@ have not passed yet.
   registered jobs. Live jobs stay waiting; interrupted attempts remain failed
   or cancelled. Complete terminal checkpoints can finalize their original seals.
   Recovery never reruns providers/commands or reads/resets mutable worktrees.
+- Required OS confinement for configured validation commands, with no unrestricted
+  fallback. macOS restricts host files, network, signalling and other processes'
+  information; candidate snapshots and private scratch remain writable. Linux
+  bubblewrap support is implemented but has not run here; Windows is refused.
+  Read-only system runtimes remain trusted inputs; resource quotas are not provided.
+- Sealed exact confinement policies and SHA-256 metadata in active checkpoints,
+  completed checks and reports. Recovery/comparison verify their digests; older
+  checks without metadata retain their original seals and remain isolation-unverified.
+- Kept captured logs outside the jail through trusted pipe relays. Unix cancellation
+  now signals the registered process group directly and uses absolute process tools,
+  preserving termination when the supervisor's PATH contains no tools.
 
 ## Work in progress
 
 The Phase 1 identity/domain foundation is implemented. Broader URL/manual
 brief/non-Git onboarding and richer context remain required product work.
 Phase 2 has a tested replay CLI backend, selected delivery, local reports and
-checkpoint-based CLI recovery validated locally. Native-agent verification,
-incomplete launcher registration, interrupted selected-delivery recovery and host
-execution confinement remain pending. GrowthLab API/dashboard operations are missing.
+checkpoint-based CLI recovery and macOS validation confinement validated locally.
+Native-agent verification, incomplete launcher registration, interrupted
+selected-delivery recovery and Linux confinement runtime verification remain pending.
+GrowthLab API/dashboard operations are missing. Windows validation is unsupported.
 The inherited dashboard was inspected in an empty isolated dev slot, then
 stopped cleanly. This was baseline behavior, not a Growth Battle demo.
 
 ## Next three concrete tasks
 
-1. Close execution confinement and remaining launch/delivery recovery gates, then
-   verify genuine native-agent proposal execution without inventing provider data.
-2. Expose the working loop through GrowthLab domain APIs and a dashboard with
+1. Expose the working loop through GrowthLab domain APIs and a dashboard with
    actual run progress, inspectable evidence/diffs and explicit delivery controls.
+2. Close remaining launch/delivery recovery and cross-platform confinement gates,
+   then verify genuine native-agent proposals without inventing provider data.
 3. Add the bundled one-command visual demo and archived render artifacts,
    inspect interactions/mobile, capture real screenshots/video and validate releases.
 
@@ -120,9 +134,18 @@ stopped cleanly. This was baseline behavior, not a Growth Battle demo.
 - `node ui/scripts/check-i18n.mjs`: **passed**.
 - `node ui/scripts/check-styles.mjs`: **passed**.
 - `cargo fmt --all --check`: **passed**.
-- `cargo test --locked`: **passed**, 895 tests per binary on macOS; 2 inherited
+- `cargo test --locked`: **passed**, 897 tests per binary on macOS; 2 inherited
   tests ignored per binary (production telemetry contract and live Slurm cluster).
 - `cargo clippy --all-targets -- -D warnings`: **passed**.
+- Real macOS isolation checks: **passed**. Node can write its candidate/scratch
+  files but cannot access synthetic host credentials, private lab directories/logs,
+  escape through symlinks/hard links, signal an owned host process or connect to
+  an owned localhost listener. Child processes inherit restrictions. Full process
+  argument reads of an owned synthetic host process are denied; self reads work.
+  Policy tampering is refused. No user credentials or user process arguments were read.
+- Unix cancellation with an empty supervisor tool PATH: **passed**. The regression
+  failed before direct process-group signalling and passes after it, proving the
+  owned group is gone. Existing timeout/checkpoint assertions also pass unchanged.
 - Recovery Rust checks: **passed**. Real gated child jobs survive controller
   interruption and remain waiting until terminal. Tampered checkpoints,
   unrelated controller paths and missing source digests refuse outcome changes.
@@ -137,23 +160,28 @@ stopped cleanly. This was baseline behavior, not a Growth Battle demo.
   observed exit code 2. Explicit selection, patch export, apply preview and actual
   selected working-tree apply passed; HEAD/index/remotes were preserved. Default
   reports omitted private context; overwrite, rerun and evidence tampering were
-  refused. Product files stayed unchanged until explicit apply. These are synthetic fixtures,
+  refused. Archived confinement policies matched every reported digest; reports
+  withheld private policy paths. Product files stayed unchanged until explicit apply. These are synthetic fixtures,
   not native-agent or real growth-outcome evidence.
-- Real-binary `scripts/test-growth-recovery.py`: **passed**, including an actual
-  pre-checkpoint binary. Only its own synthetic CLI controller was hard-killed;
+- Real-binary `scripts/test-growth-recovery.py`: **passed**, including actual
+  older binaries in previous and current checks. Only its own synthetic CLI controller was hard-killed;
   three real child commands stayed alive on their registered handles. Recovery
   waited, then retained actual logs, exit 2, proposal context, diffs and committed
-  file artifacts with the product checkout unavailable. Interrupted attempts
+  file artifacts and confinement metadata with the product checkout unavailable. Interrupted attempts
   stayed failed and ineligible. Repeat recovery preserved seals; no new jobs were
   launched and the product HEAD/index/remotes/files stayed unchanged. Actual older
   sealed comparisons and selected patch export survived schema-v4 migration.
+  Current isolation checks also preserve the exact comparison JSON and selected
+  export of archives created by the actual pre-confinement `1117bf4` binary.
 - HTML report browser review: **passed**, desktop 1600×782 CSS pixels and phone
-  390×844 CSS pixels; scrollWidth equaled innerWidth, including expanded command,
-  seal and reproducibility details on phone. Keyboard Enter toggled a disclosure;
-  actual failed exit 2 and source digests were inspectable. No captured warning/error
+  390×844 CSS pixels; scrollWidth equaled innerWidth with expanded command details,
+  including new isolation labels and policy digests. Earlier seal/reproducibility
+  review also passed. Keyboard Enter toggled a disclosure; actual failed exit 2,
+  source and policy digests were inspectable. No captured warning/error
   logs. The page contained zero scripts and only a data favicon resource element.
   Temporary viewport override was reset. Real report screenshots are in
-  `screenshots/cli-report-desktop.jpg` and `screenshots/cli-report-phone.jpg`;
+  `screenshots/cli-report-desktop.jpg` and `screenshots/cli-report-phone.jpg`, with
+  current phone isolation details in `screenshots/cli-report-phone-isolation.png`;
   these show synthetic CLI report output, not the future dashboard or product renders.
 - UI localized generation/typecheck/unit tests: **passed**, 163 tests.
 - Upstream baseline `node scripts/dev-slot.mjs start --db empty`: **passed**,
@@ -179,7 +207,7 @@ stopped cleanly. This was baseline behavior, not a Growth Battle demo.
 Known environment warning: installed external Claude CLI `--version` failed
 during inherited harness detection. Native-agent execution is not verified.
 Local CLI/domain/replay validation passed. Selected delivery/report behavior on Linux/Windows,
-GrowthLab dashboard, native-agent battles, host execution confinement,
+GrowthLab dashboard, native-agent battles, Linux confinement runtime verification,
 incomplete launcher registration, interrupted selected-delivery recovery,
 archived render artifacts, visual
 demo, release installers and telemetry adapters remain **unverified / not

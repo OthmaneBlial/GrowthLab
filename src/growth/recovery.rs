@@ -274,6 +274,13 @@ pub fn recover(store: &Store, id: &str) -> Result<RecoveryOutcome> {
     let mut orphans = Vec::new();
     for attempt in &prepared {
         if let Some(active) = &attempt.run.active_validation {
+            if let Some(record) = &active.confinement {
+                let policy = attempt
+                    .files
+                    .get(&format!("validation-{}.policy.json", active.command_index))
+                    .ok_or_else(|| anyhow!("Captured validation confinement policy is missing"))?;
+                super::confinement::verify_record(record, policy)?;
+            }
             let job = store
                 .get_run(&active.run_id)?
                 .ok_or_else(|| anyhow!("Active validation registration is missing"))?;
@@ -397,6 +404,7 @@ pub fn recover(store: &Store, id: &str) -> Result<RecoveryOutcome> {
                     run_id:job.job.id,command:job.job.command,source_commit:job.job.commit_sha.unwrap(),source_digest:descriptor.source_digest.ok_or_else(||anyhow!("Validation source digest missing"))?,status:status.as_str().into(),exit_code:job.exit,termination_reason:Some(job.reason),log_truncated:job.truncated,started_at:job.job.created_at,ended_at:inspected_at,
                     provenance:if job.registered || job.exit.is_some() {Provenance::Observed} else {Provenance::Untested},
                     limitation:"Recovered job observation on its recorded source. Completion time is recovery inspection; the command may have ended earlier. An interrupted attempt is never promoted to a successful candidate.".into(),
+                    confinement:active.confinement,
                 });
             }
             attempt.run.status = if original.cancel_requested {

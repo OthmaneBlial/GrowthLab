@@ -6,6 +6,9 @@ pub mod battle_model;
 mod battle_tests;
 pub mod cli;
 pub mod config;
+pub mod confinement;
+#[cfg(all(test, any(target_os = "macos", target_os = "linux")))]
+mod confinement_tests;
 pub mod evaluation;
 pub mod model;
 pub mod recovery;

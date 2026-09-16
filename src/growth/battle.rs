@@ -1,7 +1,7 @@
 //! Core battle execution. The UI will consume these operations, never emulate
 //! agents. Reuse upstream Git, source archives, controllers and generic runs.
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use async_trait::async_trait;
@@ -169,7 +169,7 @@ pub fn prepare(store: &Store, project_id: &str, goal: &str) -> Result<GrowthBatt
             nodes.push((variant, experiment));
         }
         let snapshot = SourceSnapshot::create_at(&project, &nodes[0].1, false, store.data_root())?;
-        let contract = BattleContract { version:1,goal:goal.into(),config:workspace.config,source_snapshot_commit:workspace.source_snapshot_commit,source_snapshot_digest:snapshot.digest,hypotheses,evaluation:"Configured command pass/fail on immutable candidate snapshots. Eligible candidates require every command to pass. Ties require user selection; no conversion ranking is inferred.".into(),limitations:vec!["No outcome telemetry, accessibility audit, performance audit or market validation is inferred from command success.".into(),"Validation commands are trusted user-authorized code, not an OS sandbox. Source safety checks cannot recognize every private datum.".into()] };
+        let contract = BattleContract { version:1,goal:goal.into(),config:workspace.config,source_snapshot_commit:workspace.source_snapshot_commit,source_snapshot_digest:snapshot.digest,hypotheses,evaluation:"Configured command pass/fail on immutable candidate snapshots. Eligible candidates require every command to pass. Ties require user selection; no conversion ranking is inferred.".into(),limitations:vec!["No outcome telemetry, accessibility audit, performance audit or market validation is inferred from command success.".into(),"Validation requires OS filesystem/network isolation. Approved system/tool runtime files remain readable; CPU/memory/disk quotas are not provided. Source safety checks cannot recognize every private datum.".into()] };
         let battle = GrowthBattle {
             id: id.clone(),
             project_id: project_id.into(),
@@ -349,6 +349,9 @@ pub async fn execute(store: &Store, id: &str, agent: &dyn BattleAgent) -> Result
     let battle = store
         .get_growth_battle(id)?
         .ok_or_else(|| anyhow!("Battle not found"))?;
+    if battle.status == BattleStatus::Ready {
+        super::confinement::available()?;
+    }
     if !store.claim_growth_battle(id)? {
         return Err(anyhow!(
             "Battle is already started, terminal or cancelled; create a new battle to retry"
@@ -593,13 +596,26 @@ async fn validate(
 ) -> Result<(ValidationRecord, String)> {
     let id = uuid::Uuid::new_v4().to_string();
     let directory = store.data_root().join("growth-jobs").join(&id);
+    let job_parent = store.data_root().join("growth-jobs");
+    if job_parent.symlink_metadata().is_ok() {
+        archive::private_directory(&job_parent)?;
+    }
+    let project = store
+        .get_local_project(&battle.project_id)?
+        .ok_or_else(|| anyhow!("Product missing"))?;
+    let confined = super::confinement::command(
+        &directory,
+        &snapshot.path,
+        command,
+        &[
+            PathBuf::from(project.repo_path),
+            store.data_root().to_path_buf(),
+        ],
+    )?;
     let spec = localbox::LocalJobSpec {
         run_id: id.clone(),
-        script: crate::compute::snapshot_script(
-            &crate::local::bash::bash_path(&snapshot.path),
-            command,
-        ),
-        env: HashMap::new(),
+        script: confined.script,
+        env: confined.environment,
         secret_env: HashMap::new(),
     };
     let started = now_ms();
@@ -642,8 +658,18 @@ async fn validate(
     attempt.active_validation = Some(ActiveValidation {
         run_id: id.clone(),
         command_index: attempt.validations.len(),
+        confinement: Some(confined.record.clone()),
     });
+    files.insert(
+        format!("validation-{}.policy.json", attempt.validations.len()),
+        confined.policy,
+    );
     if let Err(error) = checkpoint(store, attempt, files) {
+        store.update_status(&id, RunStatus::Failed, Some(now_ms()), None)?;
+        attempt.active_validation = None;
+        return Err(error);
+    }
+    if let Err(error) = archive::private_directory(&job_parent) {
         store.update_status(&id, RunStatus::Failed, Some(now_ms()), None)?;
         attempt.active_validation = None;
         return Err(error);
@@ -718,5 +744,5 @@ async fn validate(
     if status != RunStatus::Done {
         log.push_str("\nGrowthLab: validation failed, timed out, exceeded the log limit, or was cancelled. Inspect status/exit code.\n");
     }
-    Ok((ValidationRecord { run_id:id,command:command.into(),source_commit:snapshot.revision.clone(),source_digest:snapshot.digest.clone(),status:status.as_str().into(),exit_code:exit,termination_reason:reason,log_truncated:truncated,started_at:started,ended_at:ended,provenance:Provenance::Observed,limitation:"Observed command result on an immutable source snapshot; not a growth, accessibility or performance measurement.".into() },log))
+    Ok((ValidationRecord { run_id:id,command:command.into(),source_commit:snapshot.revision.clone(),source_digest:snapshot.digest.clone(),status:status.as_str().into(),exit_code:exit,termination_reason:reason,log_truncated:truncated,started_at:started,ended_at:ended,provenance:Provenance::Observed,limitation:"Observed command result on an immutable source snapshot; not a growth, accessibility or performance measurement.".into(),confinement:Some(confined.record) },log))
 }

@@ -103,6 +103,8 @@ pub struct ValidationRecord {
     pub ended_at: i64,
     pub provenance: Provenance,
     pub limitation: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub confinement: Option<super::confinement::ConfinementRecord>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -110,6 +112,8 @@ pub struct ValidationRecord {
 pub struct ActiveValidation {
     pub run_id: String,
     pub command_index: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub confinement: Option<super::confinement::ConfinementRecord>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

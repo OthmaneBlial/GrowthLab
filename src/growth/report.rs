@@ -29,6 +29,8 @@ pub struct ReportCheck {
     pub started_at: i64,
     pub ended_at: i64,
     pub provenance: Provenance,
+    pub confinement: Option<String>,
+    pub confinement_policy_digest: Option<String>,
 }
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -96,6 +98,27 @@ fn check(check: &ValidationRecord, index: usize, include_context: bool) -> Repor
         started_at: check.started_at,
         ended_at: check.ended_at,
         provenance: check.provenance,
+        confinement: check.confinement.as_ref().map(|record| {
+            match record.backend.as_str() {
+                "macos-seatbelt-v1" => "macOS filesystem restrictions; network denied",
+                "linux-bubblewrap-v1" => {
+                    "Linux filesystem/process namespaces; host network isolated"
+                }
+                _ => "Unrecognized confinement metadata; isolation is unverified",
+            }
+            .into()
+        }),
+        confinement_policy_digest: check.confinement.as_ref().and_then(|record| {
+            (matches!(
+                record.backend.as_str(),
+                "macos-seatbelt-v1" | "linux-bubblewrap-v1"
+            ) && record.policy_digest.len() == 64
+                && record
+                    .policy_digest
+                    .bytes()
+                    .all(|byte| byte.is_ascii_hexdigit()))
+            .then(|| record.policy_digest.clone())
+        }),
     }
 }
 fn diff_stats(diff: &str) -> (usize, usize, usize) {
@@ -221,7 +244,7 @@ pub fn build(store: &Store, id: &str, options: &ReportOptions) -> Result<BattleR
             "Eligibility requires every configured command to pass on a successful sealed candidate. Ties require user review; this report contains no combined growth score.".into(),
             "Diff counts summarize the archived Git diff; binary changes are not line-counted. Render screenshots have not been captured for these attempts.".into(),
             "Private product metadata, prompts, raw logs and model identifiers are withheld. Explicit context export discloses goal, variant titles, summaries and commands; that text may contain identifying names or paths.".into(),
-            "Replay proposals are declared simulations. Actual configured checks are observed; growth outcomes remain untested. Validation currently runs trusted code without host filesystem/network confinement.".into(),
+            "Replay proposals are declared simulations. Actual configured checks are observed; growth outcomes remain untested. Inspect each check's isolation metadata. Archived checks without it predate confinement; their host isolation is unverified. Resource quotas are not provided.".into(),
         ],
         selected_candidate:variants.iter().find(|variant|variant.selected).map(|variant|variant.number),
         selection_action:selected.map(|record|match record.action {
@@ -313,6 +336,17 @@ pub fn markdown(report: &BattleReport) -> String {
                     .map(|reason| format!(" {}", md(reason)))
                     .unwrap_or_default()
             ));
+            out.push_str(&format!(
+                "  Isolation: {}. Policy SHA-256: {}.\n",
+                md(check
+                    .confinement
+                    .as_deref()
+                    .unwrap_or("Not recorded; host isolation is unverified")),
+                md(check
+                    .confinement_policy_digest
+                    .as_deref()
+                    .unwrap_or("unavailable"))
+            ));
         }
         if row.checks.is_empty() {
             out.push_str("No command results recorded.\n");
@@ -366,10 +400,10 @@ pub fn document(report: &BattleReport) -> String {
             if row.selected {"is-selected"} else {""},row.number,if row.eligible {"Eligible candidate"} else {"Not eligible"},
             html(&row.label),html(&row.status),if row.selected {" · Selected"} else {""},row.passed_commands,row.required_commands,html(&report.calculation)));
         for check in &row.checks {
-            out.push_str(&format!(r#"<div class="check"><p><strong>{}</strong><span>{} · exit {}</span></p><p>{}{} · {}</p><p class="timestamp">UTC Unix ms {}–{}</p><dl><dt>Commit</dt><dd>{}</dd><dt>Source SHA-256</dt><dd>{}</dd></dl></div>"#,
+            out.push_str(&format!(r#"<div class="check"><p><strong>{}</strong><span>{} · exit {}</span></p><p>{}{} · {}</p><p class="timestamp">UTC Unix ms {}–{}</p><dl><dt>Commit</dt><dd>{}</dd><dt>Source SHA-256</dt><dd>{}</dd><dt>Isolation</dt><dd>{}</dd><dt>Policy SHA-256</dt><dd>{}</dd></dl></div>"#,
                 html(&check.label),html(&check.status),check.exit_code.map(|code|code.to_string()).unwrap_or("unavailable".into()),
                 html(check.termination.as_deref().unwrap_or("Recorded command result")),if check.log_truncated {" · log truncated"} else {""},
-                provenance(check.provenance),check.started_at,check.ended_at,html(&check.source_commit),html(&check.source_digest)));
+                provenance(check.provenance),check.started_at,check.ended_at,html(&check.source_commit),html(&check.source_digest),html(check.confinement.as_deref().unwrap_or("Not recorded; host isolation is unverified")),html(check.confinement_policy_digest.as_deref().unwrap_or("unavailable"))));
         }
         if row.checks.is_empty() {
             out.push_str("<p>No command results recorded.</p>");

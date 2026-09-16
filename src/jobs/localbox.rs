@@ -92,7 +92,15 @@ pub fn run_job_with_timeout(
         let _ = std::fs::set_permissions(&run_sh_path, std::fs::Permissions::from_mode(0o600));
     }
 
-    let mut cmd = std::process::Command::new(crate::local::bash::program());
+    #[cfg(unix)]
+    let controller_program = if inherit_environment {
+        crate::local::bash::program()
+    } else {
+        std::ffi::OsString::from("/bin/bash")
+    };
+    #[cfg(not(unix))]
+    let controller_program = crate::local::bash::program();
+    let mut cmd = std::process::Command::new(controller_program);
     if !inherit_environment {
         cmd.env_clear();
         for key in ["SystemRoot", "COMSPEC", "TEMP", "TMP", "TMPDIR", "LANG"] {
@@ -142,7 +150,7 @@ pub fn run_job_with_timeout(
 /// is not running. No libc dependency; works on macOS and Linux.
 #[cfg(not(windows))]
 fn pid_alive(pid: &str) -> bool {
-    match std::process::Command::new("ps")
+    match std::process::Command::new("/bin/ps")
         .args(["-o", "stat=", "-p", pid])
         .stderr(std::process::Stdio::null())
         .output()
@@ -260,7 +268,7 @@ pub fn stream_logs(dir: &Path, skip: u64, sink: &mut (dyn FnMut(&str) + Send)) -
     Ok(seen)
 }
 
-/// TERM the process group (pid == pgid), else the pid alone; on Windows, the process tree.
+/// TERM the fresh controller process group; on Windows, the process tree.
 pub fn cancel_job(dir: &Path) -> Result<()> {
     let pid = std::fs::read_to_string(dir.join("pid"))
         .map_err(|e| anyhow!("Could not read the run's pid: {}", e))?;
@@ -306,41 +314,40 @@ fn terminate_group(pid: &str) -> Result<()> {
     if leader <= 0 {
         return Err(anyhow!("Invalid local process id"));
     }
-    // SAFETY: probe a locally recorded process group; completion races cancel.
-    if unsafe { libc::kill(-leader, 0) } != 0 {
+    // Direct OS signals avoid mutable PATH and completion/tool lookup races.
+    // ESRCH means this recorded group already ended; other failures propagate.
+    if !signal_group(leader, 0)? {
         return Ok(());
     }
-    let group = std::process::Command::new("kill")
-        .args(["-TERM", "--", &format!("-{pid}")])
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false);
-    if !group {
-        let process = std::process::Command::new("kill")
-            .args(["-TERM", pid])
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .status()
-            .map(|status| status.success())
-            .unwrap_or(false);
-        if !process {
-            return Err(anyhow!("Could not terminate local process group {pid}"));
-        }
+    if !signal_group(leader, libc::SIGTERM)? {
+        return Ok(());
     }
     // TERM alone leaves children that ignore it running. A controller owns a
     // fresh process group; bound cancellation and kill remaining descendants.
     for _ in 0..25 {
-        // SAFETY: signal 0 probes this locally recorded process group.
-        if unsafe { libc::kill(-leader, 0) } != 0 {
+        if !signal_group(leader, 0)? {
             return Ok(());
         }
         std::thread::sleep(std::time::Duration::from_millis(20));
     }
-    // SAFETY: the recorded positive leader is negated to target its group.
-    let _ = unsafe { libc::kill(-leader, libc::SIGKILL) };
+    signal_group(leader, libc::SIGKILL)?;
     Ok(())
+}
+
+#[cfg(not(windows))]
+fn signal_group(leader: i32, signal: i32) -> Result<bool> {
+    // SAFETY: terminate_group validates the locally recorded positive leader;
+    // negation targets that owned group, not all processes or another PID.
+    if unsafe { libc::kill(-leader, signal) } == 0 {
+        return Ok(true);
+    }
+    let error = std::io::Error::last_os_error();
+    if error.raw_os_error() == Some(libc::ESRCH) {
+        return Ok(false);
+    }
+    Err(anyhow!(
+        "Could not signal local process group {leader} (signal {signal}): {error}"
+    ))
 }
 
 /// What "this machine" is, for the Compute settings card: the hardware a
@@ -471,6 +478,96 @@ mod tests {
             state = inspect_job(dir);
         }
         state
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn cancellation_does_not_require_external_tools_on_path() {
+        const MARKER: &str = "GROWTHLAB_OWNED_CANCEL_PATH_FIXTURE";
+        struct OwnedFixture {
+            root: PathBuf,
+            group: Option<i32>,
+        }
+        impl Drop for OwnedFixture {
+            fn drop(&mut self) {
+                if let Some(group) = self.group {
+                    // SAFETY: a fresh controller group created by this fixture;
+                    // cleanup is needed if the old cancellation path fails.
+                    let _ = unsafe { libc::kill(-group, libc::SIGKILL) };
+                }
+                let _ = std::fs::remove_dir_all(&self.root);
+            }
+        }
+        let Some(root) = std::env::var_os(MARKER) else {
+            let fixture = OwnedFixture {
+                root: std::env::temp_dir()
+                    .join(format!("growth-owned-cancel-path-{}", uuid::Uuid::new_v4())),
+                group: None,
+            };
+            std::fs::create_dir_all(fixture.root.join("empty-path")).unwrap();
+            // The subprocess keeps PATH changes away from concurrent tests and
+            // receives no inherited credentials or user database/config paths.
+            let result = std::process::Command::new(std::env::current_exe().unwrap())
+                .args([
+                    "--exact",
+                    "jobs::localbox::tests::cancellation_does_not_require_external_tools_on_path",
+                    "--nocapture",
+                ])
+                .env_clear()
+                .env(MARKER, &fixture.root)
+                .env("PATH", fixture.root.join("empty-path"))
+                .env("GROWTHLAB_DATA_DIR", fixture.root.join("lab"))
+                .env("ORX_DATA_DIR", fixture.root.join("lab"))
+                .env("ORX_CACHE_DIR", fixture.root.join("cache"))
+                .env("XDG_CONFIG_HOME", fixture.root.join("config"))
+                .stdin(std::process::Stdio::null())
+                .output()
+                .unwrap();
+            assert!(
+                result.status.success(),
+                "{}\n{}",
+                String::from_utf8_lossy(&result.stdout),
+                String::from_utf8_lossy(&result.stderr)
+            );
+            return;
+        };
+        let mut fixture = OwnedFixture {
+            root: root.into(),
+            group: None,
+        };
+        let directory = fixture.root.join("job");
+        run_job_at(
+            &LocalJobSpec {
+                run_id: "owned-cancel-fixture".into(),
+                script: "/bin/sleep 60".into(),
+                env: HashMap::from([("PATH".into(), "/usr/bin:/bin:/usr/sbin:/sbin".into())]),
+                secret_env: HashMap::new(),
+            },
+            &directory,
+            false,
+        )
+        .unwrap();
+        let group: i32 = std::fs::read_to_string(directory.join("pid"))
+            .unwrap()
+            .trim()
+            .parse()
+            .unwrap();
+        assert!(group > 0);
+        fixture.group = Some(group);
+        // SAFETY: inspect only this fixture's freshly registered group.
+        assert_eq!(unsafe { libc::kill(-group, 0) }, 0);
+        cancel_job(&directory).unwrap();
+        fixture.group = None;
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+        while unsafe { libc::kill(-group, 0) } == 0 && std::time::Instant::now() < deadline {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        // SAFETY: inspect only the fixture's recorded group after cancellation.
+        assert_eq!(unsafe { libc::kill(-group, 0) }, -1);
+        assert_eq!(
+            std::io::Error::last_os_error().raw_os_error(),
+            Some(libc::ESRCH)
+        );
     }
 
     #[test]

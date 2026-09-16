@@ -64,8 +64,11 @@ bundles; automatic checkpoint garbage collection is not implemented.
 
 This workflow covers CLI attempts and recorded jobs. Interrupted selected-delivery
 receipts, data-root relocation, native-agent runtime verification and operating
-system filesystem/network confinement remain release gates. Validation runs use
-minimal environments, but they are not yet an OS sandbox.
+system isolation verification across target platforms remain release gates.
+New validation checkpoints capture confinement metadata and exact policy bytes;
+recovery verifies their digest before inspecting an active job, then retains the
+original metadata with its exit/log. Older checks without metadata keep their
+original bytes and have unverified host isolation. See [confinement](confinement.md).
 
 ## Local verification
 
@@ -79,7 +82,7 @@ cargo build --locked
 python3 scripts/test-growth-recovery.py target/debug/growthlab
 ```
 
-An optional second argument is a pre-checkpoint GrowthLab binary. It creates real
-legacy seals and verifies that the current binary preserves comparisons and patch
-delivery through the schema upgrade. All GitHub Actions workflows are disabled
+An optional second argument is an older GrowthLab binary, including one predating
+checkpoints or confinement metadata. It creates real legacy seals and verifies
+that the current binary preserves comparisons and patch delivery. All GitHub Actions workflows are disabled
 at the user's request; run validation locally only.

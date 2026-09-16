@@ -29,9 +29,10 @@ will say **Recommended candidate**, never claim measured growth.
 
 ## Source development
 
-Requirements: Git, stable Rust/Cargo, Node.js 22+, and pnpm 10. macOS and Linux
-are the initial targets. Windows support inherits upstream foundations and
-requires separate runtime validation.
+Requirements: Git, stable Rust/Cargo, Node.js 22+, and pnpm 10. Validation requires
+`/usr/bin/sandbox-exec` on macOS, or `/usr/bin/bwrap` with permitted unprivileged
+namespaces on Linux. macOS and Linux are the initial targets; Linux isolation
+needs native runtime verification. Windows validation isolation is not implemented.
 
 ```sh
 git clone https://github.com/OthmaneBlial/GrowthLab.git
@@ -53,6 +54,8 @@ The [delivery workflow](docs/delivery.md) covers selected patches, apply preview
 and self-contained reports with explicit context disclosure.
 The [recovery workflow](docs/recovery.md) explains verified checkpoints, surviving
 jobs and interrupted outcomes without rerunning providers or commands.
+The [validation isolation policy](docs/confinement.md) explains permitted runtime
+files, offline dependency limits, private policy evidence and platform support.
 Do not use the upstream OpenResearch installer to install GrowthLab.
 
 ## Architecture and privacy

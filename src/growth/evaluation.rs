@@ -112,6 +112,14 @@ pub fn compare_with(
                 "Sealed run does not match its frozen battle; comparison refused"
             ));
         }
+        for (index, check) in sealed.run.validations.iter().enumerate() {
+            if let Some(record) = &check.confinement {
+                let policy = files
+                    .get(&format!("validation-{index}.policy.json"))
+                    .ok_or_else(|| anyhow!("Sealed validation confinement policy is missing"))?;
+                super::confinement::verify_record(record, policy)?;
+            }
+        }
     }
     let rows: Vec<_> = variants
         .iter()

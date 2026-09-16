@@ -42,9 +42,15 @@
   checkpoints can finalize their original seals without changing sealed siblings.
 - Disabled all six GitHub Actions workflows at the user's request. Validation is
   local only until a new instruction enables automation.
+- Required OS isolation for configured validation: macOS deny-by-default profiles
+  and a Linux Bubblewrap namespace backend, with no unrestricted fallback.
+  Captured policies/digests survive checkpoints, seals and recovery; public reports
+  disclose static backend labels/digests without private policy paths. A pipe relay
+  captures logs while supervisor files remain outside command permissions.
+  Linux runtime proof is pending; Windows isolation is not implemented.
 
 This is not a tagged credible release. The growth-native dashboard,
-verified native execution, host execution confinement, incomplete launcher registration
+verified native execution, cross-platform confinement proof, incomplete launcher registration
 and interrupted selected-delivery recovery,
 bundled visual replay demo, archived render artifacts and real outcome measurement
 remain work in the roadmap. No telemetry lift, production readiness, public

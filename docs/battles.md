@@ -76,10 +76,12 @@ and 1 MiB total implementation text. Competing execution honours parallelism.
 Validation executes content-addressed candidate source archives in separate
 controller directories, never the mutable agent worktree. It reuses the localbox
 backend and generic StoredRun records. The environment excludes inherited and
-synced provider credentials; PATH/system temp/runtime settings remain available.
-Commands are trusted user-authorized code and can execute candidate code: this
-environment filtering does not confine filesystem/network access. Host execution
-is still a security gate before a credible release.
+synced provider credentials. Commands require OS isolation: snapshot/scratch
+writes, read-only approved runtime roots and no host network access. Supervisor
+files and the original product remain outside the command's permissions.
+Captured policy bytes and their digest accompany the checks. Read the
+[confinement policy](confinement.md) for platform support and dependency limits;
+Linux runtime proof and broader security gates remain pending.
 
 A launcher watchdog enforces the configured timeout independently of the Rust
 controller, sends TERM then KILL, and records timeout status. Log capture is
@@ -94,7 +96,8 @@ Cancelled/failed attempts remain inspectable. Terminal battles are not silently
 rerun or overwritten; create a new battle for a new attempt. A failed validation
 is represented in battle/run JSON even when CLI orchestration itself exits
 successfully. Inspect status rather than treating exit zero as all checks passed.
-Recovery of interrupted unsealed attempts remains work in progress.
+Use [explicit recovery](recovery.md) for interrupted checkpointed attempts;
+unregistered launchers and interrupted selected delivery remain separate gates.
 
 ## Native adapters
 

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Hard-kill a real CLI controller, retain its jobs, and recover sealed evidence.
 
-An optional pre-checkpoint binary also verifies actual legacy archive compatibility.
+An optional older binary also verifies actual legacy archive compatibility.
 All repositories, inputs, jobs and reports are synthetic and stay in a temporary root.
 """
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -99,6 +100,11 @@ def main():
             assert not comparison["recommendedCandidates"], "Interrupted commands cannot create successful candidates"
             assert comparison["rows"][1]["checks"][0]["exitCode"] == 2
             assert all(row["status"] == "failed" and row["implementationProvenance"] == "SIMULATED" and row["checkProvenance"] == "OBSERVED" and row["outcomeProvenance"] == "UNTESTED" for row in comparison["rows"])
+            for row in comparison["rows"]:
+                isolation = row["checks"][0]["confinement"]
+                assert isolation["backend"] in ["macos-seatbelt-v1", "linux-bubblewrap-v1"]
+                archive = current / "lab/growth-archives" / row["archiveDigest"]
+                assert hashlib.sha256((archive / "validation-0.policy.json").read_bytes()).hexdigest() == isolation["policyDigest"]
             status = json.loads(run("battle-status", battle))
             for seal in status["runs"]:
                 archive = current / "lab/growth-archives" / seal["archiveDigest"]
@@ -106,6 +112,7 @@ def main():
             run("report", battle, "--output", str(current / "recovered.md"), "--format", "markdown")
             report = (current / "recovered.md").read_text()
             assert "PrivateSyntheticRecoveryName" not in report and "PrivateSyntheticRecoveryGoal" not in report and str(product) not in report
+            assert str(current / "lab") not in report and "Policy SHA-256" in report
             assert json.loads(run("recover", battle))["status"] == "unchanged"
             assert json.loads(run("battle-status", battle))["runs"] == status["runs"]
             assert len(list((current / "lab/growth-jobs").glob("*"))) == 3
@@ -123,14 +130,14 @@ def main():
             old_run("run", old_battle, "--replay", str(old_plan))
             before = json.loads(old_run("compare", old_battle))
             after = json.loads(old_run("compare", old_battle, selected_binary=binary))
-            assert after == before, "Schema-v4 upgrade must preserve actual legacy sealed archives and evaluation"
+            assert after == before, "Current binary must preserve actual legacy sealed archives and evaluation"
             assert json.loads(old_run("recover", old_battle, selected_binary=binary))["status"] == "unchanged"
             variant = old_prepared["variants"][0]["id"]
             old_run("select", variant, selected_binary=binary)
             old_run("export", variant, "--output", str(old_root / "legacy.patch"), selected_binary=binary)
             assert "+<h1>Outcome-first</h1>" in (old_root / "legacy.patch").read_text()
             assert old_git("status", "--porcelain") == ""
-        print("Growth recovery CLI smoke passed: hard-killed owner; live jobs retained; sealed context/logs recovered; no reruns or successful-candidate promotion; missing product supported; repeated recovery preserved seals." + (" Actual legacy archives and patch delivery survived schema upgrade." if legacy else ""))
+        print("Growth recovery CLI smoke passed: hard-killed owner; live jobs retained; sealed context/logs recovered; no reruns or successful-candidate promotion; missing product supported; repeated recovery preserved seals." + (" Actual legacy archives and patch delivery remain compatible." if legacy else ""))
 
 
 if __name__ == "__main__":
