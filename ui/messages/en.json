@@ -1222,5 +1222,19 @@
   "growth_measure_difference_interval": "Δ 95%",
   "growth_measure_analysis_summary": "How the exploratory intervals work",
   "growth_measure_analysis_body": "95% normal approximation over independent observations. A mean interval needs at least two rows in a group; a difference interval needs at least two rows in both the variant and baseline. These intervals are descriptive and do not establish significance, causality or a winner.",
-  "growth_measure_limit": "Measured from your file; no causality, significance or growth lift is inferred."
+  "growth_measure_limit": "Measured from your file; no causality, significance or growth lift is inferred.",
+  "growth_settings_nav": "Settings",
+  "growth_settings_title": "Keep your lab settings close.",
+  "growth_settings_intro": "Choose the language and theme for this local dashboard. These preferences stay in your browser and do not change product files.",
+  "growth_settings_language": "Language",
+  "growth_settings_theme": "Theme",
+  "growth_settings_system": "System preference",
+  "growth_settings_light": "Light",
+  "growth_settings_dark": "Dark",
+  "growth_settings_privacy_title": "Local by default",
+  "growth_settings_privacy_body": "Product context, battle evidence and CSV rows stay on this machine unless you explicitly choose an external integration.",
+  "growth_settings_integrations_title": "Integration status",
+  "growth_settings_integrations_body": "The source registry shows what can be connected later. Planned providers are inactive until you configure and authorize them.",
+  "growth_settings_local_source_count": "local source available",
+  "growth_settings_planned_source_count": "planned boundaries"
 }

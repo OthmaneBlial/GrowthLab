@@ -1222,5 +1222,19 @@
   "growth_measure_difference_interval": "Δ 95٪",
   "growth_measure_analysis_summary": "كيف تعمل الفواصل الاستكشافية",
   "growth_measure_analysis_body": "تقريب طبيعي بنسبة 95٪ للملاحظات المستقلة. يحتاج فاصل المتوسط إلى صفين على الأقل في المجموعة؛ ويحتاج فاصل الفرق إلى صفين على الأقل في كل من المتغير والأساس. هذه الفواصل وصفية ولا تثبت الدلالة أو السببية أو وجود فائز.",
-  "growth_measure_limit": "تم القياس من ملفك؛ لا نستنتج السببية أو الدلالة أو زيادة النمو."
+  "growth_measure_limit": "تم القياس من ملفك؛ لا نستنتج السببية أو الدلالة أو زيادة النمو.",
+  "growth_settings_nav": "الإعدادات",
+  "growth_settings_title": "أبقِ إعدادات مختبرك قريبة.",
+  "growth_settings_intro": "اختر لغة ولوحة ألوان لوحة التحكم المحلية. تُحفظ هذه التفضيلات في متصفحك ولا تغيّر ملفات المنتج.",
+  "growth_settings_language": "اللغة",
+  "growth_settings_theme": "المظهر",
+  "growth_settings_system": "تفضيل النظام",
+  "growth_settings_light": "فاتح",
+  "growth_settings_dark": "داكن",
+  "growth_settings_privacy_title": "محلي افتراضياً",
+  "growth_settings_privacy_body": "يبقى سياق المنتج وأدلة المعركة وصفوف CSV على هذا الجهاز ما لم تختر تكاملاً خارجياً صراحةً.",
+  "growth_settings_integrations_title": "حالة التكاملات",
+  "growth_settings_integrations_body": "يوضح سجل المصادر ما يمكن ربطه لاحقاً. تظل المزودات المخططة غير نشطة حتى تهيئها وتسمح بها.",
+  "growth_settings_local_source_count": "مصدر محلي متاح",
+  "growth_settings_planned_source_count": "حدود مخططة"
 }

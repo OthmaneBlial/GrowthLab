@@ -1222,5 +1222,19 @@
   "growth_measure_difference_interval": "Δ 95%",
   "growth_measure_analysis_summary": "अन्वेषणात्मक अंतराल कैसे काम करते हैं",
   "growth_measure_analysis_body": "स्वतंत्र अवलोकनों पर 95% सामान्य सन्निकटन। माध्य अंतराल के लिए समूह में कम से कम दो पंक्तियाँ चाहिए; अंतर अंतराल के लिए बेसलाइन और वैरिएंट दोनों में कम से कम दो पंक्तियाँ चाहिए। ये अंतराल वर्णनात्मक हैं और महत्व, कारण या विजेता सिद्ध नहीं करते।",
-  "growth_measure_limit": "आपकी फ़ाइल से मापा गया; कारण, महत्व या वृद्धि का अनुमान नहीं लगाया गया है."
+  "growth_measure_limit": "आपकी फ़ाइल से मापा गया; कारण, महत्व या वृद्धि का अनुमान नहीं लगाया गया है.",
+  "growth_settings_nav": "सेटिंग्स",
+  "growth_settings_title": "अपनी लैब सेटिंग्स पास रखें।",
+  "growth_settings_intro": "इस स्थानीय डैशबोर्ड की भाषा और थीम चुनें। ये पसंद ब्राउज़र में रहती हैं और उत्पाद फ़ाइलों को नहीं बदलतीं।",
+  "growth_settings_language": "भाषा",
+  "growth_settings_theme": "थीम",
+  "growth_settings_system": "सिस्टम पसंद",
+  "growth_settings_light": "हल्का",
+  "growth_settings_dark": "गहरा",
+  "growth_settings_privacy_title": "डिफ़ॉल्ट रूप से स्थानीय",
+  "growth_settings_privacy_body": "उत्पाद संदर्भ, बैटल प्रमाण और CSV पंक्तियाँ इसी मशीन पर रहती हैं, जब तक आप बाहरी एकीकरण न चुनें।",
+  "growth_settings_integrations_title": "एकीकरण स्थिति",
+  "growth_settings_integrations_body": "स्रोत रजिस्ट्री बताती है कि आगे क्या जोड़ा जा सकता है। नियोजित प्रदाता आपके कॉन्फ़िगर और अधिकृत करने तक निष्क्रिय रहते हैं।",
+  "growth_settings_local_source_count": "स्थानीय स्रोत उपलब्ध",
+  "growth_settings_planned_source_count": "नियोजित सीमाएँ"
 }

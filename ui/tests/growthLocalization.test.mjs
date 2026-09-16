@@ -24,6 +24,7 @@ const growthKeys = [
   "growth_candidate_earns_place",
   "growth_connection_live",
   "growth_connection_connecting",
+  "growth_settings_nav",
 ];
 const measurementKeys = [
   "growth_measure_title",
@@ -55,10 +56,26 @@ const measurementKeys = [
   "growth_measure_analysis_body",
   "growth_measure_limit",
 ];
+const settingsKeys = [
+  "growth_settings_title",
+  "growth_settings_intro",
+  "growth_settings_language",
+  "growth_settings_theme",
+  "growth_settings_system",
+  "growth_settings_light",
+  "growth_settings_dark",
+  "growth_settings_privacy_title",
+  "growth_settings_privacy_body",
+  "growth_settings_integrations_title",
+  "growth_settings_integrations_body",
+  "growth_settings_local_source_count",
+  "growth_settings_planned_source_count",
+];
 
 test("GrowthLab onboarding shell uses every localized growth message", async () => {
   const source = await readFile(new URL("src/growth/GrowthDashboard.tsx", uiRoot), "utf8");
   const measurementSource = await readFile(new URL("src/growth/MeasurementPanel.tsx", uiRoot), "utf8");
+  const settingsSource = await readFile(new URL("src/growth/GrowthSettingsPanel.tsx", uiRoot), "utf8");
   const settings = JSON.parse(await readFile(new URL("project.inlang/settings.json", uiRoot), "utf8"));
   for (const key of growthKeys) {
     assert.match(source, new RegExp(key), `${key} should be rendered by GrowthDashboard`);
@@ -66,9 +83,12 @@ test("GrowthLab onboarding shell uses every localized growth message", async () 
   for (const key of measurementKeys) {
     assert.match(measurementSource, new RegExp(key), `${key} should be rendered by MeasurementPanel`);
   }
+  for (const key of settingsKeys) {
+    assert.match(settingsSource, new RegExp(key), `${key} should be rendered by GrowthSettingsPanel`);
+  }
   for (const locale of settings.locales) {
     const catalog = JSON.parse(await readFile(new URL(`messages/${locale}.json`, uiRoot), "utf8"));
-    for (const key of [...growthKeys, ...measurementKeys]) {
+    for (const key of [...growthKeys, ...measurementKeys, ...settingsKeys]) {
       assert.equal(typeof catalog[key], "string", `${locale} should define ${key}`);
       assert.ok(catalog[key].trim(), `${locale} should not leave ${key} empty`);
     }

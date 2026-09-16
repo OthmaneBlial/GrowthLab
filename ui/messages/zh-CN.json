@@ -1222,5 +1222,19 @@
   "growth_measure_difference_interval": "Δ 95%",
   "growth_measure_analysis_summary": "探索性区间如何计算",
   "growth_measure_analysis_body": "对独立观测使用 95% 正态近似。组内至少有两行才能计算均值区间；基线和变体都至少有两行才能计算差异区间。这些区间仅作描述，不能证明显著性、因果关系或胜者。",
-  "growth_measure_limit": "数据来自你的文件；没有推断因果关系、显著性或增长提升。"
+  "growth_measure_limit": "数据来自你的文件；没有推断因果关系、显著性或增长提升。",
+  "growth_settings_nav": "设置",
+  "growth_settings_title": "让实验室设置随手可见。",
+  "growth_settings_intro": "选择此本地面板的语言和主题。这些偏好保存在浏览器中，不会修改产品文件。",
+  "growth_settings_language": "语言",
+  "growth_settings_theme": "主题",
+  "growth_settings_system": "跟随系统",
+  "growth_settings_light": "浅色",
+  "growth_settings_dark": "深色",
+  "growth_settings_privacy_title": "默认本地运行",
+  "growth_settings_privacy_body": "产品上下文、对战证据和 CSV 行保存在本机，除非你明确选择外部集成。",
+  "growth_settings_integrations_title": "集成状态",
+  "growth_settings_integrations_body": "来源注册表显示以后可以连接的内容。计划中的提供方在配置并授权前保持停用。",
+  "growth_settings_local_source_count": "个本地来源可用",
+  "growth_settings_planned_source_count": "个计划边界"
 }

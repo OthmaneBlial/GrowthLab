@@ -1222,5 +1222,19 @@
   "growth_measure_difference_interval": "Δ 95%",
   "growth_measure_analysis_summary": "Cómo funcionan los intervalos exploratorios",
   "growth_measure_analysis_body": "Aproximación normal del 95% sobre observaciones independientes. Un intervalo de media necesita al menos dos filas por grupo; un intervalo de diferencia necesita al menos dos filas tanto en la variante como en la referencia. Estos intervalos son descriptivos y no establecen significación, causalidad ni una ganadora.",
-  "growth_measure_limit": "Medido desde tu archivo; no se infieren causalidad, significación ni aumento de crecimiento."
+  "growth_measure_limit": "Medido desde tu archivo; no se infieren causalidad, significación ni aumento de crecimiento.",
+  "growth_settings_nav": "Ajustes",
+  "growth_settings_title": "Mantén cerca los ajustes del laboratorio.",
+  "growth_settings_intro": "Elige el idioma y el tema de este panel local. Estas preferencias se guardan en tu navegador y no cambian los archivos del producto.",
+  "growth_settings_language": "Idioma",
+  "growth_settings_theme": "Tema",
+  "growth_settings_system": "Preferencia del sistema",
+  "growth_settings_light": "Claro",
+  "growth_settings_dark": "Oscuro",
+  "growth_settings_privacy_title": "Local por defecto",
+  "growth_settings_privacy_body": "El contexto del producto, las evidencias de batalla y las filas CSV permanecen en este equipo salvo que elijas una integración externa.",
+  "growth_settings_integrations_title": "Estado de integraciones",
+  "growth_settings_integrations_body": "El registro muestra qué se puede conectar más adelante. Los proveedores planificados están inactivos hasta que los configures y autorices.",
+  "growth_settings_local_source_count": "fuente local disponible",
+  "growth_settings_planned_source_count": "límites planificados"
 }

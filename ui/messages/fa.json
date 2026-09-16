@@ -1222,5 +1222,19 @@
   "growth_measure_difference_interval": "Δ ۹۵٪",
   "growth_measure_analysis_summary": "فاصله‌های اکتشافی چگونه کار می‌کنند",
   "growth_measure_analysis_body": "تقریب نرمال ۹۵٪ روی مشاهده‌های مستقل. برای فاصلهٔ میانگین حداقل دو ردیف در گروه لازم است؛ برای فاصلهٔ تفاوت، هم پایه و هم گونه باید حداقل دو ردیف داشته باشند. این فاصله‌ها توصیفی‌اند و معناداری، علیت یا برنده را ثابت نمی‌کنند.",
-  "growth_measure_limit": "از فایل شما اندازه‌گیری شده است؛ علیت، معناداری یا رشد استنباط نشده است."
+  "growth_measure_limit": "از فایل شما اندازه‌گیری شده است؛ علیت، معناداری یا رشد استنباط نشده است.",
+  "growth_settings_nav": "تنظیمات",
+  "growth_settings_title": "تنظیمات آزمایشگاه را نزدیک نگه دارید.",
+  "growth_settings_intro": "زبان و پوستهٔ این داشبورد محلی را انتخاب کنید. این ترجیحات در مرورگر ذخیره می‌شوند و فایل‌های محصول را تغییر نمی‌دهند.",
+  "growth_settings_language": "زبان",
+  "growth_settings_theme": "پوسته",
+  "growth_settings_system": "ترجیح سیستم",
+  "growth_settings_light": "روشن",
+  "growth_settings_dark": "تیره",
+  "growth_settings_privacy_title": "محلی به‌صورت پیش‌فرض",
+  "growth_settings_privacy_body": "زمینهٔ محصول، شواهد رقابت و ردیف‌های CSV روی این دستگاه می‌مانند مگر این‌که آگاهانه یک اتصال بیرونی را انتخاب کنید.",
+  "growth_settings_integrations_title": "وضعیت اتصال‌ها",
+  "growth_settings_integrations_body": "ثبت منابع نشان می‌دهد بعداً چه چیزهایی قابل اتصال است. ارائه‌دهندگان برنامه‌ریزی‌شده تا زمان پیکربندی و اجازهٔ شما غیرفعال‌اند.",
+  "growth_settings_local_source_count": "منبع محلی در دسترس",
+  "growth_settings_planned_source_count": "مرز برنامه‌ریزی‌شده"
 }
