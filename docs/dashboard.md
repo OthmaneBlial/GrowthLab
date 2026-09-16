@@ -70,11 +70,13 @@ For a quick review before creating a battle, run
 shareable local note. The command reads one regular UTF-8 file and makes no
 network request; see [seo-audit.md](seo-audit.md).
 
-When a product already has a local telemetry export, summarize it with
-`growthlab measure --csv ./telemetry.csv --format markdown`. This reports
+When a product already has a local telemetry export, use the **Bring a local
+outcome export** panel on Home or summarize it from the terminal with
+`growthlab measure --csv ./telemetry.csv --format markdown`. Both paths report
 descriptive means, sample sizes, date range and arithmetic baseline comparisons
-from the supplied rows; it is labelled **MEASURED** and does not claim
-attribution or statistical significance. See [measurement.md](measurement.md).
+from the supplied rows; they are labelled **MEASURED** and do not claim
+attribution or statistical significance. The browser panel reads the selected
+CSV in memory and sends no rows to a provider. See [measurement.md](measurement.md).
 
 Select a variant and switch between hypothesis/evidence, diff/files/logs and
 the optional static preview.
@@ -111,8 +113,8 @@ data-directory move. Project admission prevents local deletion during owned work
 This is not complete cross-process coordination for every inherited or CLI path.
 
 The source-alpha screens are English. Localization of GrowthLab screens, experiment
-tree, richer evaluators, the measurement view, broader inputs, real
-telemetry integrations and release packaging remain required
+tree, richer evaluators, cautious statistical analysis, provider adapters,
+broader inputs, real telemetry integrations and release packaging remain required
 work. The inherited eager UI bundle still produces a size warning. Linux confinement
 requires native runtime proof; Windows validation is unsupported. Resource quotas
 are not provided. GitHub Actions stays disabled; all checks run locally.

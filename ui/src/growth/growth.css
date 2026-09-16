@@ -40,6 +40,16 @@
 .growth-intro h1,.growth-workspace-heading h1 { font-family:Georgia,"Times New Roman",serif; font-weight:400; font-size:clamp(2rem,3.7vw,3.9rem); letter-spacing:-0.045em; line-height:1.06; }
 .growth-intro p { font-size:1rem; line-height:1.7; max-width:590px; margin-top:23px; color:var(--subtext); }
 .growth-home-grid { display:grid; grid-template-columns:1.15fr 1fr; border:1px solid var(--border); }
+.growth-measurement { margin-top:28px; border:1px solid var(--border); }
+.growth-measurement form { max-width:620px; }
+.growth-measurement-file { margin-top:14px; color:var(--subtext); font-size:0.6875rem; }
+.growth-measurement-result { margin-top:28px; padding-top:24px; border-top:1px solid var(--border); }
+.growth-measurement-result .growth-line { align-items:center; }
+.growth-measurement-table-wrap { overflow-x:auto; margin-top:18px; }
+.growth-measurement-table { width:100%; border-collapse:collapse; font-size:0.6875rem; min-width:620px; }
+.growth-measurement-table th,.growth-measurement-table td { border-top:1px solid var(--border); padding:10px 8px; text-align:left; }
+.growth-measurement-table th { font-family:var(--mono); font-size:0.5625rem; text-transform:uppercase; letter-spacing:0.04em; }
+.growth-measurement-limit { margin-top:16px; color:var(--subtext); font-size:0.6875rem; }
 .growth-demo-launch { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:28px; padding:24px; margin-bottom:28px; border:1px solid var(--border); background:var(--surface); }
 .growth-demo-launch h2 { font-family:Georgia,serif; font-weight:400; font-size:1.5rem; line-height:1.2; margin:10px 0; }
 .growth-demo-launch p { color:var(--subtext); font-size:0.75rem; line-height:1.8; max-width:620px; }

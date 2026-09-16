@@ -1,7 +1,9 @@
 # Local CSV measurement
 
 GrowthLab can summarize a user-supplied telemetry export without contacting an
-analytics provider:
+analytics provider. From the dashboard Home screen, choose **Telemetry CSV**
+and press **Summarize locally**; the browser keeps the selected rows in memory.
+For a repeatable terminal report, use:
 
 ```sh
 growthlab measure --csv ./telemetry.csv --format markdown
@@ -34,5 +36,5 @@ explicit warning; missing baseline rows leave a variant without a comparison.
 
 The importer is local and bounded: it accepts a regular UTF-8 file up to 8 MiB,
 rejects symlinks, limits rows and columns, handles quoted CSV fields, and makes
-no network request. The JSON output is suitable for a later dashboard
-measurement view; no provider integration is enabled by this command.
+no network request. The JSON output is suitable for downstream local analysis; no provider integration
+is enabled by either path.
