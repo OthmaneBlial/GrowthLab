@@ -101,6 +101,10 @@ stopped cleanly. This was baseline behavior, not a Growth Battle demo.
 
 ## Latest validation
 
+- GitHub Actions: **disabled at the user's request (2026-09-16)**. All six
+  workflows are `disabled_manually`; no active runs remain. Validation runs
+  locally only. Workflow definitions are preserved for possible future reuse.
+
 - `pnpm install --frozen-lockfile` in ui: **passed**.
 - `node --test scripts/dev-slot.test.mjs`: **passed**.
 - `node ui/scripts/check-i18n.mjs`: **passed**.
@@ -140,8 +144,10 @@ stopped cleanly. This was baseline behavior, not a Growth Battle demo.
   Clippy check for clearing a read-only flag. Linux passed the real CLI smokes,
   874 tests per binary and the inherited private-output/ETXTBSY regressions.
   Removed unnecessary Windows flag clearing while retaining direct tampering
-  and verification-refusal assertions. Fresh exact-commit CI must verify Windows
-  and the selected delivery/report milestone; older results do not validate it.
+  and verification-refusal assertions. Selected delivery/report commit `76bedfa`
+  ended with Linux/Windows Clippy failures before runtime checks. These require
+  local fixes; cross-platform runtime validation remains unverified. GitHub CI
+  will remain disabled per the latest user instruction.
 - Community issue templates: **passed**, parsed with Ruby standard YAML.
 - GitHub topics/discussions/private vulnerability reporting: **verified enabled**.
 

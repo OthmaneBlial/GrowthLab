@@ -17,9 +17,14 @@ The inherited `openresearch.sh` companion service is not a GrowthLab service. Do
 - Run local app instances through `scripts/dev-slot.mjs` so development data, ports, and processes stay isolated.
 - `ui/dist` is committed and embedded in release builds. After UI changes, run `pnpm build` in `ui/` and include the regenerated assets.
 - Prefer canonical Tailwind utilities (`flex flex-col h-full min-h-0`) and project theme aliases (`bg-background`, `text-subtext`, `border-border`). Use arbitrary values only when no project utility exists, and preserve semantic marker classes when selectors or runtime behavior depend on them.
-- Before shipping, follow the checks in `.github/workflows/ci.yml`.
+- Before shipping, run the relevant checks from `.github/workflows/ci.yml` locally.
 
 ## CI and release gates
+
+- Latest user instruction (2026-09-16): GitHub CI is disabled for now; validation
+  runs locally only. All six GitHub Actions workflows are manually disabled,
+  including release workflows that could invoke CI. Keep their definitions for
+  future use, but do not enable or dispatch them without a new user instruction.
 
 - For this task the user explicitly authorizes direct-main work with focused commits and frequent pushes to `OthmaneBlial/GrowthLab`. Inspect status/diffs and run relevant validation before each coherent commit. Verify the exact remote/head after pushing. Do not configure protection that prevents the authorized workflow.
 - PR CI must test GitHub's simulated merge (`refs/pull/<number>/merge`), which `actions/checkout` selects by default for `pull_request` events, rather than checking out the PR head alone. Each run tests its merge candidate; subsequent changes to `main` do not automatically rerun open PRs.
