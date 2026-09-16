@@ -194,6 +194,7 @@ where
     Router::new()
         .route("/api/growth/demo", post(create_demo))
         .route("/api/growth/capabilities", get(capabilities))
+        .route("/api/growth/measurement/sources", get(measurement_sources))
         .route("/api/growth/playbooks", get(playbooks))
         .route("/api/growth/url-audit", post(url_audit))
         .route("/api/growth/repository-audit", post(repository_audit))
@@ -343,6 +344,11 @@ async fn capabilities() -> ApiResult {
     value(
         json!({"isolationAvailable":crate::growth::confinement::available().is_ok(),"platform":std::env::consts::OS,"harnesses":local::harness::registry().iter().map(|harness|json!({"id":harness.id(),"toolsDisabledProposals":harness.one_shot_has_no_tools()})).collect::<Vec<_>>(),"limitation":"Adapter capabilities do not verify installation, authentication or provider execution. Linux requires native namespace verification; Windows validation is unsupported. Resource quotas are not provided."}),
     )
+}
+
+/// Describe local and future measurement adapters without contacting them.
+async fn measurement_sources() -> ApiResult {
+    value(crate::growth::measurement::sources())
 }
 
 /// Return reusable role contracts without contacting an agent or analytics provider.

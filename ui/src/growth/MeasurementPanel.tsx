@@ -1,4 +1,7 @@
 import { useState, type FormEvent } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { workspaceKey } from "../queries/client";
+import { growth } from "./api";
 import { parseMeasurementCsv, type LocalMeasurementReport } from "./measurement";
 
 function number(value: number) {
@@ -16,6 +19,7 @@ export function MeasurementPanel() {
   const [report, setReport] = useState<LocalMeasurementReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reading, setReading] = useState(false);
+  const sources = useQuery({ queryKey: workspaceKey("growth", "measurement-sources"), queryFn: ({ signal }) => growth.measurementSources(signal) });
 
   async function readFile(file: File | undefined) {
     if (!file) return;
@@ -37,6 +41,10 @@ export function MeasurementPanel() {
     <span className="growth-section-number">03 / MEASURE WHAT YOU OWN</span>
     <h2 id="growth-measurement-title">Bring a local outcome export.</h2>
     <p>Read your own CSV in this browser. GrowthLab compares variants within each metric and optional distribution or channel, locally, and sends no rows to a provider.</p>
+    <details className="growth-measurement-analysis" open>
+      <summary>Measurement source boundary</summary>
+      {sources.isPending ? <p className="growth-muted">Loading source availability…</p> : sources.error ? <p className="growth-muted">Source availability could not be loaded; local CSV remains available in this browser.</p> : <ul>{sources.data?.map((source) => <li key={source.id}><strong>{source.label}</strong> · {source.status === "available" ? "available locally" : "planned"} · {source.network === "none" ? "no network" : "explicit opt-in network"}<br /><span className="growth-muted">{source.limitation}</span></li>)}</ul>}
+    </details>
     <form onSubmit={summarize}>
       <label className="growth-file-label" htmlFor="growth-measurement-file">Telemetry CSV<input id="growth-measurement-file" type="file" accept=".csv,text/csv" onChange={(event) => { void readFile(event.target.files?.[0]); }} /></label>
       <label htmlFor="growth-measurement-baseline">Baseline variant</label>

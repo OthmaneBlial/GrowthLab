@@ -102,6 +102,7 @@ export interface ArtifactList {
 export interface Artifact { name: string; text: string; digest: string; archiveDigest: string; sealed: boolean }
 export interface ApplyPreview { variantId: string; sourceCommit: string; candidateCommit: string; patchDigest: string; changedFiles: string[]; operation: string }
 export interface Capabilities { isolationAvailable: boolean; platform: string; harnesses: { id: string; toolsDisabledProposals: boolean }[]; limitation: string }
+export interface MeasurementSource { id: string; label: string; category: string; status: "available" | "planned"; network: "none" | "opt_in"; provenance: Provenance; limitation: string }
 export interface GrowthPlaybook {
   id: string; title: string; role: string; focus: string; summary: string;
   questions: string[]; outputs: string[]; guardrails: string[];
@@ -142,6 +143,7 @@ export const growth = {
   workspaces: (signal?: AbortSignal) => request<Workspace[]>("/workspaces", "GET", undefined, signal),
   import: (path: string, initializeGit = false) => request<Workspace>("/workspaces", "POST", { path, initializeGit }),
   capabilities: (signal?: AbortSignal) => request<Capabilities>("/capabilities", "GET", undefined, signal),
+  measurementSources: (signal?: AbortSignal) => request<MeasurementSource[]>("/measurement/sources", "GET", undefined, signal),
   playbooks: (signal?: AbortSignal) => request<GrowthPlaybook[]>("/playbooks", "GET", undefined, signal),
   playbookRuns: (projectId: string, signal?: AbortSignal) => request<PlaybookRun[]>(`/workspaces/${id(projectId)}/playbooks`, "GET", undefined, signal),
   runPlaybook: (projectId: string, role: string, answers: string[] = []) => request<PlaybookRun>(`/workspaces/${id(projectId)}/playbooks/${id(role)}`, "POST", { answers }),

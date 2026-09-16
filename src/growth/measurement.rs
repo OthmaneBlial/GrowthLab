@@ -83,6 +83,92 @@ pub struct MeasurementReport {
     pub warnings: Vec<String>,
 }
 
+/// Stable, provider-neutral description of a measurement source.
+///
+/// The registry is deliberately descriptive: the MVP only reads a local CSV.
+/// Future adapters can implement the same source identifiers without changing
+/// the report contract, while planned entries remain visibly unconfigured.
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct MeasurementSourceDescriptor {
+    pub id: &'static str,
+    pub label: &'static str,
+    pub category: &'static str,
+    pub status: &'static str,
+    pub network: &'static str,
+    pub provenance: &'static str,
+    pub limitation: &'static str,
+}
+
+/// Return the measurement integration boundary without contacting a provider.
+pub fn sources() -> Vec<MeasurementSourceDescriptor> {
+    vec![
+        MeasurementSourceDescriptor {
+            id: "csv-local",
+            label: "Local CSV event import",
+            category: "generic_csv",
+            status: "available",
+            network: "none",
+            provenance: "MEASURED",
+            limitation: "Reads a user-supplied RFC-4180 CSV in the browser or local CLI; no rows leave this machine.",
+        },
+        MeasurementSourceDescriptor {
+            id: "privacy-analytics",
+            label: "Privacy-friendly analytics",
+            category: "privacy_analytics",
+            status: "planned",
+            network: "opt_in",
+            provenance: "UNTESTED",
+            limitation: "Adapter boundary reserved; no provider credentials, requests or events are configured.",
+        },
+        MeasurementSourceDescriptor {
+            id: "web-analytics",
+            label: "Web analytics",
+            category: "web_analytics",
+            status: "planned",
+            network: "opt_in",
+            provenance: "UNTESTED",
+            limitation: "Adapter boundary reserved; read-only synchronization and retention rules still need implementation.",
+        },
+        MeasurementSourceDescriptor {
+            id: "product-analytics",
+            label: "Product analytics",
+            category: "product_analytics",
+            status: "planned",
+            network: "opt_in",
+            provenance: "UNTESTED",
+            limitation: "Adapter boundary reserved; no product analytics service is contacted by GrowthLab.",
+        },
+        MeasurementSourceDescriptor {
+            id: "ab-testing",
+            label: "A/B testing provider",
+            category: "ab_testing",
+            status: "planned",
+            network: "opt_in",
+            provenance: "UNTESTED",
+            limitation: "Adapter boundary reserved; experiment assignment and exposure semantics are not yet connected.",
+        },
+        MeasurementSourceDescriptor {
+            id: "search-performance",
+            label: "Search performance data",
+            category: "search_performance",
+            status: "planned",
+            network: "opt_in",
+            provenance: "UNTESTED",
+            limitation: "Adapter boundary reserved; no search provider account or query data is accessed.",
+        },
+        MeasurementSourceDescriptor {
+            id: "github-signals",
+            label: "GitHub repository signals",
+            category: "github_signals",
+            status: "planned",
+            network: "opt_in",
+            provenance: "UNTESTED",
+            limitation: "Adapter boundary reserved; the existing read-only repository audit is metadata-only and is not a metric feed.",
+        },
+    ]
+}
+
 #[derive(Debug, Clone, PartialEq)]
 struct Observation {
     metric: String,
@@ -668,6 +754,20 @@ pub fn markdown(report: &MeasurementReport) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn source_registry_keeps_local_csv_available_and_external_adapters_unconfigured() {
+        let sources = sources();
+        assert_eq!(sources.len(), 7);
+        assert_eq!(sources[0].id, "csv-local");
+        assert_eq!(sources[0].status, "available");
+        assert_eq!(sources[0].network, "none");
+        assert!(sources
+            .iter()
+            .skip(1)
+            .all(|source| source.status == "planned" && source.network == "opt_in"));
+        assert!(sources.iter().any(|source| source.id == "github-signals"));
+    }
 
     fn write_fixture(contents: &str) -> (std::path::PathBuf, std::path::PathBuf) {
         let dir = std::env::temp_dir().join(format!("growthlab-measure-{}", uuid::Uuid::new_v4()));

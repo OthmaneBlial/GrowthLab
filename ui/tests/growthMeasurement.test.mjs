@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { parseMeasurementCsv } from "../src/growth/measurement.ts";
 
@@ -63,4 +64,11 @@ test("keeps channel distributions separate when comparing variants", () => {
   assert.equal(report.groups.length, 4);
   assert.equal(report.groups.find((group) => group.distribution === "search" && group.variant === "hero")?.comparison?.difference, 5);
   assert.equal(report.groups.find((group) => group.distribution === "social" && group.variant === "hero")?.comparison?.difference, 4);
+});
+
+test("measurement panel surfaces the provider-neutral source boundary", async () => {
+  const source = await readFile(new URL("../src/growth/MeasurementPanel.tsx", import.meta.url), "utf8");
+  assert.match(source, /measurementSources/);
+  assert.match(source, /Measurement source boundary/);
+  assert.match(source, /explicit opt-in network/);
 });

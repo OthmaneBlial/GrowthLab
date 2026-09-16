@@ -788,6 +788,25 @@ async fn playbook_catalog_is_read_only_and_covers_the_initial_growth_roles() {
 }
 
 #[tokio::test]
+async fn measurement_sources_expose_a_provider_neutral_local_boundary() {
+    let fixture = Fixture::new(false).await;
+    let sources = fixture.get("/measurement/sources").await;
+    let sources = sources.as_array().unwrap();
+    assert_eq!(sources.len(), 7);
+    assert_eq!(sources[0]["id"], "csv-local");
+    assert_eq!(sources[0]["status"], "available");
+    assert_eq!(sources[0]["network"], "none");
+    assert!(sources.iter().skip(1).all(|source| {
+        source["status"] == "planned"
+            && source["network"] == "opt_in"
+            && source["provenance"] == "UNTESTED"
+    }));
+    assert!(sources
+        .iter()
+        .any(|source| source["id"] == "search-performance"));
+}
+
+#[tokio::test]
 async fn api_initializes_a_local_folder_only_when_requested() {
     let fixture = Fixture::new(false).await;
     let product = fixture.root.join("unversioned-product");
@@ -957,11 +976,7 @@ async fn api_edits_hypothesis_wording_but_preserves_lineage_and_rejects_active_b
         .await;
     let project_id = workspace["projectId"].as_str().unwrap();
     let hypotheses = fixture
-        .post(
-            &format!("/workspaces/{project_id}/hypotheses"),
-            None,
-            200,
-        )
+        .post(&format!("/workspaces/{project_id}/hypotheses"), None, 200)
         .await;
     let original = hypotheses.as_array().unwrap()[0].clone();
     let id = original["id"].as_str().unwrap();
@@ -983,7 +998,10 @@ async fn api_edits_hypothesis_wording_but_preserves_lineage_and_rejects_active_b
         .await;
     assert_eq!(edited["id"], original["id"]);
     assert_eq!(edited["role"], original["role"]);
-    assert_eq!(edited["sourceSnapshotCommit"], original["sourceSnapshotCommit"]);
+    assert_eq!(
+        edited["sourceSnapshotCommit"],
+        original["sourceSnapshotCommit"]
+    );
     assert_eq!(edited["evidence"], original["evidence"]);
     assert_eq!(edited["title"], "Sharper outcome promise");
     assert_eq!(
