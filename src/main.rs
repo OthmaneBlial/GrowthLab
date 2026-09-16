@@ -83,6 +83,14 @@ enum Command {
     /// Inspect a battle or request cancellation.
     #[command(name = "battle-status")]
     BattleStatus(growth::cli::BattleStatusArgs),
+    /// Record an explicitly selected, eligible sealed candidate.
+    Select(growth::cli::SelectArgs),
+    /// Copy a selected patch to a clean matching product baseline.
+    Apply(growth::cli::ApplyArgs),
+    /// Export a selected candidate as a create-only local patch.
+    Export(growth::cli::ExportArgs),
+    /// Export a privacy-conscious self-contained HTML or Markdown battle report.
+    Report(growth::cli::ReportArgs),
     /// Log in via the browser and store a token.
     Login(LoginArgs),
 
@@ -1033,6 +1041,10 @@ fn command_name(command: &Command) -> &'static str {
         Command::Experiments(_) => "experiments",
         Command::Compare(_) => "compare",
         Command::BattleStatus(_) => "battle-status",
+        Command::Select(_) => "select",
+        Command::Apply(_) => "apply",
+        Command::Export(_) => "export",
+        Command::Report(_) => "report",
         Command::Login(_) => "login",
         Command::Logout => "logout",
         Command::Projects(_) => "projects",
@@ -1088,6 +1100,10 @@ async fn dispatch(command: Command) -> error::Result<()> {
         Command::Experiments(args) => growth::cli::experiments(args),
         Command::Compare(args) => growth::cli::compare(args),
         Command::BattleStatus(args) => growth::cli::battle_status(args),
+        Command::Select(args) => growth::cli::select(args),
+        Command::Apply(args) => growth::cli::apply(args),
+        Command::Export(args) => growth::cli::export(args),
+        Command::Report(args) => growth::cli::report(args),
         Command::Login(args) => commands::login::run(args).await,
         Command::Logout => commands::logout::run().await,
         Command::Projects(args) => commands::projects::run(args).await,
@@ -1141,6 +1157,10 @@ fn command_uses_lifecycle_lock(command: &Command) -> bool {
             | Command::Experiments(_)
             | Command::Compare(_)
             | Command::BattleStatus(_)
+            | Command::Select(_)
+            | Command::Apply(_)
+            | Command::Export(_)
+            | Command::Report(_)
             | Command::Update(_)
             | Command::Login(_)
             | Command::Logout
@@ -1279,7 +1299,6 @@ mod cli_tests {
             "wandb",
             "query",
             "chart",
-            "report",
         ] {
             let error = Cli::try_parse_from(["orx", command])
                 .expect_err("removed research command should not parse");
@@ -1306,6 +1325,38 @@ mod cli_tests {
         for flag in ["--all", "--organization"] {
             let error = Cli::try_parse_from(["growthlab", "experiments", flag, "remote-scope"])
                 .expect_err("growth experiments have no remote listing flags");
+            assert_eq!(error.kind(), clap::error::ErrorKind::UnknownArgument);
+        }
+        // The new local report has a required explicit output and no remote
+        // scientific-state scope. Keep those boundaries asserted.
+        let cli = Cli::try_parse_from([
+            "growthlab",
+            "report",
+            "local-battle-id",
+            "--output",
+            "report.html",
+        ])
+        .unwrap();
+        assert!(
+            matches!(cli.command,Some(Command::Report(growth::cli::ReportArgs {ref battle_id,..})) if battle_id=="local-battle-id")
+        );
+        let error = Cli::try_parse_from(["growthlab", "report"])
+            .expect_err("report needs a battle and explicit destination");
+        assert_eq!(
+            error.kind(),
+            clap::error::ErrorKind::MissingRequiredArgument
+        );
+        for flag in ["--all", "--organization"] {
+            let error = Cli::try_parse_from([
+                "growthlab",
+                "report",
+                "local-battle-id",
+                "--output",
+                "report.html",
+                flag,
+                "remote-scope",
+            ])
+            .expect_err("local report cannot read remote research state");
             assert_eq!(error.kind(), clap::error::ErrorKind::UnknownArgument);
         }
     }

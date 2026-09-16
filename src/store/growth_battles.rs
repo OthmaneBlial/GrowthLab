@@ -5,6 +5,7 @@ use crate::growth::archive::digest;
 use crate::growth::battle_model::{
     BattleRun, BattleStatus, GrowthBattle, GrowthVariant, SealedBattleRun,
 };
+use crate::growth::selection::{SelectionAction, SelectionRecord, SelectionStatus};
 use crate::local::model::LocalExperiment;
 
 use super::{Store, EXPERIMENT_COLS};
@@ -14,6 +15,91 @@ fn decode<T: serde::de::DeserializeOwned>(value: &str) -> Result<T> {
 }
 
 impl Store {
+    pub fn get_growth_variant(&self, id: &str) -> Result<Option<GrowthVariant>> {
+        let json: Option<String> = self
+            .conn
+            .query_row(
+                "SELECT payload_json FROM growth_variants WHERE id=?1",
+                [id],
+                |row| row.get(0),
+            )
+            .optional()?;
+        let Some(json) = json else {
+            return Ok(None);
+        };
+        let variant: GrowthVariant = decode(&json)?;
+        if variant.id != id || !self.growth_variants(&variant.battle_id)?.contains(&variant) {
+            return Err(anyhow!("Stored variant does not match its battle"));
+        }
+        Ok(Some(variant))
+    }
+
+    pub fn create_growth_selection(&self, record: &SelectionRecord) -> Result<()> {
+        let runs = self.sealed_growth_runs(&record.battle_id)?;
+        let sealed = runs
+            .iter()
+            .find(|sealed| sealed.run.id == record.run_id)
+            .ok_or_else(|| anyhow!("Selection requires a sealed run"))?;
+        if sealed.run.variant_id != record.variant_id
+            || sealed.archive_digest != record.archive_digest
+            || sealed.run.candidate_commit.as_ref() != Some(&record.candidate_commit)
+            || record.decision != crate::growth::model::Decision::Candidate
+            || !(record.status == SelectionStatus::Pending
+                || (record.action == SelectionAction::Select
+                    && record.status == SelectionStatus::Done))
+        {
+            return Err(anyhow!("Selection must match one sealed candidate"));
+        }
+        self.conn.execute(
+            "INSERT INTO growth_selections (id,battle_id,variant_id,payload_json,status,created_at) VALUES (?1,?2,?3,?4,?5,?6)",
+            params![record.id,record.battle_id,record.variant_id,serde_json::to_string(record)?,
+                serde_json::to_value(record.status)?.as_str(),record.created_at],
+        )?;
+        Ok(())
+    }
+
+    pub fn finish_growth_selection(&self, record: &SelectionRecord) -> Result<()> {
+        if !matches!(
+            record.status,
+            SelectionStatus::Done | SelectionStatus::Failed
+        ) {
+            return Err(anyhow!("Selection can only finish with a terminal receipt"));
+        }
+        let json: String = self.conn.query_row(
+            "SELECT payload_json FROM growth_selections WHERE id=?1",
+            [&record.id],
+            |row| row.get(0),
+        )?;
+        let mut expected: SelectionRecord = decode(&json)?;
+        expected.status = record.status;
+        expected.decision = record.decision;
+        expected.ended_at = record.ended_at;
+        expected.error = record.error.clone();
+        if expected != *record {
+            return Err(anyhow!(
+                "Selection identity and delivery metadata are immutable"
+            ));
+        }
+        let changed = self.conn.execute(
+            "UPDATE growth_selections SET payload_json=?2,status=?3 WHERE id=?1 AND status='pending'",
+            params![record.id,serde_json::to_string(record)?,serde_json::to_value(record.status)?.as_str()],
+        )?;
+        if changed != 1 {
+            return Err(anyhow!("Selection was already finalized"));
+        }
+        Ok(())
+    }
+
+    pub fn growth_selections(&self, battle_id: &str) -> Result<Vec<SelectionRecord>> {
+        let mut query = self.conn.prepare(
+            "SELECT payload_json FROM growth_selections WHERE battle_id=?1 ORDER BY created_at,rowid")?;
+        let results = query
+            .query_map([battle_id], |row| row.get::<_, String>(0))?
+            .map(|row| decode(&row?))
+            .collect();
+        results
+    }
+
     pub fn register_growth_battle(
         &self,
         battle: &GrowthBattle,

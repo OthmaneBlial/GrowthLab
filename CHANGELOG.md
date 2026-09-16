@@ -24,9 +24,20 @@
   growth outcomes untested. Native proposal capability checks fail closed.
 - Added bounded Linux ETXTBSY retry for OpenCode version detection, retaining
   its deadline, unchanged-binary check and private capture assertions.
+- Added explicit eligible-candidate selection and append-only delivery receipts
+  through an independent transactional growth schema-v3 migration.
+- Added immutable-object patch export and guarded working-tree apply with a
+  read-only preview, clean-baseline/policy checks and sealed-artifact verification.
+  Product commits, index and remotes are preserved; Git content filters are refused.
+- Added create-only local patch/report files and self-contained HTML/Markdown
+  reports with actual command failures, provenance, diff counts, selection and
+  reproducibility digests. Private context is omitted by default; disclosure is
+  explicit and footer attribution removable. Screenshots remain pending.
+- Removed unnecessary Windows read-only flag clearing from the archive tamper
+  fixture; its write-and-refuse-verification assertions remain intact.
 
 This is not a tagged credible release. The growth-native dashboard,
 verified native execution, host execution confinement, interrupted-attempt recovery,
-selected apply/export, reports, bundled visual replay demo and real outcome measurement
+bundled visual replay demo, archived render artifacts and real outcome measurement
 remain work in the roadmap. No telemetry lift, production readiness, public
 installer or demonstrated adoption is claimed.

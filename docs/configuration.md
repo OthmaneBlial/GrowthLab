@@ -41,7 +41,7 @@ agents:
 - `draft`: artifacts belong to the lab store; no product file changes.
 - `implementation` (alias `implement`): only allowed product paths, in isolated
   worktrees. Requires at least one allowed path and validation command.
-- Applying a selected variant will be a separate explicit action; a config
+- Applying a selected variant is a separate explicit action; a config
   mode never grants automatic deployment, push, merge or messaging permission.
 
 Paths are relative file/directory prefixes using `/`, with optional trailing `/`
@@ -102,8 +102,10 @@ confidence, inconclusive, and have no outcome metric value. Each records the
 committed user brief as observed input; that evidence supports the configured
 audience/goal, not a causal hypothesis or product-market fit.
 The [battle CLI workflow](battles.md) now executes declared replay edits and actual
-configured checks, seals evidence and compares eligible candidates. Selected
-apply/export, the visual demo/dashboard and shareable reports remain in progress.
+configured checks, seals evidence and compares eligible candidates. The
+[delivery workflow](delivery.md) implements explicit selection, guarded apply,
+patch export and private-by-default reports. The visual demo/dashboard, native
+execution and recovery/confinement gates remain in progress.
 
 ## Persistence and provenance
 
@@ -114,11 +116,14 @@ source commit, user-provided context, mechanism, metric/guardrails, baseline,
 risks, evaluation mode, confidence rationale and result provenance are explicit.
 No threshold is invented when the user has not supplied one.
 
-Provenance is mandatory in JSON and will be mandatory in run/report APIs:
+Provenance is mandatory in domain JSON and exported reports:
 `MEASURED` real connected telemetry, `OBSERVED` deterministic check/direct
 inspection, `ESTIMATED` stated model/rubric assumptions, `SIMULATED` declared
 simulation, `UNTESTED` no outcome evidence. An untested hypothesis cannot be
-marked `ship`. Model estimates are not objective outcome measurements.
+promoted by the evaluator to proven growth success. An explicit apply receipt
+uses `ship` only to record copying an eligible implementation to the working
+tree; its outcome provenance remains UNTESTED. Model estimates are not objective
+outcome measurements.
 
 Default data is under `$XDG_DATA_HOME/growthlab` or `~/.local/share/growthlab`;
 override with `GROWTHLAB_DATA_DIR` (legacy `ORX_DATA_DIR` still works). Settings

@@ -134,6 +134,92 @@ pub struct BattleStatusArgs {
     pub cancel: bool,
 }
 
+#[derive(Debug, Args)]
+pub struct SelectArgs {
+    pub variant_id: String,
+}
+
+#[derive(Debug, Args)]
+pub struct ApplyArgs {
+    pub variant_id: String,
+    /// Verify eligibility, permissions and clean matching baseline without writes.
+    #[arg(long)]
+    pub check: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct ExportArgs {
+    pub variant_id: String,
+    /// Create-only local patch file outside product/variant checkouts.
+    #[arg(long)]
+    pub output: PathBuf,
+}
+
+#[derive(Debug, Clone, Copy, clap::ValueEnum)]
+pub enum ReportFormat {
+    Html,
+    Markdown,
+}
+
+#[derive(Debug, Args)]
+pub struct ReportArgs {
+    pub battle_id: String,
+    #[arg(long)]
+    pub output: PathBuf,
+    #[arg(long, value_enum, default_value = "html")]
+    pub format: ReportFormat,
+    /// Explicitly disclose goal, variant titles, summaries and validation commands.
+    /// That text may contain identifying names/paths. Prompts/raw logs stay private.
+    #[arg(long)]
+    pub include_context: bool,
+    /// Public goal text to show instead of the private configured goal.
+    #[arg(long)]
+    pub public_goal: Option<String>,
+    #[arg(long)]
+    pub without_attribution: bool,
+}
+
+pub fn select(args: SelectArgs) -> Result<()> {
+    print_json(&super::selection::select(
+        &Store::open()?,
+        &args.variant_id,
+    )?)
+}
+pub fn apply(args: ApplyArgs) -> Result<()> {
+    let store = Store::open()?;
+    if args.check {
+        print_json(&super::selection::preview_apply(&store, &args.variant_id)?)
+    } else {
+        print_json(&super::selection::apply(&store, &args.variant_id)?)
+    }
+}
+pub fn export(args: ExportArgs) -> Result<()> {
+    print_json(&super::selection::export(
+        &Store::open()?,
+        &args.variant_id,
+        &args.output,
+    )?)
+}
+pub fn report(args: ReportArgs) -> Result<()> {
+    let store = Store::open()?;
+    let options = super::report::ReportOptions {
+        include_context: args.include_context,
+        public_goal: args.public_goal,
+        without_attribution: args.without_attribution,
+    };
+    let path = super::report::export(
+        &store,
+        &args.battle_id,
+        &options,
+        &args.output,
+        matches!(args.format, ReportFormat::Markdown),
+    )?;
+    print_json(
+        &serde_json::json!({"output":path,"contextDisclosed":options.include_context,
+        "outcomeProvenance":"UNTESTED","privacy":"Private metadata, prompts and raw logs are omitted. Explicit context export may contain identifying names/paths."}),
+    )
+}
+
 fn battle_agent(args: ExecutionArgs) -> Result<Box<dyn super::battle::BattleAgent>> {
     if let Some(path) = args.replay {
         let metadata = std::fs::symlink_metadata(&path)?;
@@ -223,7 +309,7 @@ pub fn battle_status(args: BattleStatusArgs) -> Result<()> {
         store.request_growth_battle_cancel(&args.battle_id)?;
     }
     print_json(
-        &serde_json::json!({"battle":store.get_growth_battle(&args.battle_id)?.ok_or_else(||anyhow!("Battle not found"))?,"runs":store.sealed_growth_runs(&args.battle_id)?}),
+        &serde_json::json!({"battle":store.get_growth_battle(&args.battle_id)?.ok_or_else(||anyhow!("Battle not found"))?,"runs":store.sealed_growth_runs(&args.battle_id)?,"selections":store.growth_selections(&args.battle_id)?}),
     )
 }
 

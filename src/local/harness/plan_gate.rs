@@ -289,6 +289,7 @@ fn is_readonly_orx(tokens: &[&str], stage: &str) -> bool {
         "workspace" => matches!(subcommand(&mut rest), Some("list" | "view")),
         "hypotheses" => rest.any(|token| token == "--list"),
         "battle-status" => !rest.any(|token| token == "--cancel" || token.starts_with("--cancel=")),
+        "apply" => rest.any(|token| token == "--check"),
         // Verbs with a write subcommand: allow only the read-only subcommand(s).
         "project" => matches!(subcommand(&mut rest), Some("view")),
         "exp" => match subcommand(&mut rest) {
@@ -440,6 +441,10 @@ mod tests {
             "growthlab workspace list",
             "growthlab workspace view p",
             "growthlab hypotheses p --list",
+            "growthlab compare battle",
+            "growthlab experiments",
+            "growthlab battle-status battle",
+            "growthlab apply variant --check",
             "/tmp/growthlab workspace list",
         ] {
             assert!(command_is_readonly(command), "{command}");
@@ -450,6 +455,10 @@ mod tests {
             "growthlab hypotheses p",
             "growthlab battle goal",
             "growthlab apply variant",
+            "growthlab select variant",
+            "growthlab export variant --output patch",
+            "growthlab report battle --output report.html",
+            "growthlab battle-status battle --cancel",
             "growthlab config future-write",
         ] {
             assert!(!command_is_readonly(command), "{command}");

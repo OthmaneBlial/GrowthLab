@@ -2,8 +2,8 @@
 
 The backend now prepares and executes a three-competitor landing-page battle.
 Each uses one frozen product commit, configuration and validation contract.
-This is a working CLI slice; the bundled visual demo, GrowthLab dashboard,
-selected apply/export and shareable reports are still being implemented.
+This is a working CLI slice. [Selected apply/export and reports](delivery.md)
+extend it; the bundled visual demo and GrowthLab dashboard are still being built.
 
 ## Prepare and inspect
 
@@ -133,4 +133,4 @@ Growth outcome provenance remains UNTESTED, with low confidence. The label is
 
 CLI JSON and local archives contain user-provided product context for inspection;
 they are not sanitized public/shareable reports. Report export with appropriate
-privacy controls is a separate pending subsystem.
+privacy controls is available through the [delivery workflow](delivery.md).

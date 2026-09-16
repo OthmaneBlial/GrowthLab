@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import shutil
 
 
 def main():
@@ -57,13 +58,46 @@ def main():
         run("run", battle, "--replay", str(plan), succeeds=False)
         assert len(json.loads(run("experiments", "--project", project))) == 1
         assert git("rev-parse", "HEAD") == commit and git("status", "--porcelain") == "" and git("remote") == ""
+        variant = prepared["variants"][0]["id"]
+        invalid = prepared["variants"][1]["id"]
+        run("select", invalid, succeeds=False)
+        run("apply", invalid, succeeds=False)
+        selected = json.loads(run("select", variant))
+        assert selected["decision"] == "candidate"
+        patch = root / "selected.patch"
+        exported = json.loads(run("export", variant, "--output", str(patch)))
+        assert exported["status"] == "done" and patch.exists()
+        run("export", variant, "--output", str(patch), succeeds=False)
+        preview = json.loads(run("apply", variant, "--check"))
+        assert preview["changedFiles"] == ["website/index.html"]
+        assert git("status", "--porcelain") == ""
+        report = root / "report.html"
+        markdown = root / "report.md"
+        run("report", battle, "--output", str(report), "--public-goal", "Compare three declared landing-page strategies")
+        run("report", battle, "--output", str(markdown), "--format", "markdown")
+        for text in [report.read_text(), markdown.read_text()]:
+            assert all(label in text for label in ["SIMULATED", "OBSERVED", "UNTESTED"])
+            assert "Synthetic developer tool" not in text and "website/index.html" not in text and str(product) not in text
+        run("report", battle, "--output", str(report), succeeds=False)
+        applied = json.loads(run("apply", variant))
+        assert applied["status"] == "done" and applied["decision"] == "ship"
+        assert (product / "website/index.html").read_text() == "<h1>Outcome-first</h1>"
+        assert git("rev-parse", "HEAD") == commit and git("diff", "--cached", "--name-only") == "" and git("remote") == ""
+        run("apply", variant, succeeds=False)
+        if len(sys.argv) > 2:
+            artifacts = Path(sys.argv[2])
+            artifacts.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(report, artifacts / "battle-report.html")
+            shutil.copyfile(markdown, artifacts / "battle-report.md")
         archive = root / "lab/growth-archives" / comparison["rows"][0]["archiveDigest"]
         assert (archive / "validation-0.log").exists() and (archive / "proposal-input.json").exists()
         target = archive / "implementation.diff"
         target.chmod(0o600)
         target.write_text("Tampered synthetic fixture")
         run("compare", battle, succeeds=False)
-        print("Growth Battle CLI smoke passed: 3 real worktrees, 2 eligible candidates, 1 observed failure, immutable-evidence tamper refusal; product HEAD/files/remotes preserved.")
+        run("report", battle, "--output", str(root / "tampered.html"), succeeds=False)
+        run("export", variant, "--output", str(root / "tampered.patch"), succeeds=False)
+        print("Growth Battle CLI smoke passed: 3 worktrees, observed failure, explicit selection/export/apply, private-context omission, overwrite/tamper refusal; HEAD/index/remotes preserved.")
 
 
 if __name__ == "__main__":

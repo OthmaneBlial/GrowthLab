@@ -6,6 +6,399 @@ use super::battle_model::*;
 use super::model::Provenance;
 use crate::store::Store;
 
+#[tokio::test]
+async fn selected_delivery_uses_sealed_objects_and_preserves_head_index_and_remotes() {
+    let fixture = Fixture::new(None);
+    let battle = battle::prepare(&fixture.store, &fixture.project_id, "Delivery fixture").unwrap();
+    battle::execute(&fixture.store, &battle.id, &Fixture::plan())
+        .await
+        .unwrap();
+    let variants = fixture.store.growth_variants(&battle.id).unwrap();
+    assert!(super::selection::select(&fixture.store, &variants[1].id).is_err());
+    assert!(super::selection::apply(&fixture.store, &variants[1].id).is_err());
+    let selection = super::selection::select(&fixture.store, &variants[0].id).unwrap();
+    assert_eq!(selection.status, super::selection::SelectionStatus::Done);
+    fixture.unchanged();
+    // Stale mutable agent content must never enter an export or apply.
+    std::fs::write(
+        Path::new(&variants[0].worktree).join("website/index.html"),
+        "<h1>Unsealed stale worktree text</h1>",
+    )
+    .unwrap();
+    let output = fixture.root.join("selected.patch");
+    let export = super::selection::export(&fixture.store, &variants[0].id, &output).unwrap();
+    let patch = std::fs::read_to_string(&output).unwrap();
+    assert!(patch.contains("+<h1>Outcome-first</h1>"));
+    assert!(!patch.contains("Unsealed stale"));
+    assert_eq!(
+        export.artifact_digest,
+        Some(archive::digest(patch.as_bytes()))
+    );
+    assert!(super::selection::export(&fixture.store, &variants[0].id, &output).is_err());
+    assert_eq!(std::fs::read_to_string(&output).unwrap(), patch);
+    fixture.unchanged();
+    let preview = super::selection::preview_apply(&fixture.store, &variants[0].id).unwrap();
+    assert_eq!(preview.changed_files, vec!["website/index.html"]);
+    fixture.unchanged();
+    let applied = super::selection::apply(&fixture.store, &variants[0].id).unwrap();
+    assert_eq!(applied.decision, super::model::Decision::Ship);
+    assert_eq!(
+        std::fs::read_to_string(fixture.product.join("website/index.html")).unwrap(),
+        "<h1>Outcome-first</h1>"
+    );
+    assert_eq!(
+        git(&fixture.product, &["rev-parse", "HEAD"]),
+        fixture.commit
+    );
+    assert_eq!(
+        git(&fixture.product, &["diff", "--cached", "--name-only"]),
+        ""
+    );
+    assert_eq!(git(&fixture.product, &["remote"]), "");
+    assert!(super::selection::apply(&fixture.store, &variants[0].id).is_err());
+    assert!(
+        fixture.store.finish_growth_selection(&applied).is_err(),
+        "a terminal receipt cannot be overwritten"
+    );
+    let transaction = fixture.store.begin().unwrap();
+    assert!(transaction
+        .execute(
+            "UPDATE growth_selections SET payload_json='{}' WHERE id=?1",
+            [applied.id]
+        )
+        .is_err());
+    transaction.rollback().unwrap();
+}
+
+#[tokio::test]
+async fn selected_apply_refuses_dirty_staged_untracked_changed_policy_and_moving_head() {
+    let fixture = Fixture::new(None);
+    let battle = battle::prepare(
+        &fixture.store,
+        &fixture.project_id,
+        "Clean baseline fixture",
+    )
+    .unwrap();
+    battle::execute(&fixture.store, &battle.id, &Fixture::plan())
+        .await
+        .unwrap();
+    let id = fixture.store.growth_variants(&battle.id).unwrap()[0]
+        .id
+        .clone();
+    let path = fixture.product.join("website/index.html");
+    git(
+        &fixture.product,
+        &["update-index", "--assume-unchanged", "website/index.html"],
+    );
+    assert!(super::selection::apply(&fixture.store, &id).is_err());
+    git(
+        &fixture.product,
+        &[
+            "update-index",
+            "--no-assume-unchanged",
+            "website/index.html",
+        ],
+    );
+    std::fs::write(&path, "<h1>Builder's local work</h1>").unwrap();
+    assert!(super::selection::apply(&fixture.store, &id).is_err());
+    assert_eq!(
+        std::fs::read_to_string(&path).unwrap(),
+        "<h1>Builder's local work</h1>"
+    );
+    git(&fixture.product, &["add", "website/index.html"]);
+    assert!(super::selection::apply(&fixture.store, &id).is_err());
+    assert_eq!(
+        git(&fixture.product, &["diff", "--cached", "--name-only"]),
+        "website/index.html"
+    );
+    git(&fixture.product, &["reset", "--hard", &fixture.commit]);
+    std::fs::write(fixture.product.join("builder-notes.txt"), "Local draft").unwrap();
+    assert!(super::selection::apply(&fixture.store, &id).is_err());
+    std::fs::remove_file(fixture.product.join("builder-notes.txt")).unwrap();
+    let original_config = std::fs::read(fixture.product.join("growthlab.yaml")).unwrap();
+    let mut config = super::config::GrowthConfig::load(&fixture.product).unwrap();
+    config.permissions.mode = super::config::PermissionMode::AnalyzeOnly;
+    std::fs::write(
+        fixture.product.join("growthlab.yaml"),
+        serde_yaml_ng::to_string(&config).unwrap(),
+    )
+    .unwrap();
+    assert!(super::selection::apply(&fixture.store, &id).is_err());
+    std::fs::write(fixture.product.join("growthlab.yaml"), original_config).unwrap();
+    std::fs::write(&path, "<h1>Builder's newer commit</h1>").unwrap();
+    git(&fixture.product, &["add", "website/index.html"]);
+    git(
+        &fixture.product,
+        &["commit", "-m", "Builder newer baseline"],
+    );
+    let newer = git(&fixture.product, &["rev-parse", "HEAD"]);
+    assert!(super::selection::apply(&fixture.store, &id).is_err());
+    // A portable export is still useful when the product has advanced.
+    super::selection::export(&fixture.store, &id, &fixture.root.join("advanced.patch")).unwrap();
+    assert_eq!(git(&fixture.product, &["rev-parse", "HEAD"]), newer);
+    assert_eq!(
+        std::fs::read_to_string(&path).unwrap(),
+        "<h1>Builder's newer commit</h1>"
+    );
+}
+
+#[tokio::test]
+async fn selected_apply_delivers_additions_empty_text_and_deletions() {
+    let fixture = Fixture::new(None);
+    let battle =
+        battle::prepare(&fixture.store, &fixture.project_id, "Add delete fixture").unwrap();
+    let mut agent = Fixture::plan();
+    for implementation in &mut agent.0.implementations {
+        implementation.files.extend([
+            FileEdit {
+                path: "website/empty file.txt".into(),
+                contents: Some(String::new()),
+            },
+            FileEdit {
+                path: "website/retired.txt".into(),
+                contents: None,
+            },
+            FileEdit {
+                path: "website/lines.txt".into(),
+                contents: Some("++Added prefix\n--Also added\n".into()),
+            },
+        ]);
+    }
+    battle::execute(&fixture.store, &battle.id, &agent)
+        .await
+        .unwrap();
+    let id = fixture.store.growth_variants(&battle.id).unwrap()[0]
+        .id
+        .clone();
+    let preview = super::selection::preview_apply(&fixture.store, &id).unwrap();
+    assert_eq!(preview.changed_files.len(), 4);
+    let report = super::report::build(
+        &fixture.store,
+        &battle.id,
+        &super::report::ReportOptions::default(),
+    )
+    .unwrap();
+    assert_eq!(report.variants[0].files_changed, 4);
+    assert_eq!(
+        report.variants[0].lines_added, 3,
+        "diff body lines starting with ++ must count as additions"
+    );
+    assert_eq!(report.variants[0].lines_removed, 2);
+    super::selection::apply(&fixture.store, &id).unwrap();
+    assert_eq!(
+        std::fs::read(fixture.product.join("website/empty file.txt")).unwrap(),
+        Vec::<u8>::new()
+    );
+    assert!(!fixture.product.join("website/retired.txt").exists());
+    assert_eq!(
+        git(&fixture.product, &["diff", "--cached", "--name-only"]),
+        ""
+    );
+    assert_eq!(
+        git(&fixture.product, &["rev-parse", "HEAD"]),
+        fixture.commit
+    );
+}
+
+#[tokio::test]
+async fn failed_delivery_intent_refuses_product_and_export_writes() {
+    let fixture = Fixture::new(None);
+    let battle = battle::prepare(
+        &fixture.store,
+        &fixture.project_id,
+        "Intent failure fixture",
+    )
+    .unwrap();
+    battle::execute(&fixture.store, &battle.id, &Fixture::plan())
+        .await
+        .unwrap();
+    let id = fixture.store.growth_variants(&battle.id).unwrap()[0]
+        .id
+        .clone();
+    let transaction = fixture.store.begin().unwrap();
+    transaction.execute_batch("CREATE TRIGGER fixture_selection_failure BEFORE INSERT ON growth_selections BEGIN SELECT RAISE(ABORT,'synthetic intent failure'); END;").unwrap();
+    transaction.commit().unwrap();
+    assert!(super::selection::apply(&fixture.store, &id).is_err());
+    let output = fixture.root.join("not-written.patch");
+    assert!(super::selection::export(&fixture.store, &id, &output).is_err());
+    assert!(!output.exists());
+    fixture.unchanged();
+}
+
+#[tokio::test]
+async fn selected_preflight_never_executes_repository_content_filters() {
+    let fixture = Fixture::new(None);
+    let battle = battle::prepare(
+        &fixture.store,
+        &fixture.project_id,
+        "Filter boundary fixture",
+    )
+    .unwrap();
+    battle::execute(&fixture.store, &battle.id, &Fixture::plan())
+        .await
+        .unwrap();
+    let id = fixture.store.growth_variants(&battle.id).unwrap()[0]
+        .id
+        .clone();
+    let probe = "node -e \"require('node:fs').writeFileSync('filter-executed.txt','unexpected')\"";
+    git(&fixture.product, &["config", "diff.external", probe]);
+    git(&fixture.product, &["config", "core.fsmonitor", probe]);
+    super::selection::preview_apply(&fixture.store, &id).unwrap();
+    assert!(
+        !fixture.product.join("filter-executed.txt").exists(),
+        "diff/fsmonitor hooks must not execute during safe inspection"
+    );
+    git(
+        &fixture.product,
+        &[
+            "config",
+            "filter.fixture.clean",
+            "node -e \"require('node:fs').writeFileSync('filter-executed.txt','unexpected')\"",
+        ],
+    );
+    std::fs::write(
+        fixture.product.join(".gitattributes"),
+        "*.html filter=fixture\n",
+    )
+    .unwrap();
+    std::fs::write(
+        fixture.product.join("website/index.html"),
+        "<h1>Local work would trigger a clean filter during status</h1>",
+    )
+    .unwrap();
+    let error = super::selection::preview_apply(&fixture.store, &id).unwrap_err();
+    assert!(
+        error.to_string().contains("content filters"),
+        "the capability boundary must fail before ordinary dirty-state inspection"
+    );
+    assert!(!fixture.product.join("filter-executed.txt").exists());
+    assert!(
+        std::fs::read_to_string(fixture.product.join("website/index.html"))
+            .unwrap()
+            .contains("Local work")
+    );
+}
+
+#[tokio::test]
+async fn reports_withhold_private_context_escape_explicit_context_and_verify_seals() {
+    let fixture = Fixture::new(None);
+    let private_goal =
+        "PrivateProjectUnique goal <script>bad()</script> ![x](https://example.invalid/pixel)";
+    let battle = battle::prepare(&fixture.store, &fixture.project_id, private_goal).unwrap();
+    let mut agent = Fixture::plan();
+    for implementation in &mut agent.0.implementations {
+        implementation.summary =
+            "PrivateSummaryUnique <img src='https://example.invalid/pixel'>".into();
+    }
+    battle::execute(&fixture.store, &battle.id, &agent)
+        .await
+        .unwrap();
+    let variants = fixture.store.growth_variants(&battle.id).unwrap();
+    super::selection::select(&fixture.store, &variants[0].id).unwrap();
+    let options = super::report::ReportOptions::default();
+    let report = super::report::build(&fixture.store, &battle.id, &options).unwrap();
+    assert_eq!(report.selected_candidate, Some(1));
+    let output = super::report::document(&report);
+    let markdown = super::report::markdown(&report);
+    let json = serde_json::to_string(&report).unwrap();
+    for text in [&output, &markdown, &json] {
+        for private in [
+            "PrivateProjectUnique",
+            "PrivateSummaryUnique",
+            "website/index.html",
+            "website/check.mjs",
+            "Observed heading check passed",
+            fixture.product.to_str().unwrap(),
+        ] {
+            assert!(
+                !text.contains(private),
+                "private input leaked into default report"
+            );
+        }
+        assert!(
+            text.contains("SIMULATED") && text.contains("OBSERVED") && text.contains("UNTESTED")
+        );
+        assert!(text.contains(&battle.contract_digest));
+    }
+    assert_eq!(report.variants[1].checks[0].exit_code, Some(2));
+    let disclosed = super::report::build(
+        &fixture.store,
+        &battle.id,
+        &super::report::ReportOptions {
+            include_context: true,
+            without_attribution: true,
+            public_goal: None,
+        },
+    )
+    .unwrap();
+    let html = super::report::document(&disclosed);
+    assert!(html.contains("PrivateProjectUnique") && html.contains("&lt;script&gt;"));
+    assert!(!html.contains("<script>") && !html.contains("<img ") && !html.contains("<footer>"));
+    assert!(!super::report::markdown(&disclosed).contains("![x]"));
+    let output_path = fixture.root.join("report.html");
+    super::report::export(&fixture.store, &battle.id, &options, &output_path, false).unwrap();
+    assert!(
+        super::report::export(&fixture.store, &battle.id, &options, &output_path, false).is_err()
+    );
+    assert!(super::report::export(
+        &fixture.store,
+        &battle.id,
+        &options,
+        &fixture.product.join("report.html"),
+        false
+    )
+    .is_err());
+    let seal = fixture.store.sealed_growth_runs(&battle.id).unwrap()[0].clone();
+    let path = fixture
+        .root
+        .join("lab/growth-archives")
+        .join(seal.archive_digest)
+        .join("implementation.diff");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+    }
+    std::fs::write(path, "tampered").unwrap();
+    assert!(super::report::build(&fixture.store, &battle.id, &options).is_err());
+    assert!(super::selection::export(
+        &fixture.store,
+        &variants[0].id,
+        &fixture.root.join("tampered.patch")
+    )
+    .is_err());
+}
+
+#[tokio::test]
+async fn sealed_report_exports_when_original_checkout_is_unavailable() {
+    let fixture = Fixture::new(None);
+    let battle = battle::prepare(
+        &fixture.store,
+        &fixture.project_id,
+        "Unavailable checkout fixture",
+    )
+    .unwrap();
+    battle::execute(&fixture.store, &battle.id, &Fixture::plan())
+        .await
+        .unwrap();
+    let moved = fixture.root.join("moved-product");
+    std::fs::rename(&fixture.product, &moved).unwrap();
+    let output = fixture.root.join("recovered-report.html");
+    super::report::export(
+        &fixture.store,
+        &battle.id,
+        &super::report::ReportOptions::default(),
+        &output,
+        false,
+    )
+    .unwrap();
+    assert!(std::fs::read_to_string(output)
+        .unwrap()
+        .contains(&battle.contract_digest));
+    std::fs::rename(moved, &fixture.product).unwrap();
+    fixture.unchanged();
+}
+
 #[test]
 fn moving_product_head_does_not_move_the_battle_baseline() {
     let fixture = Fixture::new(None);
@@ -113,6 +506,11 @@ impl Fixture {
         std::fs::write(
             product.join("website/index.html"),
             "<!doctype html><h1>Baseline</h1>",
+        )
+        .unwrap();
+        std::fs::write(
+            product.join("website/retired.txt"),
+            "Synthetic obsolete copy",
         )
         .unwrap();
         std::fs::write(product.join("website/check.mjs"),"import {readFileSync} from 'node:fs'; if (!readFileSync('website/index.html','utf8').includes('<h1>')) process.exit(2); console.log('Observed heading check passed');").unwrap();

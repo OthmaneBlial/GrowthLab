@@ -20,7 +20,7 @@ pub(super) fn migrate(conn: &Connection) -> Result<()> {
         [],
         |row| row.get(0),
     )?;
-    if version > 2 {
+    if version > 3 {
         return Err(anyhow!(
             "GrowthLab database was created by a newer version; no growth migration applied"
         ));
@@ -74,6 +74,30 @@ pub(super) fn migrate(conn: &Connection) -> Result<()> {
         )?;
         tx.execute(
             "INSERT INTO growth_schema_migrations (version, applied_at) VALUES (2, ?1)",
+            [super::now_ms()],
+        )?;
+    }
+    if version < 3 {
+        tx.execute_batch(
+            "CREATE TABLE growth_selections (
+                id TEXT PRIMARY KEY, battle_id TEXT NOT NULL,
+                variant_id TEXT NOT NULL, payload_json TEXT NOT NULL,
+                status TEXT NOT NULL, created_at INTEGER NOT NULL
+            );
+            CREATE INDEX idx_growth_selections_battle ON growth_selections(battle_id,created_at);
+            CREATE TRIGGER freeze_finished_growth_selection BEFORE UPDATE ON growth_selections
+            WHEN OLD.status != 'pending' BEGIN
+                SELECT RAISE(ABORT, 'finished growth selection is immutable');
+            END;
+            CREATE TRIGGER cleanup_growth_battle_project AFTER DELETE ON local_projects BEGIN
+                DELETE FROM growth_selections WHERE battle_id IN (SELECT id FROM growth_battles WHERE project_id=OLD.id);
+                DELETE FROM growth_battle_runs WHERE battle_id IN (SELECT id FROM growth_battles WHERE project_id=OLD.id);
+                DELETE FROM growth_variants WHERE battle_id IN (SELECT id FROM growth_battles WHERE project_id=OLD.id);
+                DELETE FROM growth_battles WHERE project_id=OLD.id;
+            END;",
+        )?;
+        tx.execute(
+            "INSERT INTO growth_schema_migrations (version, applied_at) VALUES (3, ?1)",
             [super::now_ms()],
         )?;
     }
@@ -201,6 +225,64 @@ mod tests {
     use super::*;
 
     #[test]
+    fn failed_selection_migration_preserves_version_two_and_rolls_back_ddl() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("CREATE TABLE growth_schema_migrations (version INTEGER PRIMARY KEY,applied_at INTEGER); INSERT INTO growth_schema_migrations VALUES (2,1); CREATE TABLE idx_growth_selections_battle (collision TEXT);").unwrap();
+        assert!(migrate(&conn).is_err());
+        let version: i64 = conn
+            .query_row(
+                "SELECT MAX(version) FROM growth_schema_migrations",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(version, 2);
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE name='growth_selections'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            count, 0,
+            "failed selection migration must not leave a partial table"
+        );
+    }
+
+    #[test]
+    fn selection_migration_preserves_a_version_two_product_and_hypotheses() {
+        let root = std::env::temp_dir().join(format!(
+            "growth-selection-migration-{}",
+            uuid::Uuid::new_v4()
+        ));
+        let store = Store::open_at(root.clone()).unwrap();
+        let (project, workspace) = workspace();
+        store
+            .register_growth_workspace(&project, &workspace)
+            .unwrap();
+        let hypotheses = crate::growth::model::starter_hypotheses(&workspace);
+        store
+            .insert_growth_hypotheses(&project.id, &hypotheses)
+            .unwrap();
+        let hypotheses = store.list_growth_hypotheses(&project.id).unwrap();
+        store.conn.execute_batch("DROP TRIGGER cleanup_growth_battle_project; DROP TRIGGER freeze_finished_growth_selection; DROP TABLE growth_selections; DELETE FROM growth_schema_migrations WHERE version=3;").unwrap();
+        drop(store);
+        let upgraded = Store::open_at(root.clone()).unwrap();
+        assert_eq!(
+            upgraded.get_growth_workspace(&project.id).unwrap(),
+            Some(workspace)
+        );
+        assert_eq!(
+            upgraded.list_growth_hypotheses(&project.id).unwrap(),
+            hypotheses
+        );
+        assert!(upgraded.growth_selections("no-battle").unwrap().is_empty());
+        drop(upgraded);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
     fn failed_battle_migration_preserves_version_one_and_rolls_back_tables() {
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch("CREATE TABLE growth_schema_migrations (version INTEGER PRIMARY KEY,applied_at INTEGER); INSERT INTO growth_schema_migrations VALUES (1,1); CREATE TABLE growth_variants (bad TEXT);").unwrap();
@@ -234,7 +316,7 @@ mod tests {
         store.create_local_project(&project).unwrap();
         // Remove only the new extension from this isolated fixture to recreate
         // a pre-GrowthLab store with actual inherited schema and product data.
-        store.conn.execute_batch("DROP TRIGGER freeze_sealed_growth_run; DROP TABLE growth_battle_runs; DROP TABLE growth_variants; DROP TABLE growth_battles; DROP TRIGGER cleanup_growth_project; DROP TABLE growth_hypotheses; DROP TABLE growth_workspaces; DROP TABLE growth_schema_migrations;").unwrap();
+        store.conn.execute_batch("DROP TRIGGER cleanup_growth_battle_project; DROP TRIGGER freeze_finished_growth_selection; DROP TABLE growth_selections; DROP TRIGGER freeze_sealed_growth_run; DROP TABLE growth_battle_runs; DROP TABLE growth_variants; DROP TABLE growth_battles; DROP TRIGGER cleanup_growth_project; DROP TABLE growth_hypotheses; DROP TABLE growth_workspaces; DROP TABLE growth_schema_migrations;").unwrap();
         let transcript_version: i64 = store
             .conn
             .query_row("PRAGMA user_version", [], |row| row.get(0))
@@ -331,7 +413,7 @@ mod tests {
             count, 0,
             "failed migration must not leave a half-created workspace table"
         );
-        conn.execute_batch("DROP TABLE growth_hypotheses; CREATE TABLE growth_schema_migrations (version INTEGER PRIMARY KEY, applied_at INTEGER); INSERT INTO growth_schema_migrations VALUES (3,1);").unwrap();
+        conn.execute_batch("DROP TABLE growth_hypotheses; CREATE TABLE growth_schema_migrations (version INTEGER PRIMARY KEY, applied_at INTEGER); INSERT INTO growth_schema_migrations VALUES (4,1);").unwrap();
         assert!(migrate(&conn).is_err());
     }
 }

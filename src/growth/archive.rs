@@ -200,12 +200,6 @@ mod tests {
             use std::os::unix::fs::PermissionsExt;
             std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
         }
-        #[cfg(windows)]
-        {
-            let mut permissions = std::fs::metadata(&path).unwrap().permissions();
-            permissions.set_readonly(false);
-            std::fs::set_permissions(&path, permissions).unwrap();
-        }
         std::fs::write(path, "tampered").unwrap();
         assert!(verify(&root, &hash).is_err());
         assert!(seal(&root, &BTreeMap::from([("../escape".into(), vec![])])).is_err());

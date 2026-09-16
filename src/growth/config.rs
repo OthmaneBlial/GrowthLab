@@ -230,7 +230,7 @@ impl GrowthConfig {
 
     /// Permission check for implementation in an isolated worktree. Draft
     /// artifacts are written to the lab's artifact store, never the product.
-    pub fn check_write(&self, root: &Path, relative: &str) -> Result<()> {
+    pub fn check_permission(&self, relative: &str) -> Result<()> {
         validate_relative_path(relative)?;
         if self.permissions.mode != PermissionMode::Implement {
             return Err(anyhow!("Product file changes require implementation mode"));
@@ -249,6 +249,11 @@ impl GrowthConfig {
         {
             return Err(anyhow!("File change is outside the allowed product paths"));
         }
+        Ok(())
+    }
+
+    pub fn check_write(&self, root: &Path, relative: &str) -> Result<()> {
+        self.check_permission(relative)?;
         let root = crate::paths::canonicalize(root)?;
         let mut current = root.clone();
         for component in Path::new(relative).components() {

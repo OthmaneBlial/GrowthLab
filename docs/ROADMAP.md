@@ -13,12 +13,15 @@ by this roadmap.
   competitors, replay and native harness execution, configured validation,
   immutable run records, failure/cancellation recovery, evidence/diffs/artifacts,
   explainable comparison, safe selected apply/export and local reports.
-  The replay CLI backend passes locally; native execution, safe selection,
-  recovery and reports still prevent marking this phase complete.
+  The replay CLI backend, explicit selected delivery and local HTML/Markdown
+  reports are implemented. Native execution, recovery and host execution
+  confinement still prevent marking this phase complete.
 - [ ] **3 — UX/demo:** growth-native onboarding, tree/battle/detail/console/
   evidence/rubric/settings screens, keyboard/mobile checks, one-command bundled
   demo, sanitized self-contained reports, badge, real screenshots/video,
   contributor/security/community documents and release packaging.
+  CLI report design is implemented; this does not complete the dashboard or
+  demonstrate a bundled product battle with archived screenshots.
 - [ ] **4 — Playbooks:** focused roles and practical positioning, activation,
   onboarding, ethical SEO, pricing research and launch templates with evidence.
 - [ ] **5 — Measurement:** CSV import, baseline/variant comparison, sample size,
