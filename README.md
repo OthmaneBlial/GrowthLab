@@ -142,13 +142,14 @@ Current milestone: **Public repository review, manual-brief onboarding, executab
 - Explicit public GitHub checkout import into a local, configured workspace
 - Workspace experiment map showing the shared goal and three untested growth branches
 - Prepared battles reuse persisted hypothesis IDs so the map remains linked to each variant
+- Inspectable page-quality hints for mobile, controls, form labels and loading sources
 
 | Validation | Current evidence |
 | --- | --- |
 | Rust tests | **passed** — 945 tests per binary; 943 passed, zero failures and two inherited ignored tests (serial run) |
 | UI tests | **passed** — 172 tests; zero failures or skips |
 | Local quality checks | **passed** — Formatting, Clippy, UI types, styles and builds |
-| Actual demo and browser flow | **passed** — Real CLI/HTTP execution, desktop/phone checks, verified PNG endpoint checks, SEO rubric records and standalone local audit on owned fixtures |
+| Actual demo and browser flow | **passed** — Real CLI/HTTP execution, desktop/phone checks, verified PNG endpoint checks, SEO rubric records, page-quality hints and standalone local audit on owned fixtures |
 | Local CSV measurement | **passed** — Bounded UTF-8 CSV import smoke passed locally; means, sample sizes, optional date range, baseline differences, exploratory 95% intervals and MEASURED limits are emitted without network access |
 | Browser measurement dashboard | **passed** — Local Chrome smoke uploaded a synthetic CSV; the dashboard rendered MEASURED means, sample sizes, baseline differences, date range, 95% intervals and limits with no console warnings or errors |
 | Exploratory interval analysis | **passed** — Rust and TypeScript calculations matched on repeated synthetic samples; mean and difference intervals are omitted below n=2 and documented as descriptive normal approximations |

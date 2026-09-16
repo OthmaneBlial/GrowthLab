@@ -151,6 +151,7 @@
 .growth-check strong { font-size:0.6875rem; }
 .growth-check-error { color:var(--accent-red); margin-bottom:15px !important; }
 .growth-seo-rubric { margin:10px 0 20px; border-top:1px solid var(--border); border-bottom:1px solid var(--border); font-size:0.6875rem; }
+.growth-quality-rubric { border-top-style:dashed; }
 .growth-seo-rubric summary { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:13px 0; }
 .growth-seo-rubric summary strong { font-family:var(--mono); font-size:0.625rem; font-weight:500; white-space:nowrap; }
 .growth-seo-rubric>p { margin:0 0 14px; line-height:1.7; }

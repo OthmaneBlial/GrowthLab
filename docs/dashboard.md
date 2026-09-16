@@ -80,6 +80,13 @@ real crawl, accessibility audit or performance measurement.
 The expanded card also lists concrete next steps for every partial or missing
 dimension, so the review can turn directly into a page edit.
 
+The same card exposes **Page quality hints (estimated)** when archived HTML is
+available. This small 25-point companion checks for a mobile viewport, named
+links and buttons, labelled form controls, and parser-blocking resource hints.
+These are source-level prompts for the next SEO or UX edit; they are not a
+Lighthouse score, browser timing trace, screen-reader audit or accessibility
+certification.
+
 For a quick review before creating a battle, run
 `growthlab seo-audit --html ./website/index.html`, or inspect one public HTTPS
 page with `growthlab seo-audit --url https://example.com/pricing`. Add

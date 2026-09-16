@@ -29,6 +29,8 @@ pub struct EvaluationRow {
     pub archive_digest: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rubric: Option<SeoRubric>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub quality: Option<PageQualityRubric>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -45,6 +47,20 @@ pub struct RubricDimension {
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct SeoRubric {
+    pub id: String,
+    pub label: String,
+    pub score: u8,
+    pub max_score: u8,
+    pub provenance: Provenance,
+    pub dimensions: Vec<RubricDimension>,
+    pub recommendations: Vec<String>,
+    pub calculation: String,
+    pub limitations: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PageQualityRubric {
     pub id: String,
     pub label: String,
     pub score: u8,
@@ -348,6 +364,168 @@ pub fn seo_rubric(html: &str) -> SeoRubric {
     }
 }
 
+fn non_empty_attribute(tag: &str, name: &str) -> bool {
+    attribute(tag, name).is_some_and(|value| !value.trim().is_empty())
+}
+
+fn quality_control_counts(html: &str) -> (usize, usize, usize, usize) {
+    let mut interactive = 0;
+    let mut unnamed = 0;
+    for tag in ["a", "button"] {
+        let pattern = format!(r"(?is)<{tag}\b([^>]*)>(.*?)</{tag}\s*>");
+        for capture in Regex::new(&pattern)
+            .expect("static control pattern is valid")
+            .captures_iter(html)
+        {
+            interactive += 1;
+            let attrs = capture
+                .get(1)
+                .map(|value| value.as_str())
+                .unwrap_or_default();
+            let content = capture
+                .get(2)
+                .map(|value| value.as_str())
+                .unwrap_or_default();
+            if !non_empty_attribute(attrs, "aria-label")
+                && !non_empty_attribute(attrs, "title")
+                && text_content(content).is_empty()
+            {
+                unnamed += 1;
+            }
+        }
+    }
+    let mut forms = 0;
+    let mut labelled = 0;
+    for tag in ["input", "select", "textarea"] {
+        for opening in openings(html, tag) {
+            forms += 1;
+            let id = attribute(&opening, "id");
+            let labelled_by_for = id.as_deref().is_some_and(|id| {
+                openings(html, "label")
+                    .into_iter()
+                    .any(|label| attribute(&label, "for").is_some_and(|target| target == id))
+            });
+            if non_empty_attribute(&opening, "aria-label")
+                || non_empty_attribute(&opening, "title")
+                || labelled_by_for
+            {
+                labelled += 1;
+            }
+        }
+    }
+    (interactive, unnamed, forms, labelled)
+}
+
+/// Score conservative page-quality hints from archived HTML. These are
+/// structural checks only: no browser, screen reader or network is involved.
+pub fn page_quality_rubric(html: &str) -> PageQualityRubric {
+    let viewport = openings(html, "meta").into_iter().any(|tag| {
+        attribute(&tag, "name").is_some_and(|name| name.eq_ignore_ascii_case("viewport"))
+            && non_empty_attribute(&tag, "content")
+    });
+    let (interactive, unnamed, forms, labelled) = quality_control_counts(html);
+    let external_styles = openings(html, "link")
+        .into_iter()
+        .filter(|tag| {
+            attribute(tag, "rel").is_some_and(|rel| {
+                rel.split_ascii_whitespace()
+                    .any(|value| value.eq_ignore_ascii_case("stylesheet"))
+            }) && non_empty_attribute(tag, "href")
+        })
+        .count();
+    let blocking_scripts = openings(html, "script")
+        .into_iter()
+        .filter(|tag| {
+            non_empty_attribute(tag, "src")
+                && !non_empty_attribute(tag, "async")
+                && !non_empty_attribute(tag, "defer")
+                && !attribute(tag, "type").is_some_and(|value| value.eq_ignore_ascii_case("module"))
+        })
+        .count();
+    let dimensions = vec![
+        dimension(
+            "viewport",
+            "Mobile viewport",
+            u8::from(viewport) * 5,
+            5,
+            [if viewport {
+                "A non-empty viewport declaration is present.".into()
+            } else {
+                "No non-empty viewport declaration was found.".into()
+            }],
+        ),
+        dimension(
+            "controls",
+            "Named interactive controls",
+            if interactive == 0 || unnamed == 0 {
+                10
+            } else if unnamed < interactive {
+                5
+            } else {
+                0
+            },
+            10,
+            [format!(
+                "Found {interactive} links or buttons; {unnamed} have no visible or explicit accessible name."
+            )],
+        ),
+        dimension(
+            "forms",
+            "Form control labels",
+            if forms == 0 || labelled == forms {
+                5
+            } else if labelled > 0 {
+                2
+            } else {
+                0
+            },
+            5,
+            [format!("Found {forms} form controls; {labelled} have an explicit label association or name.")],
+        ),
+        dimension(
+            "loading",
+            "Loading hints",
+            if external_styles + blocking_scripts == 0 {
+                5
+            } else if external_styles + blocking_scripts <= 2 {
+                3
+            } else {
+                0
+            },
+            5,
+            [format!(
+                "Found {external_styles} external stylesheets and {blocking_scripts} parser-blocking scripts; this is a source hint, not a timing measurement."
+            )],
+        ),
+    ];
+    let recommendations = dimensions
+        .iter()
+        .filter(|item| item.status != "strong")
+        .filter_map(|item| match item.key.as_str() {
+            "viewport" => Some("Add a viewport declaration so narrow screens get an intentional layout.".into()),
+            "controls" => Some("Give every link and button visible text or an explicit accessible name.".into()),
+            "forms" => Some("Associate each form control with a visible label or an accessible name.".into()),
+            "loading" => Some("Review external styles and parser-blocking scripts; confirm timing in a real browser.".into()),
+            _ => None,
+        })
+        .collect();
+    PageQualityRubric {
+        id: "page-quality-hints-v1".into(),
+        label: "Page quality hints (estimated)".into(),
+        score: dimensions.iter().map(|item| item.score as u16).sum::<u16>() as u8,
+        max_score: 25,
+        provenance: Provenance::Estimated,
+        dimensions,
+        recommendations,
+        calculation: "25-point structural hint set: mobile viewport 5, named controls 10, form labels 5 and loading hints 5.".into(),
+        limitations: vec![
+            "This inspects archived HTML only; it does not run Lighthouse, a browser timing trace or a screen reader.".into(),
+            "A strong hint is not an accessibility certification, Core Web Vital or performance result.".into(),
+            "Review the rendered page on supported devices and run dedicated accessibility and performance tools before shipping.".into(),
+        ],
+    }
+}
+
 fn html_for_run<'a>(
     battle: &GrowthBattle,
     run: &'a super::battle_model::BattleRun,
@@ -391,7 +569,7 @@ impl BattleEvaluator for ConfiguredCommandEvaluator {
         "configured-command-pass-v1+seo-page-hygiene-v1"
     }
     fn calculation(&self) -> &str {
-        "Configured command pass fraction is shown alongside an independent 100-point SEO page-hygiene rubric. Eligibility requires a successful sealed run, the exact frozen command list and one immutable candidate commit; neither signal proves traffic, ranking or conversion lift."
+        "Configured command pass fraction is shown alongside independent estimated SEO page-hygiene and page-quality hints. Eligibility requires a successful sealed run, the exact frozen command list and one immutable candidate commit; neither signal proves traffic, ranking or conversion lift."
     }
     fn evaluate(
         &self,
@@ -418,10 +596,10 @@ impl BattleEvaluator for ConfiguredCommandEvaluator {
                             && Some(&check.source_commit) == run.candidate_commit.as_ref()
                     })
         });
-        let rubric = run
-            .and_then(|run| html_for_run(battle, run))
-            .map(seo_rubric);
-        EvaluationRow { variant_id:variant_id.into(),title:title.into(),status:run.map(|run|run.status.clone()).unwrap_or("untested".into()),passed_commands:passed,required_commands:required,pass_fraction:(!checks.is_empty() && required>0).then_some(passed as f64 / required.max(1) as f64),eligible:required>0 && matches && passed==required && run.is_some_and(|run|run.status=="done"),checks,implementation_provenance:run.map(|run|run.provenance).unwrap_or(Provenance::Untested),check_provenance:if run.is_some_and(|run|!run.validations.is_empty()) {Provenance::Observed} else {Provenance::Untested},outcome_provenance:Provenance::Untested,confidence:Confidence { label:ConfidenceLabel::Low,rationale:"Command checks and structural SEO signals cannot establish outcome lift; candidate choice needs user review and real product evidence.".into() },archive_digest:sealed.map(|sealed|sealed.archive_digest.clone()),rubric }
+        let html = run.and_then(|run| html_for_run(battle, run));
+        let rubric = html.map(seo_rubric);
+        let quality = html.map(page_quality_rubric);
+        EvaluationRow { variant_id:variant_id.into(),title:title.into(),status:run.map(|run|run.status.clone()).unwrap_or("untested".into()),passed_commands:passed,required_commands:required,pass_fraction:(!checks.is_empty() && required>0).then_some(passed as f64 / required.max(1) as f64),eligible:required>0 && matches && passed==required && run.is_some_and(|run|run.status=="done"),checks,implementation_provenance:run.map(|run|run.provenance).unwrap_or(Provenance::Untested),check_provenance:if run.is_some_and(|run|!run.validations.is_empty()) {Provenance::Observed} else {Provenance::Untested},outcome_provenance:Provenance::Untested,confidence:Confidence { label:ConfidenceLabel::Low,rationale:"Command checks and structural SEO or page-quality signals cannot establish outcome lift; candidate choice needs user review and real product evidence.".into() },archive_digest:sealed.map(|sealed|sealed.archive_digest.clone()),rubric,quality }
     }
 }
 
@@ -489,7 +667,7 @@ pub fn compare_with(
 
 #[cfg(test)]
 mod tests {
-    use super::{seo_rubric, Provenance};
+    use super::{page_quality_rubric, seo_rubric, Provenance};
 
     #[test]
     fn seo_rubric_exposes_each_structural_signal_and_estimated_provenance() {
@@ -530,5 +708,44 @@ mod tests {
             .recommendations
             .iter()
             .any(|recommendation| recommendation.contains("<title>")));
+    }
+
+    #[test]
+    fn page_quality_rubric_exposes_conservative_structural_hints() {
+        let html = r#"<!doctype html><html lang="en"><head>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <link rel="stylesheet" href="app.css">
+            <script src="app.js" defer></script>
+        </head><body><a href="/start">Start</a><button aria-label="Close">×</button>
+            <form><label for="email">Email</label><input id="email" type="email"></form>
+        </body></html>"#;
+        let rubric = page_quality_rubric(html);
+        assert_eq!(rubric.provenance, Provenance::Estimated);
+        assert_eq!(rubric.max_score, 25);
+        assert_eq!(rubric.score, 23);
+        assert_eq!(rubric.dimensions.len(), 4);
+        assert!(rubric
+            .dimensions
+            .iter()
+            .any(|dimension| dimension.key == "loading" && dimension.status == "partial"));
+        assert!(rubric
+            .limitations
+            .iter()
+            .any(|limitation| limitation.contains("Lighthouse")));
+    }
+
+    #[test]
+    fn page_quality_rubric_flags_unnamed_controls_and_missing_viewport() {
+        let rubric = page_quality_rubric(
+            r#"<html><body><a href="/next"></a><button></button><input id="name"></body></html>"#,
+        );
+        assert!(rubric.score <= 10);
+        assert_eq!(rubric.dimensions[0].status, "missing");
+        assert_eq!(rubric.dimensions[1].status, "missing");
+        assert_eq!(rubric.dimensions[2].status, "missing");
+        assert!(rubric
+            .recommendations
+            .iter()
+            .any(|recommendation| recommendation.contains("accessible name")));
     }
 }

@@ -94,6 +94,12 @@ deterministic next steps for partial or missing dimensions. The 100-point total
 is a structural page review; it is never a ranking, traffic, accessibility or
 conversion result.
 
+The same row may include `quality` when HTML is available. Its
+`page-quality-hints-v1` record is an **ESTIMATED** 25-point companion with
+mobile viewport, named controls, form labels and loading-hint dimensions. It is
+deliberately source-only: it does not run Lighthouse, a browser timing trace or
+a screen reader, and it is not an accessibility or performance certification.
+
 Dashboard delivery requires the latest completed selection to match the requested
 variant. Confirmation does not bypass clean-baseline, permission or seal checks.
 The CLI's explicit `apply <variant-id>` authorization remains compatible.
