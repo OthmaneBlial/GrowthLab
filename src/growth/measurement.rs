@@ -308,7 +308,8 @@ fn observations(
         let timestamp = indexes
             .timestamp
             .map(|index| optional_text(&row[index], "timestamp"))
-            .transpose()?;
+            .transpose()?
+            .flatten();
         output.push(Observation {
             metric,
             variant,
@@ -369,7 +370,9 @@ fn summarize(
     if !has_timestamp {
         warnings.push("No timestamp column was supplied; date range is unavailable.".into());
     } else if date_range.is_none() {
-        warnings.push("The timestamp column contained no nonempty values; date range is unavailable.".into());
+        warnings.push(
+            "The timestamp column contained no nonempty values; date range is unavailable.".into(),
+        );
     }
     let mut groups = Vec::with_capacity(accumulators.len());
     for ((metric, variant), (sample_size, total)) in accumulators {
