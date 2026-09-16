@@ -81,13 +81,18 @@ jobs:
       - name: Build
         run: cargo build --locked
 
+      - name: GrowthLab CLI onboarding and permission failures
+        run: python3 scripts/test-growth-cli.py target/debug/growthlab
+
       - name: Source builds cannot enable production telemetry
         shell: bash
         run: |
           set -euo pipefail
           test "$(target/debug/orx --no-telemetry version --build-channel)" = "development"
+          test "$(target/debug/growthlab --no-telemetry version --build-channel)" = "development"
           cargo build --release --locked
           test "$(target/release/orx --no-telemetry version --build-channel)" = "development"
+          test "$(target/release/growthlab --no-telemetry version --build-channel)" = "development"
 
       - name: Test
         run: cargo test --locked
@@ -122,12 +127,12 @@ jobs:
         if: ${{ !inputs.plan }}
         run: cargo build --release --locked
 
-      - name: Upload orx.exe
+      - name: Upload growthlab.exe
         if: ${{ !inputs.plan }}
         uses: actions/upload-artifact@v4
         with:
-          name: orx-windows-x86_64
-          path: target/release/orx.exe
+          name: growthlab-windows-x86_64
+          path: target/release/growthlab.exe
           if-no-files-found: error
 
   # Guards the version-bump release flow (release-on-bump.yml): the version in
@@ -175,7 +180,7 @@ jobs:
 
           # A bump must carry a regenerated lockfile, or release builds
           # (--locked) would fail.
-          if ! grep -A1 '^name = "openresearch-cli"$' Cargo.lock | grep -q "version = \"${head}\""; then
+          if ! grep -A1 '^name = "growthlab"$' Cargo.lock | grep -q "version = \"${head}\""; then
             echo "::error::Cargo.toml says ${head} but Cargo.lock was not regenerated (run cargo build and commit the lockfile)."
             exit 1
           fi

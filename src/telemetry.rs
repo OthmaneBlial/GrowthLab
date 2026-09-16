@@ -2165,7 +2165,7 @@ mod tests {
         std::env::set_var("XDG_CONFIG_HOME", &dir);
 
         // Write a corrupt settings.json.
-        let cfg = dir.join("openresearch");
+        let cfg = dir.join("growthlab");
         std::fs::create_dir_all(&cfg).unwrap();
         let path = cfg.join("settings.json");
         std::fs::write(&path, b"{ this is not json").unwrap();

@@ -1297,13 +1297,13 @@ fn apply_event(ctx: &mut TurnCtx, state: &mut TurnState, event: &Value) -> bool 
                         }
                     }
                 }
-                Some("message_delta") if parent.is_none() => {
-                    if inner.pointer("/delta/stop_reason").and_then(Value::as_str)
-                        == Some("end_turn")
-                        && state.pending_tasks.is_empty()
-                    {
-                        mark_stream_final(ctx, state);
-                    }
+                Some("message_delta")
+                    if parent.is_none()
+                        && inner.pointer("/delta/stop_reason").and_then(Value::as_str)
+                            == Some("end_turn")
+                        && state.pending_tasks.is_empty() =>
+                {
+                    mark_stream_final(ctx, state);
                 }
                 Some("content_block_delta") => {
                     let mid = match parent {
@@ -1372,18 +1372,18 @@ fn apply_event(ctx: &mut TurnCtx, state: &mut TurnState, event: &Value) -> bool 
             }
             // Track background sub-agents so the `result` arm knows a turn
             // isn't over while one still runs (see `pending_tasks`).
-            Some("task_started") => {
-                if event.get("task_type").and_then(Value::as_str) == Some("local_agent") {
-                    if let Some(id) = event.get("task_id").and_then(Value::as_str) {
-                        // No tool_use_id → no spawn-part association; the
-                        // task still gates the turn's end.
-                        let tool_id = event
-                            .get("tool_use_id")
-                            .and_then(Value::as_str)
-                            .map(str::to_string);
-                        state.pending_tasks.insert(id.to_string(), tool_id);
-                        state.saw_background_task = true;
-                    }
+            Some("task_started")
+                if event.get("task_type").and_then(Value::as_str) == Some("local_agent") =>
+            {
+                if let Some(id) = event.get("task_id").and_then(Value::as_str) {
+                    // No tool_use_id → no spawn-part association; the
+                    // task still gates the turn's end.
+                    let tool_id = event
+                        .get("tool_use_id")
+                        .and_then(Value::as_str)
+                        .map(str::to_string);
+                    state.pending_tasks.insert(id.to_string(), tool_id);
+                    state.saw_background_task = true;
                 }
             }
             // The task's real end: retire it and stamp the spawn part terminal

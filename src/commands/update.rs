@@ -33,6 +33,9 @@ use crate::updates::{self, UpdateTarget};
 /// respawning on every command. A foreground run records too — a user who fixes
 /// the cause and updates by hand should not stay stuck behind the backoff.
 pub async fn run(args: crate::UpdateArgs) -> Result<()> {
+    if env!("CARGO_PKG_NAME") == "growthlab" {
+        return Err(anyhow!("GrowthLab automatic updates are unavailable during the source alpha; rebuild from this repository. The upstream installer is never invoked."));
+    }
     // Checked before `apply` so a switched-off install never records a failed
     // attempt — nothing was attempted, and the backoff must not be waiting on it
     // if the user turns updates back on.

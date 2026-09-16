@@ -6,8 +6,9 @@ GrowthLab is building isolated, reproducible growth experiments for your product
 with evidence, implementation, and tradeoffs behind every variant.
 Local-first. Open source. No Docker required.
 
-> Development status: foundation audit in progress. The inherited OpenResearch
-> workspace is present; Growth Battles and the GrowthLab release are being built.
+> Development status: source alpha. Product configuration, Git workspace import
+> and untested starter hypotheses are implemented. The dashboard currently retains
+> the inherited research UI; Growth Battles and a credible release are being built.
 > No conversion lift, winning variant, adoption, or production readiness is claimed.
 
 ## Why GrowthLab?
@@ -40,9 +41,11 @@ node scripts/dev-slot.mjs status
 
 The dev-slot helper starts an isolated local database, Rust backend, and UI;
 its status prints the actual ports. Stop it with
-`node scripts/dev-slot.mjs stop`. The current inherited binary is `orx`;
-GrowthLab-native commands are the next milestone. Do not use the upstream
-OpenResearch installer to install GrowthLab.
+`node scripts/dev-slot.mjs stop`. The canonical binary is `growthlab`, with `orx` retained as a compatibility
+entry point. Install only the canonical command with
+`cargo install --path . --bin growthlab --locked`. See the
+[configuration workflow](docs/configuration.md) for product import and hypotheses.
+Do not use the upstream OpenResearch installer to install GrowthLab.
 
 ## Architecture and privacy
 

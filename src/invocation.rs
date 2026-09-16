@@ -9,12 +9,24 @@ use std::sync::OnceLock;
 
 static ORX: OnceLock<String> = OnceLock::new();
 
+pub fn binary_name() -> &'static str {
+    if std::env::current_exe()
+        .ok()
+        .is_some_and(|path| path.file_stem().is_some_and(|name| name == "orx"))
+    {
+        "orx"
+    } else {
+        "growthlab"
+    }
+}
+
 /// The command to print in hints: `orx` when that resolves, else this binary's
 /// own path, shell-quoted if it needs it.
 pub fn orx() -> &'static str {
     ORX.get_or_init(|| {
-        if resolves_on_path("orx") {
-            return "orx".to_string();
+        let name = binary_name();
+        if resolves_on_path(name) {
+            return name.to_string();
         }
         match std::env::current_exe() {
             // Not canonicalized: invoked through the bundle's `orx` alias, that

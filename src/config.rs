@@ -1,8 +1,8 @@
 //! Credential storage, XDG paths, and the default API URL.
 //!
 //! Credentials live at
-//! `$XDG_CONFIG_HOME/openresearch/credentials.json` (falling back to
-//! `~/.config/openresearch/credentials.json`), written owner-only (mode 0600).
+//! `$XDG_CONFIG_HOME/growthlab/credentials.json` (falling back to
+//! `~/.config/growthlab/credentials.json`), written owner-only (mode 0600).
 
 use std::path::PathBuf;
 
@@ -69,7 +69,7 @@ pub(crate) fn config_dir() -> PathBuf {
                 .unwrap_or_else(|| PathBuf::from("."))
                 .join(".config")
         });
-    base.join("openresearch")
+    base.join("growthlab")
 }
 
 fn credentials_path() -> PathBuf {

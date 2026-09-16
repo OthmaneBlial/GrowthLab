@@ -1,13 +1,13 @@
-//! OpenResearch CLI (`orx`) — Rust port entry point.
-//!
-//! A clap-derive command tree mirroring the USAGE
-//! block, dispatched from an async `tokio::main`. Each subcommand routes to one
-//! module fn in `commands::<name>`. The six fs verbs (read/write/str-replace/
-//! ls/grep/rm) all route into `commands::fs`.
-//!
-//! Error handling: command fns return `anyhow::Result<()>`. `main` prints the
-//! error's `Display` to stderr and exits 1 — matching the TS
-//! `main().catch(err => { console.error(err.message); process.exit(1) })`.
+// OpenResearch CLI (`orx`) — Rust port entry point.
+//
+// A clap-derive command tree mirroring the USAGE
+// block, dispatched from an async `tokio::main`. Each subcommand routes to one
+// module fn in `commands::<name>`. The six fs verbs (read/write/str-replace/
+// ls/grep/rm) all route into `commands::fs`.
+//
+// Error handling: command fns return `anyhow::Result<()>`. `main` prints the
+// error's `Display` to stderr and exits 1 — matching the TS
+// `main().catch(err => { console.error(err.message); process.exit(1) })`.
 
 mod browser;
 mod editors;
@@ -19,6 +19,7 @@ mod compute;
 mod config;
 mod error;
 mod folder_picker;
+mod growth;
 mod invocation;
 mod jobs;
 // Local mode (`orx up`): builds out across stages; not all of it is wired yet.
@@ -37,8 +38,8 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "orx",
-    about = "OpenResearch CLI",
+    name = "growthlab",
+    about = "GrowthLab — local-first growth experimentation",
     version,
     disable_help_subcommand = true
 )]
@@ -60,6 +61,17 @@ struct Cli {
 // you add a *read-only* subcommand, add it there too, or it stays gated in plan
 // mode. `readonly_verbs_are_real_commands` catches renames but not additions.
 enum Command {
+    /// Create a reviewed product configuration (default: analysis only).
+    Init(growth::cli::InitArgs),
+
+    /// Validate growthlab.yaml and its permissions.
+    Config(growth::cli::ConfigArgs),
+
+    /// Import or inspect product workspaces without publishing them.
+    Workspace(growth::cli::WorkspaceArgs),
+
+    /// Create or inspect three untested landing-page hypothesis templates.
+    Hypotheses(growth::cli::HypothesesArgs),
     /// Log in via the browser and store a token.
     Login(LoginArgs),
 
@@ -804,6 +816,9 @@ pub struct PaperArgs {
 // worker threads. A `current_thread` flavor would deadlock. See commands::app.
 #[tokio::main]
 async fn main() {
+    // GrowthLab does not use the upstream update endpoint or auto-installer.
+    // The inherited UI also consults this flag before any update operation.
+    std::env::set_var("ORX_NO_UPDATE_CHECK", "1");
     #[cfg(windows)]
     {
         install_panic_reporter();
@@ -909,8 +924,9 @@ async fn main() {
 
     if let Err(err) = result {
         // Match the TS: print only the message, exit 1.
-        eprintln!("{}", err);
-        show_error_dialog(&err.to_string());
+        let message = growth::redaction::redact(&err.to_string());
+        eprintln!("{message}");
+        show_error_dialog(&message);
         std::process::exit(1);
     }
 }
@@ -997,6 +1013,10 @@ fn should_capture_command(command: &Command) -> bool {
 /// variant name so renames don't silently break analytics continuity.
 fn command_name(command: &Command) -> &'static str {
     match command {
+        Command::Init(_) => "init",
+        Command::Config(_) => "config",
+        Command::Workspace(_) => "workspace",
+        Command::Hypotheses(_) => "hypotheses",
         Command::Login(_) => "login",
         Command::Logout => "logout",
         Command::Projects(_) => "projects",
@@ -1043,6 +1063,10 @@ async fn dispatch(command: Command) -> error::Result<()> {
         .transpose()?;
 
     match command {
+        Command::Init(args) => growth::cli::init(args),
+        Command::Config(args) => growth::cli::config(args),
+        Command::Workspace(args) => growth::cli::workspace(args),
+        Command::Hypotheses(args) => growth::cli::hypotheses(args),
         Command::Login(args) => commands::login::run(args).await,
         Command::Logout => commands::logout::run().await,
         Command::Projects(args) => commands::projects::run(args).await,
@@ -1087,7 +1111,12 @@ async fn dispatch(command: Command) -> error::Result<()> {
 fn command_uses_lifecycle_lock(command: &Command) -> bool {
     !matches!(
         command,
-        Command::Login(_)
+        Command::Init(_)
+            | Command::Config(_)
+            | Command::Workspace(_)
+            | Command::Hypotheses(_)
+            | Command::Update(_)
+            | Command::Login(_)
             | Command::Logout
             | Command::InstallSkills(_)
             | Command::Discover(_)

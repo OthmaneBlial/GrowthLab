@@ -234,7 +234,10 @@ fn is_readonly_producer(stage: &str) -> bool {
     if READONLY_GLUE.contains(&program) {
         return true;
     }
-    if program == "orx" || program.ends_with("/orx") {
+    if matches!(program, "orx" | "growthlab")
+        || program.ends_with("/orx")
+        || program.ends_with("/growthlab")
+    {
         return is_readonly_orx(&tokens, stage);
     }
     if program == "git" || program.ends_with("/git") {
@@ -272,6 +275,9 @@ fn is_readonly_orx(tokens: &[&str], stage: &str) -> bool {
     }
 
     match verb {
+        "config" => matches!(subcommand(&mut rest), Some("check" | "check-path")),
+        "workspace" => matches!(subcommand(&mut rest), Some("list" | "view")),
+        "hypotheses" => rest.any(|token| token == "--list"),
         // Verbs with a write subcommand: allow only the read-only subcommand(s).
         "project" => matches!(subcommand(&mut rest), Some("view")),
         "exp" => match subcommand(&mut rest) {
@@ -414,6 +420,30 @@ fn subcommand<'a>(tokens: &mut impl Iterator<Item = &'a str>) -> Option<&'a str>
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn growthlab_reads_are_allowed_and_product_mutations_remain_gated() {
+        for command in [
+            "growthlab config check",
+            "growthlab config check-path website/index.html",
+            "growthlab workspace list",
+            "growthlab workspace view p",
+            "growthlab hypotheses p --list",
+            "/tmp/growthlab workspace list",
+        ] {
+            assert!(command_is_readonly(command), "{command}");
+        }
+        for command in [
+            "growthlab init --name Fixture",
+            "growthlab workspace import",
+            "growthlab hypotheses p",
+            "growthlab battle goal",
+            "growthlab apply variant",
+            "growthlab config future-write",
+        ] {
+            assert!(!command_is_readonly(command), "{command}");
+        }
+    }
 
     fn payload(command: &str) -> Value {
         json!({ "tool_name": "Bash", "tool_input": { "command": command } })

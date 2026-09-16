@@ -2,15 +2,18 @@
 
 ## What this repository is
 
-`openresearch-cli` is the open-source Rust implementation of the `orx` command-line tool. It owns the local CLI, dashboard and API, SQLite store, coding-agent integrations, experiment orchestration, and execution backends.
+`growthlab` is a local-first Rust growth experimentation product built from alphaXiv/OpenResearch. `growthlab` is the canonical CLI; `orx` is a compatibility entry point sharing the same implementation. It owns the local CLI, dashboard/API, SQLite store, coding-agent integrations, Git worktrees and experiment orchestration.
 
-`openresearch.sh` is the companion service. It owns the website and documentation, accounts and organizations, sandbox provisioning, and managed-compute catalogs. Research projects, experiments, runs, logs, and artifacts remain local to `orx`.
+Read `docs/SPEC.md`, `docs/PROGRESS.md`, `docs/ROADMAP.md` and `docs/openresearch-foundation.md` before substantial changes. The full requested product scope remains binding; a partial scaffold or green test suite is not a credible-release claim. Preserve LICENSE, NOTICE.md and upstream history.
 
-When changing authentication, organization, sandbox, or managed-compute APIs, inspect the corresponding `openresearch.sh` implementation and keep both sides compatible. Do not edit the companion repository unless it is explicitly in scope.
+The inherited `openresearch.sh` companion service is not a GrowthLab service. Do not edit it or redirect local product data there. Inherited remote integrations remain optional. Upstream release/signing workflows are isolated and the upstream updater is refused. Never require Docker for local install, development, tests or demos.
 
 ## Development guidelines
 
 - Rust code lives in `src/`; the dashboard lives in `ui/src/`. Keep local-only behavior local and use the production API client only for capabilities owned by `openresearch.sh`.
+- Growth domain types/configuration live in `src/growth/`; growth SQLite extensions live in `src/store/growth.rs`. Preserve inherited generic primitives. New migration errors must propagate and new migration versions must not collide with transcript `user_version`.
+- Record MEASURED/OBSERVED/ESTIMATED/SIMULATED/UNTESTED provenance on results. Template proposals are untested; replay proposals are simulated; actual deterministic checks are observed. Without real outcome telemetry, recommend a candidate and do not claim measured growth or a Winner.
+- Permissions are explicit. Product changes belong in isolated worktrees and only allowed paths. Apply only an explicitly selected candidate. No automatic deploy, push to a product repository, messaging, ads, live billing/analytics changes, credentials or customer-data access.
 - Run local app instances through `scripts/dev-slot.mjs` so development data, ports, and processes stay isolated.
 - `ui/dist` is committed and embedded in release builds. After UI changes, run `pnpm build` in `ui/` and include the regenerated assets.
 - Prefer canonical Tailwind utilities (`flex flex-col h-full min-h-0`) and project theme aliases (`bg-background`, `text-subtext`, `border-border`). Use arbitrary values only when no project utility exists, and preserve semantic marker classes when selectors or runtime behavior depend on them.
@@ -18,6 +21,6 @@ When changing authentication, organization, sandbox, or managed-compute APIs, in
 
 ## CI and release gates
 
-- GitHub protection for `main` must require the `fmt, clippy, test` and `version sanity` checks from GitHub Actions, including for administrators. Do not require a merge queue or require branches to be up to date. These settings are managed in GitHub, not by this file.
+- For this task the user explicitly authorizes direct-main work with focused commits and frequent pushes to `OthmaneBlial/GrowthLab`. Inspect status/diffs and run relevant validation before each coherent commit. Verify the exact remote/head after pushing. Do not configure protection that prevents the authorized workflow.
 - PR CI must test GitHub's simulated merge (`refs/pull/<number>/merge`), which `actions/checkout` selects by default for `pull_request` events, rather than checking out the PR head alone. Each run tests its merge candidate; subsequent changes to `main` do not automatically rerun open PRs.
 - CI also runs on `main`. Releases call the same CI workflow on the commit being packaged; publishing requires that run to succeed. Keep `./ci` in cargo-dist's `global-artifacts-jobs` when regenerating the release workflow.

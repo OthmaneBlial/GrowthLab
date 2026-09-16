@@ -275,6 +275,15 @@ pub struct DatabaseLease {
     migration: bool,
 }
 
+impl Drop for DatabaseLease {
+    fn drop(&mut self) {
+        // File close alone leaves flock held until all duplicated/inherited
+        // descriptors close. Release ownership at lease end even when another
+        // thread is concurrently spawning an unrelated subprocess.
+        let _ = self.lock.unlock();
+    }
+}
+
 #[derive(Debug)]
 pub struct DatabaseBusy {
     pub path: PathBuf,
@@ -844,6 +853,28 @@ mod tests {
         assert!(busy.downcast_ref::<DatabaseBusy>().is_some());
         drop((first, second));
         assert!(DatabaseLease::acquire(&path, 2).is_ok());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn dropped_reader_releases_lock_even_if_a_spawn_inherited_a_descriptor() {
+        let fixture = Fixture::new();
+        let path = fixture.path();
+        Connection::open(&path).unwrap().execute_batch(V1).unwrap();
+        let reader = DatabaseLease::acquire(&path, 1).unwrap();
+        let other_reader = DatabaseLease::acquire(&path, 1).unwrap();
+        // try_clone shares the open file description, as an inherited fork
+        // descriptor does during another thread's concurrent subprocess spawn.
+        let inherited = reader.lock.try_clone().unwrap();
+        drop(reader);
+        assert!(
+            DatabaseLease::acquire(&path, 2).is_err(),
+            "the other active reader must still block an upgrade"
+        );
+        drop(other_reader);
+        let upgrade = DatabaseLease::acquire(&path, 2)
+            .expect("dropping the lease must release its lock before inherited descriptors close");
+        drop((upgrade, inherited));
     }
 
     #[test]

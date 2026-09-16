@@ -5,8 +5,8 @@
 //! HTTP/SSE. Run logs are plain append-only files under `run-logs/<runId>.log`
 //! so tailing (serve) and appending (supervise) never contend on the db.
 //!
-//! Data dir: `$ORX_DATA_DIR`, else `$XDG_DATA_HOME/openresearch`, else
-//! `~/.local/share/openresearch`.
+//! Data dir: `$ORX_DATA_DIR`, else `$XDG_DATA_HOME/growthlab`, else
+//! `~/.local/share/growthlab`.
 
 use std::path::PathBuf;
 
@@ -17,17 +17,19 @@ use crate::error::{anyhow, Result};
 use crate::local::model::{LocalExperiment, LocalProject};
 use crate::workspace_state::{GlobalWorkspaceState, WorkspaceState};
 
+mod growth;
+
 pub fn data_dir() -> PathBuf {
     // Resolution order (most to least authoritative):
-    //   1. $ORX_DATA_DIR — explicit imperative override (launch.json, tests,
+    //   1. $GROWTHLAB_DATA_DIR or legacy $ORX_DATA_DIR — explicit imperative override (launch.json, tests,
     //      the Codex sandbox pin). Stays on top so a forced path always wins.
     //   2. persisted user choice (config_dir()/settings.json `dataDir`) — set
     //      from the UI's Storage settings. Read fresh every call (no cache) so a
     //      just-completed data-dir move is picked up by the next Store::open().
-    //   3. $XDG_DATA_HOME/openresearch — ambient system default *base*; an
+    //   3. $XDG_DATA_HOME/growthlab — ambient system default *base*; an
     //      explicit UI choice rightly beats it, so it sits below (2).
-    //   4. ~/.local/share/openresearch — hardcoded default.
-    if let Some(dir) = env_path("ORX_DATA_DIR") {
+    //   4. ~/.local/share/growthlab — hardcoded default.
+    if let Some(dir) = env_path("GROWTHLAB_DATA_DIR").or_else(|| env_path("ORX_DATA_DIR")) {
         return dir;
     }
     if let Some(dir) = crate::config::settings_data_dir() {
@@ -118,7 +120,7 @@ fn env_path(key: &str) -> Option<PathBuf> {
         .map(PathBuf::from)
 }
 
-/// `$XDG_DATA_HOME/openresearch` else `~/.local/share/openresearch` — the tail
+/// `$XDG_DATA_HOME/growthlab` else `~/.local/share/growthlab` — the tail
 /// of the resolution chain, shared by `data_dir()` and `default_data_dir()`.
 fn xdg_default_data_dir() -> PathBuf {
     let base = env_path("XDG_DATA_HOME").unwrap_or_else(|| {
@@ -127,7 +129,7 @@ fn xdg_default_data_dir() -> PathBuf {
             .join(".local")
             .join("share")
     });
-    base.join("openresearch")
+    base.join("growthlab")
 }
 
 /// The data dir ignoring any persisted user choice — where resolution would
@@ -135,7 +137,7 @@ fn xdg_default_data_dir() -> PathBuf {
 /// "(default)" path and offer resetting to it. `$ORX_DATA_DIR` still wins, since
 /// it's a forced override.
 pub fn default_data_dir() -> PathBuf {
-    if let Some(dir) = env_path("ORX_DATA_DIR") {
+    if let Some(dir) = env_path("GROWTHLAB_DATA_DIR").or_else(|| env_path("ORX_DATA_DIR")) {
         return dir;
     }
     xdg_default_data_dir()
@@ -152,13 +154,16 @@ pub enum DataDirSource {
     Config,
     /// Derived from `$XDG_DATA_HOME` (no user choice).
     Xdg,
-    /// Hardcoded `~/.local/share/openresearch`.
+    /// Hardcoded `~/.local/share/growthlab`.
     Default,
 }
 
 /// Classify the current `data_dir()` resolution for the Storage settings UI.
 pub fn data_dir_source() -> DataDirSource {
-    if env_path("ORX_DATA_DIR").is_some() {
+    if env_path("GROWTHLAB_DATA_DIR")
+        .or_else(|| env_path("ORX_DATA_DIR"))
+        .is_some()
+    {
         return DataDirSource::Env;
     }
     if crate::config::settings_data_dir().is_some() {
@@ -815,6 +820,7 @@ impl Store {
         // to do it safely exists: `reconcileReasoning` in `ui/src/api.ts` drops
         // one the selected model doesn't offer, and each harness's mapper drops
         // it again before it can reach a CLI.
+        growth::migrate(&conn)?;
         Ok(Self {
             conn,
             data_dir_move_lock_path,

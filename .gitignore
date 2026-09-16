@@ -26,6 +26,7 @@ Claude.local.md
 /.claude/launch.json
 /.claude/settings.local.json
 /ui/project.inlang/cache/
+__pycache__/
 
 # This repo uses pnpm; ignore an accidental npm lockfile
 ui/package-lock.json

@@ -63,7 +63,7 @@ pub(crate) fn legacy_cache_root() -> PathBuf {
             dirs::home_dir()
                 .unwrap_or_else(|| PathBuf::from("."))
                 .join(".cache")
-                .join("openresearch")
+                .join("growthlab")
         })
 }
 

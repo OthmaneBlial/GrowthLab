@@ -24,9 +24,27 @@ pub async fn run(args: crate::VersionArgs) -> Result<()> {
     }
 
     let current = updates::current_version();
+    let name = crate::invocation::binary_name();
 
     if !args.check && !args.json {
-        println!("orx {}", current);
+        println!("{name} {current}");
+        return Ok(());
+    }
+
+    if env!("CARGO_PKG_NAME") == "growthlab" {
+        if args.json {
+            println!(
+                "{}",
+                serde_json::json!({
+                    "current": current.to_string(), "latest": null,
+                    "updateAvailable": false, "autoUpdate": false,
+                    "releaseLookup": "unavailable", "channel": "source_alpha",
+                })
+            );
+        } else {
+            println!("{name} {current}");
+            println!("GrowthLab release lookup is unavailable during the source alpha; no upstream release comparison was performed.");
+        }
         return Ok(());
     }
 
