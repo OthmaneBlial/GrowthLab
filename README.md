@@ -15,7 +15,7 @@ It is made for founders, indie hackers, marketers, designers, and developers who
 **Open source · local-first · built for small teams · no Docker**
 
 <!-- project-links:start -->
-[Website](https://othmaneblial.github.io/GrowthLab/) · [Docs](https://othmaneblial.github.io/GrowthLab/docs.html) · [Alpha release](https://github.com/OthmaneBlial/GrowthLab/releases/tag/v0.1.0-alpha.8) · [Roadmap](docs/ROADMAP.md) · [Contribute](CONTRIBUTING.md)
+[Website](https://othmaneblial.github.io/GrowthLab/) · [Docs](https://othmaneblial.github.io/GrowthLab/docs.html) · [Alpha release](https://github.com/OthmaneBlial/GrowthLab/releases/tag/v0.1.0-alpha.9) · [Roadmap](docs/ROADMAP.md) · [Contribute](CONTRIBUTING.md)
 <!-- project-links:end -->
 
 ![Real bundled battle with two eligible candidates and one deliberately failed heading check](docs/screenshots/growth-demo-failure.png)
