@@ -142,7 +142,7 @@ Current milestone: **Public repository review, manual-brief onboarding, executab
 - Explicit public GitHub checkout import into a local, configured workspace
 - Workspace experiment map showing the shared goal and three untested growth branches
 - Prepared battles reuse persisted hypothesis IDs so the map remains linked to each variant
-- Inspectable page-quality hints for mobile, controls, form labels and loading sources
+- Inspectable page-quality hints for mobile, controls, form labels, loading sources and claim guardrails
 
 | Validation | Current evidence |
 | --- | --- |

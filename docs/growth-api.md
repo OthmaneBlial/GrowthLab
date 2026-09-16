@@ -95,8 +95,8 @@ is a structural page review; it is never a ranking, traffic, accessibility or
 conversion result.
 
 The same row may include `quality` when HTML is available. Its
-`page-quality-hints-v1` record is an **ESTIMATED** 25-point companion with
-mobile viewport, named controls, form labels and loading-hint dimensions. It is
+`page-quality-hints-v1` record is an **ESTIMATED** 30-point companion with
+mobile viewport, named controls, form labels, loading-hint and claim-guardrail dimensions. It is
 deliberately source-only: it does not run Lighthouse, a browser timing trace or
 a screen reader, and it is not an accessibility or performance certification.
 

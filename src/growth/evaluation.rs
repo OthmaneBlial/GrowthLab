@@ -449,6 +449,11 @@ pub fn page_quality_rubric(html: &str) -> PageQualityRubric {
                 && !attribute(tag, "type").is_some_and(|value| value.eq_ignore_ascii_case("module"))
         })
         .count();
+    let absolute_claims =
+        Regex::new(r"(?i)\b(?:guarantee(?:s|d)?|proven\s+winner|number\s+one)\b|#1")
+            .expect("static claim guardrail pattern is valid")
+            .find_iter(&text_content(html))
+            .count();
     let dimensions = vec![
         dimension(
             "viewport",
@@ -504,6 +509,17 @@ pub fn page_quality_rubric(html: &str) -> PageQualityRubric {
                 "Found {external_styles} external stylesheets and {blocking_scripts} parser-blocking scripts; this is a source hint, not a timing measurement."
             )],
         ),
+        dimension(
+            "claims",
+            "Claim guardrail",
+            u8::from(absolute_claims == 0) * 5,
+            5,
+            [if absolute_claims == 0 {
+                "No common absolute-outcome claim pattern was found in visible copy.".into()
+            } else {
+                format!("Found {absolute_claims} possible absolute-outcome claim pattern(s); review the surrounding copy and evidence.")
+            }],
+        ),
     ];
     let recommendations = dimensions
         .iter()
@@ -513,6 +529,7 @@ pub fn page_quality_rubric(html: &str) -> PageQualityRubric {
             "controls" => Some("Give every link and button visible text or an explicit accessible name.".into()),
             "forms" => Some("Associate each form control with a visible label or an accessible name.".into()),
             "loading" => Some("Review external styles and parser-blocking scripts; confirm timing in a real browser.".into()),
+            "claims" => Some("Replace absolute growth or winner language with a specific, evidenced claim.".into()),
             _ => None,
         })
         .collect();
@@ -520,11 +537,11 @@ pub fn page_quality_rubric(html: &str) -> PageQualityRubric {
         id: "page-quality-hints-v1".into(),
         label: "Page quality hints (estimated)".into(),
         score: dimensions.iter().map(|item| item.score as u16).sum::<u16>() as u8,
-        max_score: 25,
+        max_score: 30,
         provenance: Provenance::Estimated,
         dimensions,
         recommendations,
-        calculation: "25-point structural hint set: mobile viewport 5, named controls 10, form labels 5 and loading hints 5.".into(),
+        calculation: "30-point structural hint set: mobile viewport 5, named controls 10, form labels 5, loading hints 5 and claim guardrails 5.".into(),
         limitations: vec![
             "This inspects archived HTML only; it does not run Lighthouse, a browser timing trace or a screen reader.".into(),
             "A strong hint is not an accessibility certification, Core Web Vital or performance result.".into(),
@@ -728,9 +745,9 @@ mod tests {
         </body></html>"#;
         let rubric = page_quality_rubric(html);
         assert_eq!(rubric.provenance, Provenance::Estimated);
-        assert_eq!(rubric.max_score, 25);
-        assert_eq!(rubric.score, 23);
-        assert_eq!(rubric.dimensions.len(), 4);
+        assert_eq!(rubric.max_score, 30);
+        assert_eq!(rubric.score, 28);
+        assert_eq!(rubric.dimensions.len(), 5);
         assert!(rubric
             .dimensions
             .iter()
@@ -763,5 +780,23 @@ mod tests {
         );
         assert_eq!(rubric.dimensions[3].key, "loading");
         assert_eq!(rubric.dimensions[3].status, "strong");
+    }
+
+    #[test]
+    fn page_quality_rubric_flags_absolute_outcome_language_for_review() {
+        let rubric = page_quality_rubric(
+            "<html><body><h1>Guaranteed growth for every team</h1><p>Our proven winner.</p></body></html>",
+        );
+        let claims = rubric
+            .dimensions
+            .iter()
+            .find(|dimension| dimension.key == "claims")
+            .expect("claim dimension");
+        assert_eq!(claims.status, "missing");
+        assert!(claims.evidence[0].contains("2 possible"));
+        assert!(rubric
+            .recommendations
+            .iter()
+            .any(|recommendation| recommendation.contains("absolute")));
     }
 }
