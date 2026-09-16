@@ -237,6 +237,9 @@ pub struct MeasureArgs {
     /// Optional CSV column grouping observations into metrics.
     #[arg(long, default_value = "metric")]
     pub metric_column: String,
+    /// Optional CSV column grouping observations by channel or distribution.
+    #[arg(long, default_value = "distribution")]
+    pub distribution_column: String,
     /// Optional CSV column used to report the observed date range.
     #[arg(long, default_value = "timestamp")]
     pub timestamp_column: String,
@@ -560,6 +563,7 @@ pub fn measure(args: MeasureArgs) -> Result<()> {
         &args.variant_column,
         &args.value_column,
         &args.metric_column,
+        &args.distribution_column,
         &args.timestamp_column,
     )?;
     match args.format {
@@ -1070,6 +1074,7 @@ mod tests {
             "variant",
             "value",
             "metric",
+            "distribution",
             "timestamp",
         )
         .unwrap();

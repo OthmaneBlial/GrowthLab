@@ -51,3 +51,16 @@ test("computes an exploratory difference interval only with repeated baseline an
   assert.ok(Math.abs(hero.comparison.differenceInterval95.lower + 9.55) < 0.02);
   assert.ok(Math.abs(hero.comparison.differenceInterval95.upper - 15.55) < 0.02);
 });
+
+test("keeps channel distributions separate when comparing variants", () => {
+  const report = parseMeasurementCsv([
+    "distribution,variant,value",
+    "search,baseline,10",
+    "search,hero,15",
+    "social,baseline,4",
+    "social,hero,8",
+  ].join("\n"));
+  assert.equal(report.groups.length, 4);
+  assert.equal(report.groups.find((group) => group.distribution === "search" && group.variant === "hero")?.comparison?.difference, 5);
+  assert.equal(report.groups.find((group) => group.distribution === "social" && group.variant === "hero")?.comparison?.difference, 4);
+});

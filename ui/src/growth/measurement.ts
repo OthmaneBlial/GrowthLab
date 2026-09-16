@@ -18,6 +18,7 @@ export interface MeasurementComparison {
 
 export interface MeasurementGroup {
   metric: string;
+  distribution: string;
   variant: string;
   sampleSize: number;
   total: number;
@@ -118,18 +119,20 @@ export function parseMeasurementCsv(input: string, baselineVariant = "baseline",
   const variant = findColumn(headers, "variant", true)!;
   const value = findColumn(headers, "value", true)!;
   const metric = findColumn(headers, "metric", false);
+  const distribution = findColumn(headers, "distribution", false);
   const timestamp = findColumn(headers, "timestamp", false);
-  const accumulators = new Map<string, { metric: string; variant: string; sampleSize: number; total: number; sumSquares: number }>();
+  const accumulators = new Map<string, { metric: string; distribution: string; variant: string; sampleSize: number; total: number; sumSquares: number }>();
   const dates: string[] = [];
   let included = 0;
   for (const [rowIndex, record] of rows.slice(1).entries()) {
     const variantValue = text(record[variant], "variant")!;
     const metricValue = metric === null ? "primary" : text(record[metric], "metric")!;
+    const distributionValue = distribution === null ? "all" : text(record[distribution], "distribution", true) ?? "all";
     if (filter !== undefined && metricValue.toLocaleLowerCase() !== filter.toLocaleLowerCase()) continue;
     const numeric = Number(record[value].trim());
     if (!Number.isFinite(numeric)) fail(`Measurement value on CSV row ${rowIndex + 2} is not finite.`);
-    const key = `${metricValue}\u0000${variantValue}`;
-    const previous = accumulators.get(key) ?? { metric: metricValue, variant: variantValue, sampleSize: 0, total: 0, sumSquares: 0 };
+    const key = `${metricValue}\u0000${distributionValue}\u0000${variantValue}`;
+    const previous = accumulators.get(key) ?? { metric: metricValue, distribution: distributionValue, variant: variantValue, sampleSize: 0, total: 0, sumSquares: 0 };
     previous.sampleSize += 1;
     previous.total += numeric;
     previous.sumSquares += numeric * numeric;
@@ -162,16 +165,16 @@ export function parseMeasurementCsv(input: string, baselineVariant = "baseline",
   const warnings: string[] = [];
   if (timestamp === null) warnings.push("No timestamp column was supplied; date range is unavailable.");
   else if (!dates.length) warnings.push("The timestamp column contained no nonempty values; date range is unavailable.");
-  const groups = [...accumulators.values()].sort((left, right) => left.metric.localeCompare(right.metric) || (left.variant === baseline ? -1 : right.variant === baseline ? 1 : left.variant.localeCompare(right.variant))).map((group) => {
-    const groupStats = stats.get(`${group.metric}\u0000${group.variant}`)!;
-    const baselineStats = stats.get(`${group.metric}\u0000${baseline}`);
+  const groups = [...accumulators.values()].sort((left, right) => left.metric.localeCompare(right.metric) || left.distribution.localeCompare(right.distribution) || (left.variant === baseline ? -1 : right.variant === baseline ? 1 : left.variant.localeCompare(right.variant))).map((group) => {
+    const groupStats = stats.get(`${group.metric}\u0000${group.distribution}\u0000${group.variant}`)!;
+    const baselineStats = stats.get(`${group.metric}\u0000${group.distribution}\u0000${baseline}`);
     const comparison = baselineStats === undefined ? null : {
       baselineMean: baselineStats.mean,
       difference: groupStats.mean - baselineStats.mean,
       relativeChangePercent: baselineStats.mean === 0 ? null : (groupStats.mean - baselineStats.mean) / Math.abs(baselineStats.mean) * 100,
       differenceInterval95: group.variant === baseline ? null : differenceInterval(groupStats, baselineStats),
     };
-    if (group.variant !== baseline && comparison === null) warnings.push(`Metric '${group.metric}' has no '${baseline}' baseline; its variants are shown without comparison.`);
+    if (group.variant !== baseline && comparison === null) warnings.push(`Metric '${group.metric}' in distribution '${group.distribution}' has no '${baseline}' baseline; its variants are shown without comparison.`);
     return { ...group, mean: groupStats.mean, sampleStddev: groupStats.sampleStddev, meanInterval95: meanInterval(groupStats), comparison };
   });
   const sortedDates = [...dates].sort();

@@ -36,7 +36,7 @@ export function MeasurementPanel() {
   return <section className="growth-measurement growth-panel" aria-labelledby="growth-measurement-title">
     <span className="growth-section-number">03 / MEASURE WHAT YOU OWN</span>
     <h2 id="growth-measurement-title">Bring a local outcome export.</h2>
-    <p>Read your own CSV in this browser. GrowthLab calculates descriptive comparisons locally and sends no rows to a provider.</p>
+    <p>Read your own CSV in this browser. GrowthLab compares variants within each metric and optional distribution or channel, locally, and sends no rows to a provider.</p>
     <form onSubmit={summarize}>
       <label className="growth-file-label" htmlFor="growth-measurement-file">Telemetry CSV<input id="growth-measurement-file" type="file" accept=".csv,text/csv" onChange={(event) => { void readFile(event.target.files?.[0]); }} /></label>
       <label htmlFor="growth-measurement-baseline">Baseline variant</label>
@@ -48,7 +48,7 @@ export function MeasurementPanel() {
     {report && <div className="growth-measurement-result" aria-live="polite">
       <div className="growth-line"><strong>Descriptive summary</strong><span className="growth-mark growth-mark-observed">{report.provenance}</span></div>
       <p className="growth-muted">{report.rowsIncluded} observations · baseline <code>{report.baselineVariant}</code>{report.dateRange ? ` · ${report.dateRange.from} → ${report.dateRange.to}` : " · date range unavailable"}</p>
-      <div className="growth-measurement-table-wrap"><table className="growth-measurement-table"><thead><tr><th>Metric</th><th>Variant</th><th>Mean</th><th>n</th><th>Mean 95%</th><th>Change</th><th>Δ 95%</th></tr></thead><tbody>{report.groups.map((group) => <tr key={`${group.metric}-${group.variant}`}><td>{group.metric}</td><td>{group.variant}</td><td>{number(group.mean)}</td><td>{group.sampleSize}</td><td>{interval(group.meanInterval95)}</td><td>{group.comparison?.relativeChangePercent == null ? "—" : `${number(group.comparison.relativeChangePercent)}%`}</td><td>{interval(group.comparison?.differenceInterval95 ?? null)}</td></tr>)}</tbody></table></div>
+      <div className="growth-measurement-table-wrap"><table className="growth-measurement-table"><thead><tr><th>Metric</th><th>Distribution</th><th>Variant</th><th>Mean</th><th>n</th><th>Mean 95%</th><th>Change</th><th>Δ 95%</th></tr></thead><tbody>{report.groups.map((group) => <tr key={`${group.metric}-${group.distribution}-${group.variant}`}><td>{group.metric}</td><td>{group.distribution}</td><td>{group.variant}</td><td>{number(group.mean)}</td><td>{group.sampleSize}</td><td>{interval(group.meanInterval95)}</td><td>{group.comparison?.relativeChangePercent == null ? "—" : `${number(group.comparison.relativeChangePercent)}%`}</td><td>{interval(group.comparison?.differenceInterval95 ?? null)}</td></tr>)}</tbody></table></div>
       <details className="growth-measurement-analysis"><summary>How the exploratory intervals work</summary><p className="growth-muted">95% normal approximation over independent observations. A mean interval needs at least two rows in a group; a difference interval needs at least two rows in both the variant and baseline. These intervals are descriptive and do not establish significance, causality or a winner.</p></details>
       {report.warnings.map((warning) => <p className="growth-muted" key={warning}>{warning}</p>)}
       <p className="growth-measurement-limit">Measured from your file; no causality, significance or growth lift is inferred.</p>

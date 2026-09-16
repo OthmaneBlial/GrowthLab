@@ -57,6 +57,8 @@ pub struct MeasurementComparison {
 #[serde(rename_all = "camelCase")]
 pub struct MeasurementGroup {
     pub metric: String,
+    /// Optional user-supplied channel or distribution label. Missing columns use `all`.
+    pub distribution: String,
     pub variant: String,
     pub sample_size: usize,
     pub total: f64,
@@ -84,6 +86,7 @@ pub struct MeasurementReport {
 #[derive(Debug, Clone, PartialEq)]
 struct Observation {
     metric: String,
+    distribution: String,
     variant: String,
     value: f64,
     timestamp: Option<String>,
@@ -94,6 +97,7 @@ struct ColumnIndexes {
     variant: usize,
     value: usize,
     metric: Option<usize>,
+    distribution: Option<usize>,
     timestamp: Option<usize>,
 }
 
@@ -322,6 +326,7 @@ fn indexes(
     variant_column: &str,
     value_column: &str,
     metric_column: &str,
+    distribution_column: &str,
     timestamp_column: &str,
 ) -> Result<ColumnIndexes> {
     for (index, header) in headers.iter().enumerate() {
@@ -339,6 +344,7 @@ fn indexes(
         variant,
         value,
         metric: column(headers, metric_column, false)?,
+        distribution: column(headers, distribution_column, false)?,
         timestamp: column(headers, timestamp_column, false)?,
     })
 }
@@ -375,6 +381,12 @@ fn observations(
             .map(|index| bounded_text(&row[index], "metric"))
             .transpose()?
             .unwrap_or_else(|| "primary".into());
+        let distribution = indexes
+            .distribution
+            .map(|index| optional_text(&row[index], "distribution"))
+            .transpose()?
+            .flatten()
+            .unwrap_or_else(|| "all".into());
         if metric_filter.is_some_and(|filter| !metric.eq_ignore_ascii_case(filter.trim())) {
             continue;
         }
@@ -397,6 +409,7 @@ fn observations(
             .flatten();
         output.push(Observation {
             metric,
+            distribution,
             variant,
             value,
             timestamp,
@@ -418,7 +431,8 @@ fn summarize(
     has_timestamp: bool,
 ) -> Result<MeasurementReport> {
     let baseline_variant = bounded_text(baseline_variant, "baseline variant")?;
-    let mut accumulators = std::collections::BTreeMap::<(String, String), Accumulator>::new();
+    let mut accumulators =
+        std::collections::BTreeMap::<(String, String, String), Accumulator>::new();
     let mut dates = observations
         .iter()
         .filter_map(|observation| observation.timestamp.as_deref());
@@ -432,7 +446,11 @@ fn summarize(
         DateRange { from, to }
     });
     for observation in observations {
-        let key = (observation.metric.clone(), observation.variant.clone());
+        let key = (
+            observation.metric.clone(),
+            observation.distribution.clone(),
+            observation.variant.clone(),
+        );
         accumulators
             .entry(key)
             .or_default()
@@ -440,10 +458,10 @@ fn summarize(
     }
     let stats = accumulators
         .iter()
-        .map(|((metric, variant), accumulator)| {
+        .map(|((metric, distribution, variant), accumulator)| {
             let mean = accumulator.total / accumulator.sample_size as f64;
             (
-                (metric.clone(), variant.clone()),
+                (metric.clone(), distribution.clone(), variant.clone()),
                 GroupStats {
                     sample_size: accumulator.sample_size,
                     total: accumulator.total,
@@ -462,13 +480,17 @@ fn summarize(
         );
     }
     let mut groups = Vec::with_capacity(accumulators.len());
-    for ((metric, variant), _) in accumulators {
+    for ((metric, distribution, variant), _) in accumulators {
         let group_stats = stats
-            .get(&(metric.clone(), variant.clone()))
+            .get(&(metric.clone(), distribution.clone(), variant.clone()))
             .copied()
             .expect("stats for every accumulator");
         let comparison = stats
-            .get(&(metric.clone(), baseline_variant.clone()))
+            .get(&(
+                metric.clone(),
+                distribution.clone(),
+                baseline_variant.clone(),
+            ))
             .copied()
             .map(|baseline_stats| MeasurementComparison {
                 baseline_mean: baseline_stats.mean,
@@ -482,11 +504,12 @@ fn summarize(
             });
         if variant != baseline_variant && comparison.is_none() {
             warnings.push(format!(
-                "Metric '{metric}' has no '{baseline_variant}' baseline; its variants are shown without comparison."
+                "Metric '{metric}' in distribution '{distribution}' has no '{baseline_variant}' baseline; its variants are shown without comparison."
             ));
         }
         groups.push(MeasurementGroup {
             metric,
+            distribution,
             variant,
             sample_size: group_stats.sample_size,
             total: group_stats.total,
@@ -519,6 +542,7 @@ fn summarize(
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn import(
     path: &Path,
     baseline_variant: &str,
@@ -526,6 +550,7 @@ pub fn import(
     variant_column: &str,
     value_column: &str,
     metric_column: &str,
+    distribution_column: &str,
     timestamp_column: &str,
 ) -> Result<MeasurementReport> {
     if let Some(metric) = metric {
@@ -538,6 +563,7 @@ pub fn import(
         variant_column,
         value_column,
         metric_column,
+        distribution_column,
         timestamp_column,
     )?;
     let observations = observations(&rows, indexes, metric)?;
@@ -580,7 +606,7 @@ pub fn markdown(report: &MeasurementReport) -> String {
         report.rows_included,
         report.baseline_variant
     );
-    output.push_str("## Observations\n\n| Metric | Variant | Mean | Sample size | Sample SD | Mean 95% interval | Baseline mean | Difference | Difference 95% interval | Relative change |\n| --- | --- | ---: | ---: | ---: | --- | ---: | ---: | --- | ---: |\n");
+    output.push_str("## Observations\n\n| Metric | Distribution | Variant | Mean | Sample size | Sample SD | Mean 95% interval | Baseline mean | Difference | Difference 95% interval | Relative change |\n| --- | --- | --- | ---: | ---: | ---: | --- | ---: | ---: | --- | ---: |\n");
     for group in &report.groups {
         let (baseline, difference, difference_interval, relative) = group
             .comparison
@@ -598,8 +624,9 @@ pub fn markdown(report: &MeasurementReport) -> String {
             })
             .unwrap_or_else(|| ("—".into(), "—".into(), "—".into(), "—".into()));
         output.push_str(&format!(
-            "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |\n",
+            "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |\n",
             cell(&group.metric),
+            cell(&group.distribution),
             cell(&group.variant),
             markdown_number(group.mean),
             group.sample_size,
@@ -662,6 +689,7 @@ mod tests {
             "variant",
             "value",
             "metric",
+            "distribution",
             "timestamp",
         )
         .unwrap();
@@ -717,6 +745,7 @@ hero,22
             "variant",
             "value",
             "metric",
+            "distribution",
             "timestamp",
         )
         .unwrap();
@@ -749,6 +778,7 @@ hero,22
             "variant",
             "value",
             "metric",
+            "distribution",
             "timestamp",
         )
         .unwrap();
@@ -774,9 +804,42 @@ hero,22
             "variant",
             "value",
             "metric",
+            "distribution",
             "timestamp",
         )
         .is_err());
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn compares_variants_within_each_distribution() {
+        let (dir, path) = write_fixture(
+            "distribution,variant,value\nsearch,baseline,10\nsearch,hero,15\nsocial,baseline,4\nsocial,hero,8\n",
+        );
+        let report = import(
+            &path,
+            "baseline",
+            None,
+            "variant",
+            "value",
+            "metric",
+            "distribution",
+            "timestamp",
+        )
+        .unwrap();
+        assert_eq!(report.groups.len(), 4);
+        let social_hero = report
+            .groups
+            .iter()
+            .find(|group| group.distribution == "social" && group.variant == "hero")
+            .unwrap();
+        assert_eq!(social_hero.comparison.as_ref().unwrap().difference, 4.0);
+        let search_hero = report
+            .groups
+            .iter()
+            .find(|group| group.distribution == "search" && group.variant == "hero")
+            .unwrap();
+        assert_eq!(search_hero.comparison.as_ref().unwrap().difference, 5.0);
         std::fs::remove_dir_all(dir).unwrap();
     }
 }
