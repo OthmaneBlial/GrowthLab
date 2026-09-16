@@ -17,8 +17,8 @@ inspect the checks and evidence behind each one, then choose what ships.
 An AI proposal is a starting point. GrowthLab makes it reviewable: actual changed
 files, a fixed evaluation contract, captured command output, immutable evidence
 and an explicit delivery decision. It is being built as an open-source growth
-team for developers, indie hackers and small product teams. SEO can be one
-optional playbook; GrowthLab is a general growth experimentation lab.
+team for developers, indie hackers and small product teams. One playbook never
+defines the product; GrowthLab is a general growth experimentation lab.
 
 A diff is simply the technical record of what changed. The product value is the
 safe comparison of growth approaches and the evidence that helps you decide.
