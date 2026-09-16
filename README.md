@@ -111,7 +111,7 @@ causality, statistical significance or growth lift. See the [local measurement g
 
 **Source alpha · about 84% overall (subjective estimate) · updated 2026-09-17**
 
-Current milestone: **Estimated accessibility structure hints, continuous browser walkthrough, observed timing hints, public repository review, manual-brief onboarding, executable playbooks, public checkout import, distribution-aware measurement and role-grouped experiment tree validated**.
+Current milestone: **Estimated accessibility structure hints in comparisons and standalone page audits, continuous browser walkthrough, observed timing hints, public repository review, manual-brief onboarding, executable playbooks, public checkout import, distribution-aware measurement and role-grouped experiment tree validated**.
 
 **Working today**
 
@@ -132,6 +132,7 @@ Current milestone: **Estimated accessibility structure hints, continuous browser
 - Automatic desktop and phone PNG capture from sealed preview documents with archive verification
 - Explainable SEO page-hygiene rubric with dimension scores and limits
 - Standalone local SEO audit with actionable recommendations, JSON or Markdown output and safe file bounds
+- Standalone local and read-only public page audits also expose the estimated accessibility structure rubric
 - 30-second screen recording captured in an isolated Chrome profile, showing the public site and real demo evidence
 - Local CSV measurement summaries with baseline comparisons, sample sizes, date range and MEASURED provenance
 - Local browser measurement dashboard over user-supplied CSV with local descriptive comparisons
