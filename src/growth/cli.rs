@@ -9,6 +9,7 @@ use crate::store::{now_ms, Store};
 
 use super::config::{
     Agents, Goal, GrowthConfig, Metrics, PermissionMode, Permissions, Product, Validation,
+    CONFIG_FILE,
 };
 use super::model::{starter_hypotheses, GrowthWorkspace, Provenance};
 
@@ -89,10 +90,14 @@ pub struct WorkspaceArgs {
 }
 #[derive(Debug, Subcommand)]
 pub enum WorkspaceCommand {
-    /// Register a local Git product and its committed growthlab.yaml.
+    /// Register a local product and its committed growthlab.yaml.
     Import {
         #[arg(long, default_value = ".")]
         path: PathBuf,
+        /// Initialize a new local Git repository and commit the current folder
+        /// when the path is not already a repository. No remote is configured.
+        #[arg(long)]
+        init_git: bool,
     },
     List,
     View {
@@ -578,16 +583,46 @@ fn git(root: &Path, args: &[&str]) -> Result<String> {
 }
 
 pub fn import(store: &Store, path: &Path) -> Result<GrowthWorkspace> {
+    import_with_options(store, path, false)
+}
+
+/// Import a committed local product. With `initialize_git`, an otherwise
+/// unversioned folder receives a local-only initial snapshot after protected
+/// paths are checked. Existing repositories are never auto-committed.
+pub fn import_with_options(
+    store: &Store,
+    path: &Path,
+    initialize_git: bool,
+) -> Result<GrowthWorkspace> {
     let path = crate::paths::canonicalize(path)?;
-    let root = crate::paths::canonicalize(Path::new(
-        git(&path, &["rev-parse", "--show-toplevel"])?.trim(),
-    ))?;
+    if !path.is_dir() {
+        return Err(anyhow!("Product path must be a directory"));
+    }
+    // Validate the reviewed context before any optional Git initialization.
+    // This avoids turning an invalid or secret-bearing config into a commit.
+    let config = GrowthConfig::load(&path).map_err(|error| {
+        if initialize_git && !crate::local::git::own_repository_state(&path).is_initialized() {
+            anyhow!("A valid growthlab.yaml is required before --init-git: {error}")
+        } else {
+            error
+        }
+    })?;
+    let state = crate::local::git::own_repository_state(&path);
+    if matches!(state, crate::local::git::RepositoryState::NotRepository) && initialize_git {
+        initialize_local_repository(&path)?;
+    } else if matches!(state, crate::local::git::RepositoryState::Unborn) && initialize_git {
+        commit_initial_snapshot(&path)?;
+    }
+    let root = crate::local::git::repository_root(&path).map_err(|_| {
+        anyhow!(
+            "Product path is not a Git repository. Review growthlab.yaml, then rerun with --init-git to create a local snapshot."
+        )
+    })?;
     if root != path {
         return Err(anyhow!(
             "Import the product repository root, not a nested folder"
         ));
     }
-    let config = GrowthConfig::load(&root)?;
     let committed = GrowthConfig::parse(&git(&root, &["show", "HEAD:growthlab.yaml"])?)?;
     if committed != config {
         return Err(anyhow!(
@@ -628,10 +663,82 @@ pub fn import(store: &Store, path: &Path) -> Result<GrowthWorkspace> {
     Ok(workspace)
 }
 
+fn initialize_local_repository(root: &Path) -> Result<()> {
+    match crate::local::git::own_repository_state(root) {
+        crate::local::git::RepositoryState::Invalid => {
+            return Err(anyhow!(
+                "The product has an invalid .git entry; repair it manually before --init-git"
+            ));
+        }
+        crate::local::git::RepositoryState::NotRepository => {}
+        crate::local::git::RepositoryState::Unborn => return commit_initial_snapshot(root),
+        crate::local::git::RepositoryState::Ready
+        | crate::local::git::RepositoryState::Detached => return Ok(()),
+    }
+    crate::local::git::git(Some(root), &["init", "-b", "main"])
+        .or_else(|_| crate::local::git::git(Some(root), &["init"]))?;
+    commit_initial_snapshot(root)
+}
+
+fn commit_initial_snapshot(root: &Path) -> Result<()> {
+    crate::local::git::git(Some(root), &["add", "--all"])?;
+    let staged = crate::local::git::git(Some(root), &["diff", "--cached", "--name-only", "-z"])?;
+    let files: Vec<_> = staged.split('\0').filter(|path| !path.is_empty()).collect();
+    if !files.contains(&CONFIG_FILE) {
+        return Err(anyhow!(
+            "The initial snapshot must include a regular growthlab.yaml"
+        ));
+    }
+    if let Some(path) = files
+        .iter()
+        .find(|path| **path != CONFIG_FILE && super::config::protected_path(path))
+    {
+        return Err(anyhow!(
+            "The initial snapshot includes a protected path ({path}); remove it or add it to .gitignore before --init-git"
+        ));
+    }
+    let has_identity = crate::local::git::git(Some(root), &["config", "user.name"]).is_ok()
+        && crate::local::git::git(Some(root), &["config", "user.email"]).is_ok();
+    if has_identity {
+        crate::local::git::git(
+            Some(root),
+            &[
+                "-c",
+                "commit.gpgsign=false",
+                "-c",
+                "core.hooksPath=.growthlab-no-hooks",
+                "commit",
+                "-m",
+                "Initialize GrowthLab product snapshot",
+            ],
+        )?;
+    } else {
+        crate::local::git::git(
+            Some(root),
+            &[
+                "-c",
+                "user.name=GrowthLab local initializer",
+                "-c",
+                "user.email=growthlab@localhost",
+                "-c",
+                "commit.gpgsign=false",
+                "-c",
+                "core.hooksPath=.growthlab-no-hooks",
+                "commit",
+                "-m",
+                "Initialize GrowthLab product snapshot",
+            ],
+        )?;
+    }
+    Ok(())
+}
+
 pub fn workspace(args: WorkspaceArgs) -> Result<()> {
     let store = Store::open()?;
     match args.command {
-        WorkspaceCommand::Import { path } => print_json(&import(&store, &path)?),
+        WorkspaceCommand::Import { path, init_git } => {
+            print_json(&import_with_options(&store, &path, init_git)?)
+        }
         WorkspaceCommand::List => print_json(&store.list_growth_workspaces()?),
         WorkspaceCommand::View { project_id } => print_json(
             &store
@@ -781,6 +888,59 @@ mod tests {
             import(&store, &product).is_err(),
             "dirty configuration cannot silently replace snapshot context"
         );
+        drop(store);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn initializes_a_non_git_folder_only_with_explicit_option() {
+        let dir =
+            std::env::temp_dir().join(format!("growthlab-init-import-{}", uuid::Uuid::new_v4()));
+        let product = dir.join("product");
+        std::fs::create_dir_all(product.join("website")).unwrap();
+        super::super::config::fixture().write_new(&product).unwrap();
+        std::fs::write(product.join("website/index.html"), "<h1>Local product</h1>").unwrap();
+        let store = Store::open_at(dir.join("store")).unwrap();
+
+        assert!(import_with_options(&store, &product, false).is_err());
+        let workspace = import_with_options(&store, &product, true).unwrap();
+        assert_eq!(workspace.source_snapshot_commit.len(), 40);
+        assert_eq!(git(&product, &["status", "--porcelain"]).unwrap(), "");
+        assert_eq!(
+            git(&product, &["show", "--format=%s", "--no-patch"])
+                .unwrap()
+                .trim(),
+            "Initialize GrowthLab product snapshot"
+        );
+        assert_eq!(
+            git(
+                &product,
+                &["ls-files", "--error-unmatch", "website/index.html"]
+            )
+            .unwrap()
+            .trim(),
+            "website/index.html"
+        );
+        assert!(git(&product, &["remote"]).unwrap().is_empty());
+        drop(store);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn refuses_protected_paths_before_the_non_git_initial_commit() {
+        let dir =
+            std::env::temp_dir().join(format!("growthlab-init-secret-{}", uuid::Uuid::new_v4()));
+        let product = dir.join("product");
+        std::fs::create_dir_all(product.join("website")).unwrap();
+        super::super::config::fixture().write_new(&product).unwrap();
+        std::fs::write(product.join("website/index.html"), "<h1>Local product</h1>").unwrap();
+        std::fs::write(product.join(".env"), "DEMO=value").unwrap();
+        let store = Store::open_at(dir.join("store")).unwrap();
+        let error = import_with_options(&store, &product, true)
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("protected path"));
+        assert!(git(&product, &["rev-parse", "--verify", "HEAD"]).is_err());
         drop(store);
         std::fs::remove_dir_all(dir).unwrap();
     }

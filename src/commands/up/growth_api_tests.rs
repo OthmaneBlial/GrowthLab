@@ -782,3 +782,34 @@ async fn playbook_catalog_is_read_only_and_covers_the_initial_growth_roles() {
         .is_empty());
     assert!(fixture.state.host.workers.lock().unwrap().is_empty());
 }
+
+#[tokio::test]
+async fn api_initializes_a_local_folder_only_when_requested() {
+    let fixture = Fixture::new(false).await;
+    let product = fixture.root.join("unversioned-product");
+    std::fs::create_dir_all(product.join("website")).unwrap();
+    crate::growth::config::fixture()
+        .write_new(&product)
+        .unwrap();
+    std::fs::write(product.join("website/index.html"), "<h1>Local product</h1>").unwrap();
+
+    fixture
+        .post("/workspaces", Some(json!({"path":product})), 400)
+        .await;
+    let workspace = fixture
+        .post(
+            "/workspaces",
+            Some(json!({"path":product,"initializeGit":true})),
+            200,
+        )
+        .await;
+    assert!(!workspace["projectId"].as_str().unwrap().is_empty());
+    assert_eq!(
+        crate::local::git::git(Some(&product), &["status", "--porcelain"]).unwrap(),
+        ""
+    );
+    assert_eq!(
+        crate::local::git::git(Some(&product), &["remote"]).unwrap(),
+        ""
+    );
+}

@@ -9,7 +9,7 @@ to 1 MiB. The existing loopback/origin and remote-host authentication guards app
 |---|---|---|
 | GET | `/capabilities` | OS isolation availability and tools-disabled harness capabilities; not authentication/provider proof |
 | POST | `/demo` | Accept `{}` to create a new owned fictional product and launch its three declared replay proposals; HTTP 202 returns `projectId`, `battleId`, `accepted` |
-| GET / POST | `/workspaces` | List imported contexts / import `{ "path": "/local/git/product" }` |
+| GET / POST | `/workspaces` | List imported contexts / import `{ "path": "/local/product", "initializeGit": false }`; set `initializeGit` explicitly to create a local snapshot for a non-Git folder |
 | GET | `/workspaces/{id}` | Read the recorded committed product context |
 | GET / POST | `/workspaces/{id}/hypotheses` | List / create three UNTESTED starter hypotheses |
 | GET / POST | `/battles` | List (optional `projectId` query) / prepare `{ "projectId": "…", "goal": "…" }` |

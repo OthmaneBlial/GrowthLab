@@ -95,9 +95,21 @@ growthlab hypotheses <project-id> --list
 
 Import records the full HEAD commit and committed config, verifies the on-disk
 configuration agrees, and registers an inherited LocalProject with publication
-disabled. It never changes product files, commits or remotes. Import currently
-requires a Git repository root with a checked-out branch and committed context;
-non-Git folders, URL analysis, public clones and manual briefs remain onboarding
+disabled. Existing repositories are never changed, committed or given a remote.
+
+For a local folder that is not versioned yet, opt in explicitly after reviewing
+the configuration:
+
+```sh
+growthlab workspace import --path /path/to/product --init-git
+```
+
+This creates a local `main` repository, stages the current folder, rejects
+protected paths such as `.env`, credentials and key files, and makes one local
+snapshot commit. It does not configure a remote or publish anything. If the
+folder already has a repository, `--init-git` does not auto-commit it; commit
+the reviewed configuration with the product's normal Git workflow first.
+Public repository URLs, website analysis and manual briefs remain onboarding
 work in the roadmap.
 
 `hypotheses` creates three deterministic starter templates: outcome-first

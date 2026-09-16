@@ -7,7 +7,9 @@ extend it; the bundled visual demo and GrowthLab dashboard are still being built
 
 ## Prepare and inspect
 
-Import a Git product using the [configuration workflow](configuration.md).
+Import a product using the [configuration workflow](configuration.md). A
+non-Git folder can be initialized explicitly with `workspace import --init-git`;
+existing repositories still require a committed configuration.
 Its committed configuration must enable implementation with explicit allowed
 paths and validation commands. The battle records the imported source commit;
 it does not move when you continue working on the product's main branch.

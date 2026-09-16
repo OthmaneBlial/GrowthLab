@@ -113,7 +113,7 @@ async function request<T>(path: string, method = "GET", body?: unknown, signal?:
 export const growth = {
   demo: () => request<{projectId: string; battleId: string; accepted: boolean}>("/demo", "POST", {}),
   workspaces: (signal?: AbortSignal) => request<Workspace[]>("/workspaces", "GET", undefined, signal),
-  import: (path: string) => request<Workspace>("/workspaces", "POST", { path }),
+  import: (path: string, initializeGit = false) => request<Workspace>("/workspaces", "POST", { path, initializeGit }),
   capabilities: (signal?: AbortSignal) => request<Capabilities>("/capabilities", "GET", undefined, signal),
   playbooks: (signal?: AbortSignal) => request<GrowthPlaybook[]>("/playbooks", "GET", undefined, signal),
   battles: (signal?: AbortSignal) => request<Battle[]>("/battles", "GET", undefined, signal),

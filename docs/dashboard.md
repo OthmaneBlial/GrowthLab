@@ -18,8 +18,11 @@ it does not copy your regular database. For an installed canonical binary,
 `growthlab up` serves the embedded dashboard. Stop the development slot with
 `node scripts/dev-slot.mjs stop`.
 
-Use a local Git product with a reviewed, committed `growthlab.yaml`, following
+Use a local product folder with a reviewed `growthlab.yaml`, following
 [configuration.md](configuration.md). Import its repository root from Home.
+Existing Git repositories must have a committed configuration. For a folder
+without Git, the CLI supports the explicit `--init-git` option; it creates one
+local snapshot after rejecting protected paths and never configures a remote.
 Import records the committed context and baseline; it does not publish the product.
 Existing workspaces are accessible from Home on desktop and phone layouts.
 

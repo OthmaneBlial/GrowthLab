@@ -408,16 +408,22 @@ async fn prepare_and_launch_demo(state: GrowthState) -> std::result::Result<Demo
 }
 
 #[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct ImportRequest {
     path: PathBuf,
+    /// Explicitly authorize creating a local repository and initial snapshot.
+    #[serde(default)]
+    initialize_git: bool,
 }
 async fn import_workspace(
     State(state): State<GrowthState>,
     Json(request): Json<ImportRequest>,
 ) -> ApiResult {
     with_store(state, None, move |store| {
-        value(cli::import(store, &request.path).map_err(domain_error)?)
+        value(
+            cli::import_with_options(store, &request.path, request.initialize_git)
+                .map_err(domain_error)?,
+        )
     })
     .await
 }
