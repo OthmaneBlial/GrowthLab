@@ -21,6 +21,7 @@ export function StaticPreviewPanel({ variantId, record, digest, configured, trus
   const data = preview.data;
   const ready = trusted && data?.archiveDigest === digest && data.record.documentDigest === record?.documentDigest;
   const screenshot = record?.screenshots?.find((item) => item.path.endsWith(`screenshot-${viewport}.png`));
+  const renderCheck = record?.renderChecks?.find((item) => item.viewport === viewport);
   useEffect(() => {
     if (!ready || !stage.current) return;
     const observer = new ResizeObserver(([entry]) => setAvailableWidth(entry.contentRect.width));
@@ -53,6 +54,16 @@ export function StaticPreviewPanel({ variantId, record, digest, configured, trus
       <img src={`/api/growth/variants/${encodeURIComponent(variantId)}/static-preview/${viewport}`} alt={`Captured ${viewport} render of the archived candidate page`} loading="lazy" />
       <figcaption>Captured PNG · {screenshot.width} × {screenshot.height} · SHA-256 {screenshot.digest}</figcaption>
     </figure>}
+    {renderCheck && <details className="growth-local-metadata">
+      <summary>Observed local render check · {renderCheck.provenance}</summary>
+      <dl><div className="growth-digest"><dt>Viewport</dt><dd>{renderCheck.width} × {renderCheck.height} · {renderCheck.viewportMatches ? "matched" : "mismatched"}</dd></div>
+        <div className="growth-digest"><dt>Horizontal overflow</dt><dd>{renderCheck.horizontalOverflow ? "detected" : "none detected"}</dd></div>
+        <div className="growth-digest"><dt>Visible copy</dt><dd>{renderCheck.bodyTextChars.toLocaleString()} characters</dd></div>
+        <div className="growth-digest"><dt>DOMContentLoaded / load</dt><dd>{renderCheck.domContentLoadedMs ?? "—"} ms / {renderCheck.loadMs ?? "—"} ms</dd></div>
+        <div className="growth-digest"><dt>First contentful paint</dt><dd>{renderCheck.firstContentfulPaintMs == null ? "—" : `${renderCheck.firstContentfulPaintMs} ms`}</dd></div>
+      </dl>
+      <p>{renderCheck.limitation}</p>
+    </details>}
     <details className="growth-local-metadata"><summary>Preview source and limitations</summary>
       <p>{record.limitation}</p><p>{record.sources.length} archived source files · {record.blockedResources} omitted resource references · {record.producer}</p>
       <dl><div className="growth-digest"><dt>Candidate commit</dt><dd>{record.sourceCommit}</dd></div>

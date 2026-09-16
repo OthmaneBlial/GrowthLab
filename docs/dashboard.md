@@ -115,8 +115,12 @@ The inspector reads verified archives or checkpoints, not mutable worktree files
 Artifacts are displayed as escaped text. Configured static pages have a separate
 restricted preview of archived source; scripts and external resources are blocked.
 Ready runs also expose verified desktop and phone PNGs captured from that sealed
-source when local Chromium is available. They are render artifacts, not a visual
-quality score. The capture shown follows the selected viewport. See
+source when local Chromium is available. They can include **OBSERVED** local
+Chromium render checks for viewport coverage, visible copy, horizontal overflow
+and optional navigation/paint timings. PNGs and checks are render inspection
+artifacts, not a visual quality score, Lighthouse result, accessibility audit,
+Core Web Vital, real-user performance measurement or growth outcome. The capture
+shown follows the selected viewport. See
 [static-previews.md](static-previews.md). Private prompts and policy files are
 excluded from this viewer. Keyboard arrows, Home and End move between the three
 inspection tabs.

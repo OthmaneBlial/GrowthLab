@@ -83,7 +83,11 @@ with an empty sandbox; the archived CSP blocks scripts and external resources.
 The [preview contract](static-previews.md) documents limits and unsupported input.
 If present, `GET /api/growth/variants/{id}/static-preview/desktop` returns the
 verified archived PNG with `image/png`; it remains a render artifact, not a
-visual quality score or measured growth result.
+visual quality score or measured growth result. The JSON metadata may also
+include `renderChecks`, marked **OBSERVED**, for local Chromium viewport
+coverage, visible text length, horizontal overflow and optional navigation/paint
+timings. They are inspection traces of the sanitized document, not Lighthouse,
+Core Web Vitals, accessibility, visual-regression, real-user or growth evidence.
 
 Each comparison row may include `rubric` when the sealed implementation contains
 HTML. The `rubric.id` is `seo-page-hygiene-v1`, its `provenance` is `ESTIMATED`,

@@ -34,7 +34,8 @@
     "Explicit public GitHub checkout import into a local, configured workspace",
     "Workspace experiment map showing the shared goal and three untested growth branches",
     "Prepared battles reuse persisted hypothesis IDs so the map remains linked to each variant",
-    "Inspectable page-quality hints for mobile, controls, form labels, loading sources and claim guardrails"
+    "Inspectable page-quality hints for mobile, controls, form labels, loading sources and claim guardrails",
+    "Observed local Chromium render checks for viewport coverage, overflow, visible copy and optional timings"
   ],
   "validation": [
     {
@@ -55,7 +56,7 @@
     {
       "name": "Actual demo and browser flow",
       "status": "passed",
-      "detail": "Real CLI/HTTP execution, desktop/phone checks, verified PNG endpoint checks, SEO rubric records, page-quality hints and standalone local audit on owned fixtures"
+      "detail": "Real CLI/HTTP execution, desktop/phone captures, observed local Chromium render checks, verified PNG endpoint checks, SEO rubric records, page-quality hints and standalone local audit on owned fixtures"
     },
     {
       "name": "Local CSV measurement",

@@ -52,6 +52,9 @@ export interface StaticPreviewRecord {
   producer: string; status: "ready" | "unavailable"; sourceCommit: string;
   documentDigest: string | null; sources: { path: string; digest: string; size: number }[];
   screenshots?: { path: string; width: number; height: number; digest: string; size: number }[];
+  renderChecks?: { viewport: "desktop" | "phone"; width: number; height: number; viewportMatches: boolean;
+    bodyTextChars: number; horizontalOverflow: boolean; domContentLoadedMs: number | null;
+    loadMs: number | null; firstContentfulPaintMs: number | null; provenance: Provenance; limitation: string }[];
   blockedResources: number; limitation: string;
 }
 export interface StaticPreviewData {

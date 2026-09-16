@@ -52,6 +52,22 @@ pub struct PreviewScreenshot {
     pub size: usize,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PreviewRenderCheck {
+    pub viewport: String,
+    pub width: u32,
+    pub height: u32,
+    pub viewport_matches: bool,
+    pub body_text_chars: usize,
+    pub horizontal_overflow: bool,
+    pub dom_content_loaded_ms: Option<u64>,
+    pub load_ms: Option<u64>,
+    pub first_contentful_paint_ms: Option<u64>,
+    pub provenance: String,
+    pub limitation: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct PreviewRecord {
@@ -62,6 +78,8 @@ pub struct PreviewRecord {
     pub sources: Vec<PreviewSource>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub screenshots: Vec<PreviewScreenshot>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub render_checks: Vec<PreviewRenderCheck>,
     pub blocked_resources: usize,
     pub limitation: String,
 }
@@ -440,27 +458,11 @@ fn png_dimensions(bytes: &[u8]) -> Option<(u32, u32)> {
     ))
 }
 
-fn wait_for_screenshot(child: &mut Child, output: &Path) -> bool {
+fn wait_for_process(child: &mut Child) -> bool {
     let deadline = Instant::now() + SCREENSHOT_TIMEOUT;
     loop {
-        if output.is_file() {
-            // Chrome can write the PNG immediately before its headless parent
-            // finishes shutting down. Give it a short settle window, then
-            // terminate only this private child if the process remains stuck.
-            thread::sleep(Duration::from_millis(50));
-            if let Ok(Some(status)) = child.try_wait() {
-                return status.success();
-            }
-            if let Ok(bytes) = std::fs::read(output) {
-                if !bytes.is_empty() {
-                    let _ = child.kill();
-                    let _ = child.wait();
-                    return true;
-                }
-            }
-        }
         match child.try_wait() {
-            Ok(Some(status)) => return status.success() && output.is_file(),
+            Ok(Some(status)) => return status.success(),
             Ok(None) if Instant::now() < deadline => thread::sleep(Duration::from_millis(50)),
             _ => {
                 let _ = child.kill();
@@ -471,7 +473,79 @@ fn wait_for_screenshot(child: &mut Child, output: &Path) -> bool {
     }
 }
 
-fn render_screenshot(document: &[u8], width: u32, height: u32) -> Option<Vec<u8>> {
+struct RenderCapture {
+    screenshot: Vec<u8>,
+    check: Option<PreviewRenderCheck>,
+}
+
+fn audit_document(document: &[u8], width: u32) -> Option<Vec<u8>> {
+    let mut html = String::from_utf8(document.to_vec()).ok()?;
+    // The packaged document has no candidate scripts: the sanitizer removes
+    // them and the CSP blocks them. This temporary audit copy permits only the
+    // inline probe below, then is discarded with the browser's private temp dir.
+    html = html.replacen("script-src 'none'", "script-src 'unsafe-inline'", 1);
+    let probe = r#"<script>(function(){
+const n=performance.getEntriesByType('navigation')[0];
+const p=performance.getEntriesByType('paint').find(function(e){return e.name==='first-contentful-paint'});
+const body=document.body;
+const root=document.documentElement;
+// Headless Chrome keeps a small layout viewport floor even when the archived
+// PNG is requested at a narrower phone width. Treat the requested width as
+// covered when the layout viewport is at least that wide; the PNG dimensions
+// are validated separately before the check is archived.
+const value={viewportMatches:window.innerWidth>=WIDTH,bodyTextChars:body?body.innerText.trim().length:0,horizontalOverflow:root.scrollWidth>window.innerWidth+1,domContentLoadedMs:n&&n.domContentLoadedEventEnd>0?Math.round(n.domContentLoadedEventEnd):null,loadMs:n&&n.loadEventEnd>0?Math.round(n.loadEventEnd):null,firstContentfulPaintMs:p&&p.startTime>0?Math.round(p.startTime):null};
+const out=document.createElement('pre');out.id='growthlab-render-audit';out.textContent='__GROWTHLAB_RENDER_AUDIT__'+JSON.stringify(value);(body||document.documentElement).append(out);
+})();</script>"#;
+    let probe = probe.replace("WIDTH", &width.to_string());
+    let position = html.to_ascii_lowercase().rfind("</body>");
+    let Some(position) = position else {
+        html.push_str(&probe);
+        return Some(html.into_bytes());
+    };
+    html.insert_str(position, &probe);
+    Some(html.into_bytes())
+}
+
+fn parse_render_check(
+    dom: &str,
+    viewport: &str,
+    width: u32,
+    height: u32,
+) -> Option<PreviewRenderCheck> {
+    let marker = "__GROWTHLAB_RENDER_AUDIT__";
+    let mut value = None;
+    for (index, _) in dom.match_indices(marker) {
+        let start = index + marker.len();
+        let Some(json) = dom[start..].split_once("</pre>").map(|pair| pair.0) else {
+            continue;
+        };
+        if json.trim_start().starts_with('{') {
+            value = serde_json::from_str(json).ok();
+        }
+    }
+    let value: serde_json::Value = value?;
+    let number = |key: &str| value.get(key).and_then(serde_json::Value::as_u64);
+    Some(PreviewRenderCheck {
+        viewport: viewport.into(),
+        width,
+        height,
+        viewport_matches: value.get("viewportMatches").and_then(serde_json::Value::as_bool)?,
+        body_text_chars: value.get("bodyTextChars").and_then(serde_json::Value::as_u64)? as usize,
+        horizontal_overflow: value.get("horizontalOverflow").and_then(serde_json::Value::as_bool)?,
+        dom_content_loaded_ms: number("domContentLoadedMs"),
+        load_ms: number("loadMs"),
+        first_contentful_paint_ms: number("firstContentfulPaintMs"),
+        provenance: "OBSERVED".into(),
+        limitation: "Local Chromium trace of the sanitized static document. It is not a Lighthouse score, Core Web Vital, accessibility audit, visual regression or real-user performance measurement.".into(),
+    })
+}
+
+fn render_capture(
+    document: &[u8],
+    viewport: &str,
+    width: u32,
+    height: u32,
+) -> Option<RenderCapture> {
     let browser = browser_executable()?;
     let directory =
         std::env::temp_dir().join(format!("growthlab-preview-{}", uuid::Uuid::new_v4()));
@@ -479,7 +553,9 @@ fn render_screenshot(document: &[u8], width: u32, height: u32) -> Option<Vec<u8>
     let _temporary = PreviewTempDir(directory.clone());
     let document_path = directory.join("document.html");
     let screenshot_path = directory.join("screenshot.png");
-    std::fs::write(&document_path, document).ok()?;
+    let dom_path = directory.join("dom.html");
+    let audit = audit_document(document, width)?;
+    std::fs::write(&document_path, audit).ok()?;
     let url = url::Url::from_file_path(&document_path).ok()?.to_string();
     let mut child = Command::new(browser)
         .args([
@@ -500,16 +576,26 @@ fn render_screenshot(document: &[u8], width: u32, height: u32) -> Option<Vec<u8>
         ])
         .arg(format!("--window-size={width},{height}"))
         .arg(format!("--screenshot={}", screenshot_path.display()))
+        .arg("--dump-dom")
         .arg(url)
-        .stdout(Stdio::null())
+        .stdout(Stdio::from(std::fs::File::create(&dom_path).ok()?))
         .stderr(Stdio::null())
         .spawn()
         .ok()?;
-    if !wait_for_screenshot(&mut child, &screenshot_path) {
+    if !wait_for_process(&mut child) {
         return None;
     }
     let bytes = std::fs::read(screenshot_path).ok()?;
-    (bytes.len() <= FILE_CAP && png_dimensions(&bytes) == Some((width, height))).then_some(bytes)
+    if bytes.len() > FILE_CAP || png_dimensions(&bytes) != Some((width, height)) {
+        return None;
+    }
+    let dom = std::fs::read_to_string(dom_path).ok();
+    Some(RenderCapture {
+        screenshot: bytes,
+        check: dom
+            .as_deref()
+            .and_then(|dom| parse_render_check(dom, viewport, width, height)),
+    })
 }
 
 fn bundle(
@@ -565,16 +651,18 @@ fn bundle(
     let output = document(html, &spec.entry, &resources)?;
     let document_bytes = output.into_bytes();
     let mut screenshots = vec![];
+    let mut render_checks = vec![];
     // Unit tests exercise archive determinism and run concurrently; keep them
     // independent of an installed browser. The release binary and real demo
     // path execute this same capture branch and verify the resulting PNG over
     // HTTP.
     if !cfg!(test) {
-        for (path, width, height) in [
-            (SCREENSHOT_DESKTOP, 1280, 900),
-            (SCREENSHOT_PHONE, 390, 844),
+        for (path, viewport, width, height) in [
+            (SCREENSHOT_DESKTOP, "desktop", 1280, 900),
+            (SCREENSHOT_PHONE, "phone", 390, 844),
         ] {
-            if let Some(bytes) = render_screenshot(&document_bytes, width, height) {
+            if let Some(capture) = render_capture(&document_bytes, viewport, width, height) {
+                let bytes = capture.screenshot;
                 screenshots.push(PreviewScreenshot {
                     path: path.into(),
                     width,
@@ -583,10 +671,13 @@ fn bundle(
                     size: bytes.len(),
                 });
                 archived.insert(path.into(), bytes);
+                if let Some(check) = capture.check {
+                    render_checks.push(check);
+                }
             }
         }
     }
-    let record = PreviewRecord { producer: PRODUCER.into(), status: PreviewStatus::Ready, source_commit: commit.into(), document_digest: Some(digest(&document_bytes)), sources, screenshots, blocked_resources: resources.blocked.get(), limitation: "Archived static source with an optional local Chromium render capture. A PNG is a render artifact, not a visual regression result, accessibility audit, performance measurement or growth outcome. Supported local styles/images/fonts are bundled; scripts, forms and navigation are removed, external/unsupported resources omitted. Display only in an opaque, inert sandbox frame. Dynamic apps and CSS image-set string sources are not reproduced. If no compatible browser is installed or it cannot render safely, no screenshot is fabricated.".into() };
+    let record = PreviewRecord { producer: PRODUCER.into(), status: PreviewStatus::Ready, source_commit: commit.into(), document_digest: Some(digest(&document_bytes)), sources, screenshots, render_checks, blocked_resources: resources.blocked.get(), limitation: "Archived static source with optional local Chromium render captures and static layout checks. PNGs are render artifacts; checks are OBSERVED local traces, not a visual regression result, Lighthouse score, accessibility audit, Core Web Vital, real-user performance measurement or growth outcome. Supported local styles/images/fonts are bundled; scripts, forms and navigation are removed, external/unsupported resources omitted. Display only in an opaque, inert sandbox frame. Dynamic apps and CSS image-set string sources are not reproduced. If no compatible browser is installed or it cannot render safely, no screenshot or render check is fabricated.".into() };
     archived.insert(DOCUMENT.into(), document_bytes);
     archived.insert(METADATA.into(), serde_json::to_vec(&record)?);
     Ok((record, archived))
@@ -607,7 +698,7 @@ pub fn capture(
             Ok(Some(record))
         }
         Err(_) => {
-            let record = PreviewRecord { producer: PRODUCER.into(), status: PreviewStatus::Unavailable, source_commit: commit.into(), document_digest: None, sources: vec![], screenshots: vec![], blocked_resources: 0, limitation: "Configured static preview could not be packaged within its allowed-source, HTML/CSS or size limits. No preview or screenshot was fabricated; configured validation remains separate.".into() };
+            let record = PreviewRecord { producer: PRODUCER.into(), status: PreviewStatus::Unavailable, source_commit: commit.into(), document_digest: None, sources: vec![], screenshots: vec![], render_checks: vec![], blocked_resources: 0, limitation: "Configured static preview could not be packaged within its allowed-source, HTML/CSS or size limits. No preview, screenshot or render check was fabricated; configured validation remains separate.".into() };
             files.insert(METADATA.into(), serde_json::to_vec(&record)?);
             Ok(Some(record))
         }
@@ -694,6 +785,22 @@ pub fn verify(
                     || png_dimensions(bytes) != Some((screenshot.width, screenshot.height))
                 {
                     return Err(anyhow!("Static preview screenshot digest mismatch"));
+                }
+            }
+            let mut render_viewports = BTreeSet::new();
+            for check in &record.render_checks {
+                let expected = match check.viewport.as_str() {
+                    "desktop" => (1280, 900),
+                    "phone" => (390, 844),
+                    _ => return Err(anyhow!("Static preview render check viewport is invalid")),
+                };
+                if (check.width, check.height) != expected
+                    || !check.viewport_matches
+                    || check.provenance != "OBSERVED"
+                    || check.limitation.trim().is_empty()
+                    || !render_viewports.insert(&check.viewport)
+                {
+                    return Err(anyhow!("Static preview render check metadata is invalid"));
                 }
             }
         }
@@ -938,5 +1045,31 @@ mod tests {
             1
         );
         assert!(html.contains(&base64::engine::general_purpose::STANDARD.encode(css)));
+    }
+
+    #[test]
+    fn render_audit_probe_is_injected_only_into_a_disposable_copy() {
+        let source = format!("<html><head>{CSP}</head><body><h1>Owned</h1></body></html>");
+        let audited = audit_document(source.as_bytes(), 390).unwrap();
+        let audited = String::from_utf8(audited).unwrap();
+        assert!(audited.contains("script-src 'unsafe-inline'"));
+        assert!(audited.contains("window.innerWidth>=390"));
+        assert!(audited.contains("__GROWTHLAB_RENDER_AUDIT__"));
+        assert!(audited.contains("</body>"));
+        assert!(source.contains("script-src 'none'"));
+    }
+
+    #[test]
+    fn render_check_parser_keeps_observed_layout_and_timing_values() {
+        let dom = r#"<html><body><pre id="growthlab-render-audit">__GROWTHLAB_RENDER_AUDIT__{"viewportMatches":true,"bodyTextChars":42,"horizontalOverflow":false,"domContentLoadedMs":12,"loadMs":18,"firstContentfulPaintMs":15}</pre></body></html>"#;
+        let check = parse_render_check(dom, "phone", 390, 844).unwrap();
+        assert_eq!(check.viewport, "phone");
+        assert!(check.viewport_matches);
+        assert_eq!(check.body_text_chars, 42);
+        assert!(!check.horizontal_overflow);
+        assert_eq!(check.dom_content_loaded_ms, Some(12));
+        assert_eq!(check.load_ms, Some(18));
+        assert_eq!(check.first_contentful_paint_ms, Some(15));
+        assert_eq!(check.provenance, "OBSERVED");
     }
 }

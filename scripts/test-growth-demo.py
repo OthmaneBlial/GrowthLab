@@ -98,6 +98,11 @@ def main():
                         "preview/screenshot-desktop.png",
                         "preview/screenshot-phone.png",
                     }, "Both desktop and phone captures are required for the browser smoke."
+                    render_checks = preview["record"].get("renderChecks", [])
+                    assert {check["viewport"] for check in render_checks} == {"desktop", "phone"}
+                    assert all(check["provenance"] == "OBSERVED" for check in render_checks)
+                    assert all(check["viewportMatches"] for check in render_checks)
+                    assert all(not check["horizontalOverflow"] for check in render_checks)
                 for screenshot in screenshots:
                     viewport = "desktop" if screenshot["path"].endswith("screenshot-desktop.png") else "phone"
                     image = get(f"/api/growth/variants/{variant}/static-preview/{viewport}")

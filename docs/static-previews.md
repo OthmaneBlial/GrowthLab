@@ -28,10 +28,16 @@ local Chromium-compatible browser is available, the battle engine also captures
 the sealed document at 1280 × 900 and 390 × 844 as
 `preview/screenshot-desktop.png` and `preview/screenshot-phone.png`. Their
 dimensions, sizes and SHA-256 values are stored in `preview/metadata.json` and
-verified with the archive. These PNGs are render artifacts, **not a visual
-regression result**, accessibility audit or measured growth outcome. Preview
-availability does not change validation eligibility; a failed candidate can
-still have an inspectable page.
+verified with the archive. The same metadata can include `renderChecks` from the
+local Chromium run: the requested viewport width, whether that width was
+covered by the browser layout viewport, visible body-text character count,
+horizontal-overflow observation and optional local navigation/paint timings.
+Each check is marked **OBSERVED** and describes the sanitized static document;
+these values are useful inspection hints, not a Lighthouse score, Core Web
+Vital, accessibility audit, visual regression result, real-user performance
+measurement or growth outcome. PNG dimensions are validated independently.
+Preview availability does not change validation eligibility; a failed candidate
+can still have an inspectable page.
 
 Phone-sized dashboards initially choose the phone viewport. Controls let you
 inspect either size. The inert preview shows one viewport; use captured source
