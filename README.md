@@ -148,7 +148,7 @@ Current milestone: **Public repository review, manual-brief onboarding, executab
 
 | Validation | Current evidence |
 | --- | --- |
-| Rust tests | **passed** — 951 tests per binary; 949 passed, zero failures and two inherited ignored tests (serial run) |
+| Rust tests | **passed** — 953 tests per binary; 951 passed, zero failures and two inherited ignored tests (serial run) |
 | UI tests | **passed** — 172 tests; zero failures or skips |
 | Local quality checks | **passed** — Formatting, Clippy, UI types, styles and builds |
 | Actual demo and browser flow | **passed** — Real CLI/HTTP execution, desktop/phone captures, observed local Chromium render checks and static-render rubric, verified PNG endpoint checks, SEO rubric records, page-quality hints and standalone local audit on owned fixtures |
