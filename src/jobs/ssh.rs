@@ -429,6 +429,13 @@ pub async fn run_job(spec: &SshJobSpec) -> Result<String> {
         "#!/usr/bin/env bash\n{exports}\ncd \"$HOME/{dir}\" || exit 97\n(\n{script}\n) > log 2>&1\necho $? > exit_code\n",
         script = spec.script,
     );
+    // Register the detached launcher before payload work. A controller can
+    // now restart after the SSH launch without losing the process handle.
+    let run_sh = run_sh.replacen(
+        "#!/usr/bin/env bash\n",
+        "#!/usr/bin/env bash\nif ! printf '%s\\n' \"$$\" > pid; then exit 97; fi\n",
+        1,
+    );
 
     // Create the dir (owner-only) and write run.sh from stdin.
     let setup = format!(
@@ -438,12 +445,12 @@ pub async fn run_job(spec: &SshJobSpec) -> Result<String> {
 
     // Launch detached so it survives the ssh channel closing. Prefer `setsid`
     // (new session → pid == pgid, so cancel can TERM the whole group); fall back
-    // to `nohup` where setsid is absent (e.g. a macOS host). Record the pid.
+    // to `nohup` where setsid is absent (e.g. a macOS host). The launcher
+    // records its own PID before payload work.
     let launch = format!(
         "cd \"$HOME/{dir}\" && \
          if command -v setsid >/dev/null 2>&1; then setsid bash run.sh </dev/null >/dev/null 2>&1 & \
-         else nohup bash run.sh </dev/null >/dev/null 2>&1 & fi; \
-         echo $! > pid",
+         else nohup bash run.sh </dev/null >/dev/null 2>&1 & fi",
     );
     ssh_run(&spec.target, &launch, None).await?;
     Ok(dir)

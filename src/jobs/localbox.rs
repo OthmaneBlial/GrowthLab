@@ -81,6 +81,14 @@ pub fn run_job_with_timeout(
         script = spec.script,
     )
     };
+    // Register the controller from inside the detached launcher before it can
+    // start payload work. This closes the crash window between spawn and the
+    // parent recording a PID for recovery.
+    let run_sh = run_sh.replacen(
+        "#!/usr/bin/env bash\n",
+        "#!/usr/bin/env bash\nif ! printf '%s\\n' \"$$\" > pid; then exit 97; fi\n",
+        1,
+    );
     let run_sh_path = dir.join("run.sh");
     std::fs::write(&run_sh_path, run_sh)
         .map_err(|e| anyhow!("Could not write {}: {}", run_sh_path.display(), e))?;
@@ -128,14 +136,35 @@ pub fn run_job_with_timeout(
     let mut child = cmd
         .spawn()
         .map_err(|e| anyhow!("Could not launch the local run: {}", e))?;
-    if let Err(error) = std::fs::write(dir.join("pid"), format!("{}\n", child.id())) {
-        #[cfg(not(windows))]
-        let _ = terminate_group(&child.id().to_string());
-        #[cfg(windows)]
-        let _ = terminate_tree(&child.id().to_string());
-        let _ = child.kill();
-        let _ = child.wait();
-        return Err(anyhow!("Could not record the run's pid: {error}"));
+    let child_pid = child.id();
+    let registration_deadline = std::time::Instant::now() + std::time::Duration::from_secs(1);
+    loop {
+        match std::fs::read_to_string(dir.join("pid")) {
+            Ok(pid) if pid.trim() == child_pid.to_string() => break,
+            Ok(_) if std::time::Instant::now() >= registration_deadline => {
+                #[cfg(not(windows))]
+                let _ = terminate_group(&child_pid.to_string());
+                #[cfg(windows)]
+                let _ = terminate_tree(&child_pid.to_string());
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(anyhow!(
+                    "Local launcher did not register its controller PID"
+                ));
+            }
+            Err(_) if std::time::Instant::now() >= registration_deadline => {
+                #[cfg(not(windows))]
+                let _ = terminate_group(&child_pid.to_string());
+                #[cfg(windows)]
+                let _ = terminate_tree(&child_pid.to_string());
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(anyhow!(
+                    "Local launcher did not register its controller PID"
+                ));
+            }
+            _ => std::thread::sleep(std::time::Duration::from_millis(5)),
+        }
     }
     // The detached handle remains its directory/PID, but this submitting
     // process still owns the OS child and must reap it when it ends.
@@ -656,6 +685,7 @@ mod tests {
         // Python is defaulted to unbuffered so tailed-`log` output streams live.
         let run_sh = std::fs::read_to_string(dir.join("run.sh")).unwrap();
         assert!(run_sh.contains("export PYTHONUNBUFFERED='1'\n"));
+        assert!(run_sh.contains("if ! printf '%s\\n' \"$$\" > pid; then exit 97; fi\n"));
         assert!(!run_sh.contains("s3cr3t-value"));
 
         let mut lines = Vec::new();

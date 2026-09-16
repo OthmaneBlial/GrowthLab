@@ -911,7 +911,7 @@ pub fn recover_delivery(
                     )
                 })
                 .collect::<Result<Vec<_>>>()?;
-            if states.iter().any(|state| *state == FileState::Conflict) {
+            if states.contains(&FileState::Conflict) {
                 return Ok(pending_delivery(
                     &receipt,
                     "conflict",
