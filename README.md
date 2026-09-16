@@ -94,7 +94,7 @@ Current milestone: **Three real growth surfaces with verified local PNG captures
 
 | Validation | Current evidence |
 | --- | --- |
-| Rust tests | **passed** — 914 per binary; 912 passed, zero failures and two inherited ignored tests |
+| Rust tests | **passed** — 916 tests per binary; 914 passed, zero failures and two inherited ignored tests |
 | UI tests | **passed** — 167 tests; zero failures or skips |
 | Local quality checks | **passed** — Formatting, Clippy, UI types, styles and builds |
 | Actual demo and browser flow | **passed** — Real CLI/HTTP execution, desktop/phone checks, verified PNG endpoint checks and SEO rubric records on owned fictional fixtures |
