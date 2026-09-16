@@ -95,6 +95,12 @@ export interface GrowthPlaybook {
   id: string; title: string; role: string; focus: string; summary: string;
   questions: string[]; outputs: string[]; guardrails: string[];
 }
+export interface PlaybookRun {
+  id: string; projectId: string; role: string; title: string;
+  responses: { question: string; answer: string }[]; outputs: string[];
+  guardrails: string[]; nextStep: string; provenance: Provenance;
+  confidence: Confidence; createdAt: number;
+}
 export type Execution = { mode: "replay"; plan: unknown } | { mode: "native"; harness: string; model: string | null; agentTimeoutSeconds: number };
 
 const prefix = "/api/growth";
@@ -126,6 +132,8 @@ export const growth = {
   import: (path: string, initializeGit = false) => request<Workspace>("/workspaces", "POST", { path, initializeGit }),
   capabilities: (signal?: AbortSignal) => request<Capabilities>("/capabilities", "GET", undefined, signal),
   playbooks: (signal?: AbortSignal) => request<GrowthPlaybook[]>("/playbooks", "GET", undefined, signal),
+  playbookRuns: (projectId: string, signal?: AbortSignal) => request<PlaybookRun[]>(`/workspaces/${id(projectId)}/playbooks`, "GET", undefined, signal),
+  runPlaybook: (projectId: string, role: string, answers: string[] = []) => request<PlaybookRun>(`/workspaces/${id(projectId)}/playbooks/${id(role)}`, "POST", { answers }),
   urlAudit: (url: string) => request<RemoteSeoAudit>("/url-audit", "POST", { url }),
   repositoryAudit: (url: string) => request<PublicRepositoryAudit>("/repository-audit", "POST", { url }),
   createBrief: (brief: { name: string; audience: string; goal: string; description: string; metric: string }) => request<Workspace>("/briefs", "POST", brief),

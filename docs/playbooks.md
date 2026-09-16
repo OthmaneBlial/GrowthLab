@@ -4,6 +4,28 @@ GrowthLab includes a small catalog of reusable role contracts. A playbook gives 
 
 The local dashboard loads the same catalog from `GET /api/growth/playbooks`. No provider or analytics request is made when the catalog is read.
 
+## Run a role contract locally
+
+Each role can now be executed against a registered workspace. Execution expands
+the questions with the answers you provide, records the expected outputs and
+guardrails, and saves an inspectable local run. It does not invoke an agent,
+contact a provider, modify product files or claim an outcome:
+
+```sh
+growthlab playbook run <project-id> seo \
+  --answer 'Qualified developer visitors' \
+  --answer 'Committed product facts' \
+  --answer 'A useful page for a specific search question'
+growthlab playbook list <project-id>
+```
+
+The dashboard exposes **Run locally** on every role card inside a workspace.
+Missing answers remain explicitly `Unknown`, and every saved run is
+**UNTESTED** with low confidence until the user supplies evidence or outcome
+data. The HTTP equivalents are `POST
+/api/growth/workspaces/{id}/playbooks/{role}` with `{ "answers": [] }` and
+`GET /api/growth/workspaces/{id}/playbooks`.
+
 | Role | Focus | Useful outputs |
 | --- | --- | --- |
 | Strategist | Choose a tractable growth question | Prioritized brief, hypothesis tree, metric and decision rule |

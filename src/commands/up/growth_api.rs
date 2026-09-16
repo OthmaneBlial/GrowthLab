@@ -207,6 +207,11 @@ where
             "/api/growth/workspaces/{id}/hypotheses",
             get(hypotheses).post(create_hypotheses),
         )
+        .route("/api/growth/workspaces/{id}/playbooks", get(playbook_runs))
+        .route(
+            "/api/growth/workspaces/{id}/playbooks/{role}",
+            post(run_playbook),
+        )
         .route("/api/growth/battles", get(battles).post(prepare_battle))
         .route("/api/growth/battles/{id}", get(battle_status))
         .route("/api/growth/battles/{id}/run", post(run_battle))
@@ -539,6 +544,44 @@ async fn create_hypotheses(State(state): State<GrowthState>, Path(id): Path<Stri
         let hypotheses = model::starter_hypotheses(&workspace);
         store.insert_growth_hypotheses(&id, &hypotheses)?;
         value(hypotheses)
+    })
+    .await
+}
+
+async fn playbook_runs(State(state): State<GrowthState>, Path(id): Path<String>) -> ApiResult {
+    with_store(state, Some(id.clone()), move |store| {
+        value(store.list_growth_playbook_runs(&id)?)
+    })
+    .await
+}
+
+#[derive(Default, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct PlaybookRunRequest {
+    #[serde(default)]
+    answers: Vec<String>,
+}
+
+async fn run_playbook(
+    State(state): State<GrowthState>,
+    Path((id, role)): Path<(String, String)>,
+    Json(request): Json<PlaybookRunRequest>,
+) -> ApiResult {
+    if request.answers.len() > 16 || request.answers.iter().any(|answer| answer.len() > 4096) {
+        return Err(bad_request(
+            "Playbook answers accept up to 16 values of at most 4096 bytes",
+        ));
+    }
+    with_store(state, Some(id.clone()), move |store| {
+        let workspace = store
+            .get_growth_workspace(&id)?
+            .ok_or_else(|| not_found("Growth workspace"))?;
+        let run = crate::growth::playbooks::execute(&workspace, &role, &request.answers)
+            .map_err(domain_error)?;
+        store
+            .insert_growth_playbook_run(&run)
+            .map_err(domain_error)?;
+        value(run)
     })
     .await
 }

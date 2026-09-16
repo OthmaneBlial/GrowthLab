@@ -131,6 +131,26 @@ pub struct HypothesesArgs {
 }
 
 #[derive(Debug, Args)]
+pub struct PlaybookArgs {
+    #[command(subcommand)]
+    pub command: PlaybookCommand,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum PlaybookCommand {
+    /// Execute one deterministic role contract against a local workspace.
+    Run {
+        project_id: String,
+        role: String,
+        /// Answer the role's questions in order; missing answers stay Unknown.
+        #[arg(long = "answer")]
+        answers: Vec<String>,
+    },
+    /// List previously executed local role contracts for a workspace.
+    List { project_id: String },
+}
+
+#[derive(Debug, Args)]
 pub struct ExecutionArgs {
     /// Declared simulation input. All file changes and checks still execute.
     #[arg(long, conflicts_with = "harness")]
@@ -964,6 +984,32 @@ pub fn hypotheses(args: HypothesesArgs) -> Result<()> {
         print_json(&hypotheses)
     } else {
         print_json(&store.list_growth_hypotheses(&args.project_id)?)
+    }
+}
+
+pub fn playbook(args: PlaybookArgs) -> Result<()> {
+    let store = Store::open()?;
+    match args.command {
+        PlaybookCommand::Run {
+            project_id,
+            role,
+            answers,
+        } => {
+            if answers.iter().any(|answer| answer.len() > 4096) || answers.len() > 16 {
+                return Err(anyhow!(
+                    "Playbook answers accept up to 16 values of at most 4096 bytes"
+                ));
+            }
+            let workspace = store
+                .get_growth_workspace(&project_id)?
+                .ok_or_else(|| anyhow!("Growth workspace not found"))?;
+            let run = super::playbooks::execute(&workspace, &role, &answers)?;
+            store.insert_growth_playbook_run(&run)?;
+            print_json(&run)
+        }
+        PlaybookCommand::List { project_id } => {
+            print_json(&store.list_growth_playbook_runs(&project_id)?)
+        }
     }
 }
 

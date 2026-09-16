@@ -74,6 +74,8 @@ enum Command {
 
     /// Create or inspect three untested landing-page hypothesis templates.
     Hypotheses(growth::cli::HypothesesArgs),
+    /// Execute or inspect a deterministic growth playbook contract.
+    Playbook(growth::cli::PlaybookArgs),
     /// Create three isolated competitors and execute a Growth Battle.
     Battle(growth::cli::BattleArgs),
     /// Execute all three competitors of a prepared battle.
@@ -1052,6 +1054,7 @@ fn command_name(command: &Command) -> &'static str {
         Command::Config(_) => "config",
         Command::Workspace(_) => "workspace",
         Command::Hypotheses(_) => "hypotheses",
+        Command::Playbook(_) => "playbook",
         Command::Battle(_) => "battle",
         Command::Run(_) => "run",
         Command::Experiments(_) => "experiments",
@@ -1117,6 +1120,7 @@ async fn dispatch(command: Command) -> error::Result<()> {
         Command::Config(args) => growth::cli::config(args),
         Command::Workspace(args) => growth::cli::workspace(args),
         Command::Hypotheses(args) => growth::cli::hypotheses(args),
+        Command::Playbook(args) => growth::cli::playbook(args),
         Command::Battle(args) => growth::cli::battle(args).await,
         Command::Run(args) => growth::cli::battle_run(args).await,
         Command::Experiments(args) => growth::cli::experiments(args),
@@ -1180,6 +1184,7 @@ fn command_uses_lifecycle_lock(command: &Command) -> bool {
             | Command::Config(_)
             | Command::Workspace(_)
             | Command::Hypotheses(_)
+            | Command::Playbook(_)
             | Command::Battle(_)
             | Command::Run(_)
             | Command::Experiments(_)

@@ -905,3 +905,42 @@ async fn repository_audit_rejects_non_github_input_without_network_access() {
         .unwrap()
         .is_empty());
 }
+
+#[tokio::test]
+async fn api_runs_and_persists_a_local_playbook_contract() {
+    let fixture = Fixture::new(false).await;
+    let workspace = fixture
+        .post(
+            "/briefs",
+            Some(json!({
+                "name": "Playbook product",
+                "audience": "Indie makers",
+                "goal": "Increase qualified signups"
+            })),
+            200,
+        )
+        .await;
+    let project_id = workspace["projectId"].as_str().unwrap();
+    let run = fixture
+        .post(
+            &format!("/workspaces/{project_id}/playbooks/seo"),
+            Some(json!({"answers":["Developer tools","Product brief","Search intent"]})),
+            200,
+        )
+        .await;
+    assert_eq!(run["role"], "seo");
+    assert_eq!(run["provenance"], "UNTESTED");
+    assert_eq!(run["responses"].as_array().unwrap().len(), 3);
+    let runs = fixture
+        .get(&format!("/workspaces/{project_id}/playbooks"))
+        .await;
+    assert_eq!(runs.as_array().unwrap().len(), 1);
+    let unknown = fixture
+        .post(
+            &format!("/workspaces/{project_id}/playbooks/nope"),
+            Some(json!({})),
+            400,
+        )
+        .await;
+    assert!(unknown["error"].as_str().unwrap().contains("Unknown"));
+}

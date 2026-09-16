@@ -14,6 +14,8 @@ to 1 MiB. The existing loopback/origin and remote-host authentication guards app
 | POST | `/repository-audit` | Inspect one public GitHub URL with a single unauthenticated metadata request; no clone, checkout, execution or workspace registration |
 | GET | `/workspaces/{id}` | Read the recorded committed product context |
 | GET / POST | `/workspaces/{id}/hypotheses` | List / create three UNTESTED starter hypotheses |
+| GET | `/workspaces/{id}/playbooks` | List saved local role-contract runs for this workspace |
+| POST | `/workspaces/{id}/playbooks/{role}` | Execute a deterministic role contract with optional ordered `{ "answers": [] }`; saves an UNTESTED local run and makes no provider request |
 | GET / POST | `/battles` | List (optional `projectId` query) / prepare `{ "projectId": "…", "goal": "…" }` |
 | GET | `/battles/{id}` | Frozen battle, variants, verified sealed runs/checkpoints, selections and owned-controller status |
 | POST | `/battles/{id}/run` | Submit an explicit replay/native request; HTTP 202 means accepted |

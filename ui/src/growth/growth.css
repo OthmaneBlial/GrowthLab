@@ -230,6 +230,11 @@
 .growth-playbook-role { color:var(--accent-strong); }
 .growth-playbook-template { color:var(--subtext); }
 .growth-playbook-card > .growth-muted { margin-top:16px; font-size:0.62rem; }
+.growth-playbook-card .growth-button { margin-top:14px; }
+.growth-playbook-latest { margin-top:14px; border-top:1px solid var(--border); padding-top:10px; font-size:0.67rem; line-height:1.65; }
+.growth-playbook-latest ul { margin:9px 0 0; padding-left:18px; color:var(--subtext); }
+.growth-playbook-latest li + li { margin-top:8px; }
+.growth-playbook-latest strong { display:inline; font-size:0.67rem; text-transform:none; letter-spacing:normal; }
 .growth-repository-audit { margin-top:28px; border-top:1px solid var(--border); }
 .growth-repository-audit-result { margin-top:24px; padding:18px; border:1px solid var(--border); background:var(--surface); }
 .growth-repository-audit-result p { margin:10px 0 0; font-size:0.75rem; line-height:1.7; overflow-wrap:anywhere; }

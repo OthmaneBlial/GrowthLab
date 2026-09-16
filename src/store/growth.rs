@@ -3,7 +3,10 @@
 use rusqlite::{params, Connection, OptionalExtension};
 
 use crate::error::{anyhow, Result};
-use crate::growth::model::{GrowthHypothesis, GrowthWorkspace};
+use crate::growth::{
+    model::{GrowthHypothesis, GrowthWorkspace},
+    playbooks::PlaybookRun,
+};
 use crate::local::model::LocalProject;
 
 use super::{Store, PROJECT_COLS};
@@ -20,7 +23,7 @@ pub(super) fn migrate(conn: &Connection) -> Result<()> {
         [],
         |row| row.get(0),
     )?;
-    if version > 4 {
+    if version > 5 {
         return Err(anyhow!(
             "GrowthLab database was created by a newer version; no growth migration applied"
         ));
@@ -105,6 +108,37 @@ pub(super) fn migrate(conn: &Connection) -> Result<()> {
         tx.execute_batch("ALTER TABLE growth_battle_runs ADD COLUMN checkpoint_digest TEXT;")?;
         tx.execute(
             "INSERT INTO growth_schema_migrations (version, applied_at) VALUES (4, ?1)",
+            [super::now_ms()],
+        )?;
+    }
+    if version < 5 {
+        tx.execute_batch(
+            "CREATE TABLE growth_playbook_runs (
+                id TEXT PRIMARY KEY,
+                project_id TEXT NOT NULL REFERENCES growth_workspaces(project_id),
+                role TEXT NOT NULL,
+                payload_json TEXT NOT NULL,
+                created_at INTEGER NOT NULL
+            );
+            CREATE INDEX idx_growth_playbook_runs_project ON growth_playbook_runs(project_id, created_at);",
+        )?;
+        let has_local_projects: bool = tx.query_row(
+            "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='local_projects')",
+            [],
+            |row| row.get(0),
+        )?;
+        // A migration unit test may intentionally provide only the growth
+        // tables. Real stores always have local_projects, where the cleanup
+        // trigger prevents orphaned local role-contract artifacts.
+        if has_local_projects {
+            tx.execute_batch(
+                "CREATE TRIGGER cleanup_growth_playbook_project AFTER DELETE ON local_projects BEGIN
+                    DELETE FROM growth_playbook_runs WHERE project_id = OLD.id;
+                END;",
+            )?;
+        }
+        tx.execute(
+            "INSERT INTO growth_schema_migrations (version, applied_at) VALUES (5, ?1)",
             [super::now_ms()],
         )?;
     }
@@ -225,6 +259,43 @@ impl Store {
             })
             .collect()
     }
+
+    pub fn insert_growth_playbook_run(&self, run: &PlaybookRun) -> Result<()> {
+        run.validate()?;
+        if self.get_growth_workspace(&run.project_id)?.is_none() {
+            return Err(anyhow!("Growth workspace not found"));
+        }
+        let payload = serde_json::to_string(run)?;
+        self.conn.execute(
+            "INSERT INTO growth_playbook_runs (id, project_id, role, payload_json, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![run.id, run.project_id, serde_json::to_string(&run.role)?, payload, run.created_at],
+        )?;
+        Ok(())
+    }
+
+    pub fn list_growth_playbook_runs(&self, project_id: &str) -> Result<Vec<PlaybookRun>> {
+        if self.get_growth_workspace(project_id)?.is_none() {
+            return Err(anyhow!("Growth workspace not found"));
+        }
+        let mut query = self.conn.prepare(
+            "SELECT payload_json FROM growth_playbook_runs WHERE project_id = ?1 ORDER BY created_at, rowid",
+        )?;
+        let values = query
+            .query_map([project_id], |row| row.get::<_, String>(0))?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        values
+            .into_iter()
+            .map(|value| {
+                let run: PlaybookRun = serde_json::from_str(&value)
+                    .map_err(|_| anyhow!("Stored playbook run has invalid schema"))?;
+                run.validate()?;
+                if run.project_id != project_id {
+                    return Err(anyhow!("Stored playbook run references another workspace"));
+                }
+                Ok(run)
+            })
+            .collect()
+    }
 }
 
 #[cfg(test)]
@@ -247,7 +318,7 @@ mod tests {
                 |row| row.get::<_, i64>(0)
             )
             .unwrap(),
-            4
+            5
         );
     }
 
@@ -327,7 +398,7 @@ mod tests {
             .insert_growth_hypotheses(&project.id, &hypotheses)
             .unwrap();
         let hypotheses = store.list_growth_hypotheses(&project.id).unwrap();
-        store.conn.execute_batch("DROP TRIGGER cleanup_growth_battle_project; DROP TRIGGER freeze_finished_growth_selection; DROP TABLE growth_selections; ALTER TABLE growth_battle_runs DROP COLUMN checkpoint_digest; DELETE FROM growth_schema_migrations WHERE version>=3;").unwrap();
+        store.conn.execute_batch("DROP TRIGGER cleanup_growth_battle_project; DROP TRIGGER cleanup_growth_playbook_project; DROP TRIGGER freeze_finished_growth_selection; DROP TABLE growth_selections; DROP TABLE growth_playbook_runs; ALTER TABLE growth_battle_runs DROP COLUMN checkpoint_digest; DELETE FROM growth_schema_migrations WHERE version>=3;").unwrap();
         drop(store);
         let upgraded = Store::open_at(root.clone()).unwrap();
         assert_eq!(
@@ -377,7 +448,7 @@ mod tests {
         store.create_local_project(&project).unwrap();
         // Remove only the new extension from this isolated fixture to recreate
         // a pre-GrowthLab store with actual inherited schema and product data.
-        store.conn.execute_batch("DROP TRIGGER cleanup_growth_battle_project; DROP TRIGGER freeze_finished_growth_selection; DROP TABLE growth_selections; DROP TRIGGER freeze_sealed_growth_run; DROP TABLE growth_battle_runs; DROP TABLE growth_variants; DROP TABLE growth_battles; DROP TRIGGER cleanup_growth_project; DROP TABLE growth_hypotheses; DROP TABLE growth_workspaces; DROP TABLE growth_schema_migrations;").unwrap();
+        store.conn.execute_batch("DROP TRIGGER cleanup_growth_battle_project; DROP TRIGGER cleanup_growth_playbook_project; DROP TRIGGER freeze_finished_growth_selection; DROP TABLE growth_selections; DROP TRIGGER freeze_sealed_growth_run; DROP TABLE growth_battle_runs; DROP TABLE growth_variants; DROP TABLE growth_battles; DROP TRIGGER cleanup_growth_project; DROP TABLE growth_playbook_runs; DROP TABLE growth_hypotheses; DROP TABLE growth_workspaces; DROP TABLE growth_schema_migrations;").unwrap();
         let transcript_version: i64 = store
             .conn
             .query_row("PRAGMA user_version", [], |row| row.get(0))
@@ -474,7 +545,7 @@ mod tests {
             count, 0,
             "failed migration must not leave a half-created workspace table"
         );
-        conn.execute_batch("DROP TABLE growth_hypotheses; CREATE TABLE growth_schema_migrations (version INTEGER PRIMARY KEY, applied_at INTEGER); INSERT INTO growth_schema_migrations VALUES (5,1);").unwrap();
+        conn.execute_batch("DROP TABLE growth_hypotheses; CREATE TABLE growth_schema_migrations (version INTEGER PRIMARY KEY, applied_at INTEGER); INSERT INTO growth_schema_migrations VALUES (6,1);").unwrap();
         assert!(migrate(&conn).is_err());
     }
 }
