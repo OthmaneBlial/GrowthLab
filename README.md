@@ -15,7 +15,7 @@ It is made for founders, indie hackers, marketers, designers, and developers who
 **Open source · local-first · built for small teams · no Docker**
 
 <!-- project-links:start -->
-[Website](https://othmaneblial.github.io/GrowthLab/) · [Docs](https://othmaneblial.github.io/GrowthLab/docs.html) · [Alpha release](https://github.com/OthmaneBlial/GrowthLab/releases/tag/v0.1.0-alpha.14) · [Roadmap](docs/ROADMAP.md) · [Contribute](CONTRIBUTING.md)
+[Website](https://othmaneblial.github.io/GrowthLab/) · [Docs](https://othmaneblial.github.io/GrowthLab/docs.html) · [Alpha release](https://github.com/OthmaneBlial/GrowthLab/releases/tag/v0.1.0-alpha.15) · [Roadmap](docs/ROADMAP.md) · [Contribute](CONTRIBUTING.md)
 <!-- project-links:end -->
 
 ![Real bundled battle with two eligible candidates and one deliberately failed heading check](docs/screenshots/growth-demo-failure.png)
@@ -146,6 +146,7 @@ Current milestone: **Public repository review, manual-brief onboarding, executab
 - Observed local Chromium render checks for viewport coverage, overflow, visible copy and optional timings
 - Transparent observed static-render rubric in comparisons and shareable reports
 - Role-grouped experiment tree keeps stable hypothesis IDs linked to each battle
+- Comparison rows and private reports preserve hypothesis IDs for end-to-end lineage
 
 | Validation | Current evidence |
 | --- | --- |
@@ -166,7 +167,7 @@ Current milestone: **Public repository review, manual-brief onboarding, executab
 | Distribution-aware measurement | **passed** — Local Rust and browser CSV summaries group by metric, distribution or channel and variant; comparisons stay within each distribution and remain MEASURED from user-supplied rows |
 | Public repository checkout import | **passed** — CLI, API and Home UI clone only after an explicit new destination is supplied; existing contracts are preserved, missing contracts are committed locally, and no push or provider request occurs |
 | Workspace experiment map | **passed** — Chrome smoke created the deterministic starter map and rendered the shared goal with positioning, conversion and onboarding branches; cards remain UNTESTED until a battle and local evidence exist |
-| Experiment map lineage | **passed** — Rust battle preparation tests confirm a persisted three-hypothesis map is reused in the frozen contract and variant records, while older workspaces retain the deterministic fallback |
+| Experiment map lineage | **passed** — Rust battle preparation, comparison rows and report tests confirm persisted hypothesis IDs remain linked from the map through frozen battle variants and exported JSON, Markdown and HTML |
 | Role-grouped experiment tree | **passed** — Workspace dashboard groups persisted hypotheses by role in accessible branches; stable hypothesis IDs remain linked into prepared battle variants |
 
 **Still ahead**
