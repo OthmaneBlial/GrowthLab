@@ -741,7 +741,7 @@ dependencies = [
 
 [[package]]
 name = "growthlab"
-version = "0.1.0-alpha.7"
+version = "0.1.0-alpha.19"
 dependencies = [
  "aes",
  "anyhow",
