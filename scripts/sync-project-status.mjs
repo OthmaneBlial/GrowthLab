@@ -43,7 +43,7 @@ const progress = [
 const links = [];
 if (status.website?.published === true) {
   if (status.website.url !== "https://othmaneblial.github.io/GrowthLab/" || status.website.docsUrl !== "https://othmaneblial.github.io/GrowthLab/docs.html") throw new Error("Website identity does not match GrowthLab");
-  links.push(`[Website](${status.website.url})`, `[Docs](${status.website.docsUrl})`);
+  links.push(`[Website](${status.website.url})`, `[Docs](${status.website.docsUrl})`, "[Distribution](docs/distribution.md)");
 } else links.push("[Documentation](docs/dashboard.md)");
 if (status.release?.published === true) {
   if (!/^https:\/\/github\.com\/OthmaneBlial\/GrowthLab\/releases\/tag\/v[\w.-]+$/.test(status.release.url)) throw new Error("Release identity does not match GrowthLab");
