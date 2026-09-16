@@ -3,7 +3,7 @@ use rusqlite::{params, OptionalExtension};
 use crate::error::{anyhow, Result};
 use crate::growth::archive::digest;
 use crate::growth::battle_model::{
-    BattleRun, BattleStatus, GrowthBattle, GrowthVariant, SealedBattleRun,
+    BattleRun, BattleStatus, GrowthAttempt, GrowthBattle, GrowthVariant, SealedBattleRun,
 };
 use crate::growth::selection::{SelectionAction, SelectionRecord, SelectionStatus};
 use crate::local::model::LocalExperiment;
@@ -212,6 +212,25 @@ impl Store {
     }
 
     pub fn save_growth_attempt(&self, run: &BattleRun) -> Result<()> {
+        self.upsert_growth_attempt(run, None)
+    }
+
+    pub fn checkpoint_growth_attempt(&self, run: &BattleRun, hash: &str) -> Result<()> {
+        let files = crate::growth::archive::verify(self.data_root(), hash)?;
+        let battle = self
+            .get_growth_battle(&run.battle_id)?
+            .ok_or_else(|| anyhow!("Battle not found"))?;
+        if files.get("run.json") != Some(&serde_json::to_vec(run)?)
+            || files.get("contract.json") != Some(&serde_json::to_vec(&battle.contract)?)
+        {
+            return Err(anyhow!(
+                "Checkpoint bytes must match the attempt and frozen contract"
+            ));
+        }
+        self.upsert_growth_attempt(run, Some(hash))
+    }
+
+    fn upsert_growth_attempt(&self, run: &BattleRun, checkpoint: Option<&str>) -> Result<()> {
         let variant: String = self.conn.query_row(
             "SELECT battle_id FROM growth_variants WHERE id=?1",
             [&run.variant_id],
@@ -226,8 +245,44 @@ impl Store {
         {
             return Err(anyhow!("Run must match the frozen battle contract"));
         }
-        self.conn.execute("INSERT INTO growth_battle_runs (id,variant_id,battle_id,payload_json) VALUES (?1,?2,?3,?4) ON CONFLICT(id) DO UPDATE SET payload_json=excluded.payload_json", params![run.id,run.variant_id,run.battle_id,serde_json::to_string(run)?])?;
+        self.conn.execute("INSERT INTO growth_battle_runs (id,variant_id,battle_id,payload_json,checkpoint_digest) VALUES (?1,?2,?3,?4,?5) ON CONFLICT(id) DO UPDATE SET payload_json=excluded.payload_json,checkpoint_digest=excluded.checkpoint_digest", params![run.id,run.variant_id,run.battle_id,serde_json::to_string(run)?,checkpoint])?;
         Ok(())
+    }
+
+    pub fn growth_attempts(&self, battle_id: &str) -> Result<Vec<GrowthAttempt>> {
+        let battle = self
+            .get_growth_battle(battle_id)?
+            .ok_or_else(|| anyhow!("Battle not found"))?;
+        let mut query = self.conn.prepare("SELECT id,variant_id,payload_json,checkpoint_digest,archive_digest FROM growth_battle_runs WHERE battle_id=?1 ORDER BY rowid")?;
+        let results = query
+            .query_map([battle_id], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, Option<String>>(3)?,
+                    row.get::<_, Option<String>>(4)?,
+                ))
+            })?
+            .map(|row| {
+                let (id, variant, json, checkpoint, seal) = row?;
+                let run: BattleRun = decode(&json)?;
+                if run.id != id
+                    || run.variant_id != variant
+                    || run.battle_id != battle_id
+                    || run.contract_digest != battle.contract_digest
+                    || run.source_snapshot_commit != battle.contract.source_snapshot_commit
+                {
+                    return Err(anyhow!("Attempt does not match its frozen battle"));
+                }
+                Ok(GrowthAttempt {
+                    run,
+                    checkpoint_digest: checkpoint,
+                    archive_digest: seal,
+                })
+            })
+            .collect();
+        results
     }
 
     pub fn seal_growth_attempt(&self, run: &BattleRun, hash: &str) -> Result<()> {

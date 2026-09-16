@@ -20,7 +20,7 @@ pub(super) fn migrate(conn: &Connection) -> Result<()> {
         [],
         |row| row.get(0),
     )?;
-    if version > 3 {
+    if version > 4 {
         return Err(anyhow!(
             "GrowthLab database was created by a newer version; no growth migration applied"
         ));
@@ -98,6 +98,13 @@ pub(super) fn migrate(conn: &Connection) -> Result<()> {
         )?;
         tx.execute(
             "INSERT INTO growth_schema_migrations (version, applied_at) VALUES (3, ?1)",
+            [super::now_ms()],
+        )?;
+    }
+    if version < 4 {
+        tx.execute_batch("ALTER TABLE growth_battle_runs ADD COLUMN checkpoint_digest TEXT;")?;
+        tx.execute(
+            "INSERT INTO growth_schema_migrations (version, applied_at) VALUES (4, ?1)",
             [super::now_ms()],
         )?;
     }
@@ -225,6 +232,60 @@ mod tests {
     use super::*;
 
     #[test]
+    fn checkpoint_migration_preserves_version_three_records() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("CREATE TABLE growth_schema_migrations (version INTEGER PRIMARY KEY,applied_at INTEGER); INSERT INTO growth_schema_migrations VALUES(3,1); CREATE TABLE growth_battle_runs(id TEXT PRIMARY KEY,variant_id TEXT,battle_id TEXT,payload_json TEXT,archive_digest TEXT); INSERT INTO growth_battle_runs VALUES('existing','variant','battle','original payload','original seal');").unwrap();
+        migrate(&conn).unwrap();
+        let (payload,seal,checkpoint):(String,String,Option<String>)=conn.query_row("SELECT payload_json,archive_digest,checkpoint_digest FROM growth_battle_runs WHERE id='existing'",[],|row|Ok((row.get(0)?,row.get(1)?,row.get(2)?))).unwrap();
+        assert_eq!(payload, "original payload");
+        assert_eq!(seal, "original seal");
+        assert_eq!(checkpoint, None);
+        assert_eq!(
+            conn.query_row(
+                "SELECT MAX(version) FROM growth_schema_migrations",
+                [],
+                |row| row.get::<_, i64>(0)
+            )
+            .unwrap(),
+            4
+        );
+    }
+
+    #[test]
+    fn failed_checkpoint_migration_rolls_back_without_advancing_version_or_changing_records() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("CREATE TABLE growth_schema_migrations (version INTEGER PRIMARY KEY,applied_at INTEGER); INSERT INTO growth_schema_migrations VALUES(3,1); CREATE TABLE growth_battle_runs(id TEXT,payload_json TEXT,checkpoint_digest TEXT); INSERT INTO growth_battle_runs VALUES('existing','original payload','existing checkpoint');").unwrap();
+        assert!(migrate(&conn).is_err());
+        assert_eq!(
+            conn.query_row(
+                "SELECT MAX(version) FROM growth_schema_migrations",
+                [],
+                |row| row.get::<_, i64>(0)
+            )
+            .unwrap(),
+            3
+        );
+        assert_eq!(
+            conn.query_row(
+                "SELECT payload_json FROM growth_battle_runs WHERE id='existing'",
+                [],
+                |row| row.get::<_, String>(0)
+            )
+            .unwrap(),
+            "original payload"
+        );
+        assert_eq!(
+            conn.query_row(
+                "SELECT checkpoint_digest FROM growth_battle_runs WHERE id='existing'",
+                [],
+                |row| row.get::<_, String>(0)
+            )
+            .unwrap(),
+            "existing checkpoint"
+        );
+    }
+
+    #[test]
     fn failed_selection_migration_preserves_version_two_and_rolls_back_ddl() {
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch("CREATE TABLE growth_schema_migrations (version INTEGER PRIMARY KEY,applied_at INTEGER); INSERT INTO growth_schema_migrations VALUES (2,1); CREATE TABLE idx_growth_selections_battle (collision TEXT);").unwrap();
@@ -266,7 +327,7 @@ mod tests {
             .insert_growth_hypotheses(&project.id, &hypotheses)
             .unwrap();
         let hypotheses = store.list_growth_hypotheses(&project.id).unwrap();
-        store.conn.execute_batch("DROP TRIGGER cleanup_growth_battle_project; DROP TRIGGER freeze_finished_growth_selection; DROP TABLE growth_selections; DELETE FROM growth_schema_migrations WHERE version=3;").unwrap();
+        store.conn.execute_batch("DROP TRIGGER cleanup_growth_battle_project; DROP TRIGGER freeze_finished_growth_selection; DROP TABLE growth_selections; ALTER TABLE growth_battle_runs DROP COLUMN checkpoint_digest; DELETE FROM growth_schema_migrations WHERE version>=3;").unwrap();
         drop(store);
         let upgraded = Store::open_at(root.clone()).unwrap();
         assert_eq!(
@@ -413,7 +474,7 @@ mod tests {
             count, 0,
             "failed migration must not leave a half-created workspace table"
         );
-        conn.execute_batch("DROP TABLE growth_hypotheses; CREATE TABLE growth_schema_migrations (version INTEGER PRIMARY KEY, applied_at INTEGER); INSERT INTO growth_schema_migrations VALUES (4,1);").unwrap();
+        conn.execute_batch("DROP TABLE growth_hypotheses; CREATE TABLE growth_schema_migrations (version INTEGER PRIMARY KEY, applied_at INTEGER); INSERT INTO growth_schema_migrations VALUES (5,1);").unwrap();
         assert!(migrate(&conn).is_err());
     }
 }

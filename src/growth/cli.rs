@@ -135,6 +135,15 @@ pub struct BattleStatusArgs {
 }
 
 #[derive(Debug, Args)]
+pub struct RecoverArgs {
+    pub battle_id: String,
+}
+
+pub fn recover(args: RecoverArgs) -> Result<()> {
+    print_json(&super::recovery::recover(&Store::open()?, &args.battle_id)?)
+}
+
+#[derive(Debug, Args)]
 pub struct SelectArgs {
     pub variant_id: String,
 }
@@ -309,7 +318,7 @@ pub fn battle_status(args: BattleStatusArgs) -> Result<()> {
         store.request_growth_battle_cancel(&args.battle_id)?;
     }
     print_json(
-        &serde_json::json!({"battle":store.get_growth_battle(&args.battle_id)?.ok_or_else(||anyhow!("Battle not found"))?,"runs":store.sealed_growth_runs(&args.battle_id)?,"selections":store.growth_selections(&args.battle_id)?}),
+        &serde_json::json!({"battle":store.get_growth_battle(&args.battle_id)?.ok_or_else(||anyhow!("Battle not found"))?,"runs":store.sealed_growth_runs(&args.battle_id)?,"attempts":store.growth_attempts(&args.battle_id)?,"selections":store.growth_selections(&args.battle_id)?}),
     )
 }
 

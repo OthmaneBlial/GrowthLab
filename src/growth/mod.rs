@@ -8,6 +8,7 @@ pub mod cli;
 pub mod config;
 pub mod evaluation;
 pub mod model;
+pub mod recovery;
 pub mod redaction;
 pub mod report;
 pub mod selection;

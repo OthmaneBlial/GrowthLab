@@ -14,7 +14,8 @@ by this roadmap.
   immutable run records, failure/cancellation recovery, evidence/diffs/artifacts,
   explainable comparison, safe selected apply/export and local reports.
   The replay CLI backend, explicit selected delivery and local HTML/Markdown
-  reports are implemented. Native execution, recovery and host execution
+  reports and checkpoint-based CLI recovery are implemented. Native execution,
+  incomplete launcher registration, selected-delivery recovery and host execution
   confinement still prevent marking this phase complete.
 - [ ] **3 — UX/demo:** growth-native onboarding, tree/battle/detail/console/
   evidence/rubric/settings screens, keyboard/mobile checks, one-command bundled

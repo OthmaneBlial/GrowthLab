@@ -6,6 +6,369 @@ use super::battle_model::*;
 use super::model::Provenance;
 use crate::store::Store;
 
+const GATED_CHECK: &str = "node -e \"const fs=require('node:fs');fs.writeFileSync('ready','started');const timer=setInterval(()=>{if(fs.existsSync('release')){clearInterval(timer);process.exit(fs.readFileSync('website/index.html','utf8').includes('<h1>')?0:2)}},20)\"";
+
+async fn abandon_controller(
+    fixture: &Fixture,
+    battle_id: &str,
+    agent: &dyn BattleAgent,
+    active: bool,
+) -> Vec<GrowthAttempt> {
+    let execution = battle::execute(&fixture.store, battle_id, agent);
+    tokio::pin!(execution);
+    let started = async {
+        for _ in 0..1500 {
+            let attempts = fixture.store.growth_attempts(battle_id).unwrap();
+            if attempts.len() == 3
+                && attempts.iter().all(|attempt| {
+                    attempt.checkpoint_digest.is_some()
+                        && (!active
+                            || attempt.run.active_validation.as_ref().is_some_and(|job| {
+                                fixture
+                                    .store
+                                    .data_root()
+                                    .join("growth-jobs")
+                                    .join(&job.run_id)
+                                    .join("repo/ready")
+                                    .exists()
+                            }))
+                })
+            {
+                let error = super::recovery::recover(&fixture.store, battle_id).unwrap_err();
+                assert!(error.to_string().contains("live controller"));
+                return attempts;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        }
+        panic!("fixture controller never reached the requested checkpoint");
+    };
+    tokio::select! {
+        result=&mut execution=>panic!("fixture controller finished before interruption: {result:?}"),
+        attempts=started=>attempts,
+    }
+    // Dropping this actual execution future releases its OS lease. Registered
+    // Bash controllers and their payloads remain independently alive.
+}
+
+async fn release_registered_jobs(fixture: &Fixture, attempts: &[GrowthAttempt]) {
+    let jobs: Vec<_> = attempts
+        .iter()
+        .map(|attempt| {
+            let id = &attempt.run.active_validation.as_ref().unwrap().run_id;
+            let job = fixture.store.get_run(id).unwrap().unwrap();
+            let descriptor = crate::jobs::BackendDescriptor::parse(&job.backend_json).unwrap();
+            let directory = PathBuf::from(descriptor.job_id.unwrap());
+            std::fs::write(directory.join("repo/release"), "fixture release").unwrap();
+            directory
+        })
+        .collect();
+    for _ in 0..300 {
+        if jobs.iter().all(|directory| {
+            matches!(
+                crate::jobs::localbox::inspect_job(directory).stage.as_str(),
+                "COMPLETED" | "ERROR"
+            )
+        }) {
+            return;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    }
+    panic!("released fixture jobs did not become terminal");
+}
+
+#[tokio::test]
+async fn interrupted_jobs_wait_then_recover_sealed_context_without_rerunning_or_reading_worktrees()
+{
+    let fixture = Fixture::with_timeout(Some(GATED_CHECK), 60);
+    let battle =
+        battle::prepare(&fixture.store, &fixture.project_id, "Interrupted fixture").unwrap();
+    let attempts = abandon_controller(&fixture, &battle.id, &Fixture::plan(), true).await;
+    let waiting = super::recovery::recover(&fixture.store, &battle.id).unwrap();
+    assert_eq!(waiting.status, "waiting");
+    assert_eq!(waiting.waiting_jobs.len(), 3);
+    assert!(waiting.recovered_attempts.is_empty());
+    assert_eq!(fixture.store.growth_attempts(&battle.id).unwrap(), attempts);
+    let job_id = &attempts[0].run.active_validation.as_ref().unwrap().run_id;
+    let registered_job = fixture.store.get_run(job_id).unwrap().unwrap();
+    let descriptor = crate::jobs::BackendDescriptor::parse(&registered_job.backend_json).unwrap();
+    let mut unrelated = descriptor.clone();
+    unrelated.job_id = Some(
+        fixture
+            .root
+            .join("unrelated-controller")
+            .to_string_lossy()
+            .into_owned(),
+    );
+    fixture
+        .store
+        .set_backend_json(job_id, &unrelated.to_json())
+        .unwrap();
+    assert!(super::recovery::recover(&fixture.store, &battle.id).is_err());
+    assert_eq!(fixture.store.growth_attempts(&battle.id).unwrap(), attempts);
+    let mut missing_source = descriptor.clone();
+    missing_source.source_digest = None;
+    fixture
+        .store
+        .set_backend_json(job_id, &missing_source.to_json())
+        .unwrap();
+    assert!(super::recovery::recover(&fixture.store, &battle.id).is_err());
+    assert_eq!(fixture.store.growth_attempts(&battle.id).unwrap(), attempts);
+    fixture
+        .store
+        .set_backend_json(job_id, &registered_job.backend_json)
+        .unwrap();
+    let directory = PathBuf::from(descriptor.job_id.unwrap());
+    std::fs::rename(
+        directory.join("pid"),
+        directory.join("fixture-retained-pid"),
+    )
+    .unwrap();
+    let unregistered = super::recovery::recover(&fixture.store, &battle.id).unwrap();
+    assert_eq!(unregistered.status, "waiting");
+    assert!(unregistered
+        .warnings
+        .iter()
+        .any(|warning| warning.contains("termination is unverified")));
+    assert_eq!(fixture.store.growth_attempts(&battle.id).unwrap(), attempts);
+    std::fs::rename(
+        directory.join("fixture-retained-pid"),
+        directory.join("pid"),
+    )
+    .unwrap();
+    let variants = fixture.store.growth_variants(&battle.id).unwrap();
+    std::fs::write(
+        Path::new(&variants[0].worktree).join("website/index.html"),
+        "Unsealed later work",
+    )
+    .unwrap();
+    release_registered_jobs(&fixture, &attempts).await;
+    let moved = fixture.root.join("temporarily-unavailable-product");
+    std::fs::rename(&fixture.product, &moved).unwrap();
+    let recovered = super::recovery::recover(&fixture.store, &battle.id).unwrap();
+    assert_eq!(recovered.status, "recovered");
+    assert_eq!(recovered.recovered_attempts.len(), 3);
+    assert_eq!(recovered.battle.status, BattleStatus::Failed);
+    let sealed = fixture.store.sealed_growth_runs(&battle.id).unwrap();
+    assert_eq!(sealed.len(), 3);
+    for seal in &sealed {
+        assert_eq!(seal.run.status, "failed");
+        assert!(seal.run.active_validation.is_none());
+        assert_eq!(seal.run.provenance, Provenance::Simulated);
+        assert_eq!(seal.run.outcome_provenance, Provenance::Untested);
+        assert_eq!(seal.run.validations.len(), 1);
+        assert_eq!(seal.run.validations[0].provenance, Provenance::Observed);
+        let files = archive::verify(fixture.store.data_root(), &seal.archive_digest).unwrap();
+        assert!(
+            files.contains_key("proposal-input.json")
+                && files.contains_key("implementation.diff")
+                && files.contains_key("validation-0.log")
+                && files.contains_key("recovery.json")
+        );
+        if seal.run.variant_id == variants[0].id {
+            assert_eq!(files["files/website/index.html"], b"<h1>Outcome-first</h1>");
+        }
+    }
+    let comparison = super::evaluation::compare(&fixture.store, &battle.id).unwrap();
+    assert!(
+        comparison.recommended_candidates.is_empty(),
+        "interrupted attempts must never be promoted to success"
+    );
+    assert_eq!(comparison.rows[1].checks[0].exit_code, Some(2));
+    super::report::export(
+        &fixture.store,
+        &battle.id,
+        &super::report::ReportOptions::default(),
+        &fixture.root.join("recovered.html"),
+        false,
+    )
+    .unwrap();
+    assert_eq!(
+        super::recovery::recover(&fixture.store, &battle.id)
+            .unwrap()
+            .status,
+        "unchanged"
+    );
+    assert_eq!(
+        fixture.store.sealed_growth_runs(&battle.id).unwrap(),
+        sealed
+    );
+    std::fs::rename(moved, &fixture.product).unwrap();
+    fixture.unchanged();
+    assert_eq!(
+        std::fs::read_to_string(Path::new(&variants[0].worktree).join("website/index.html"))
+            .unwrap(),
+        "Unsealed later work"
+    );
+    assert_eq!(
+        fixture
+            .store
+            .list_runs_by_project(&fixture.project_id)
+            .unwrap()
+            .len(),
+        3,
+        "recovery cannot launch new jobs"
+    );
+}
+
+#[tokio::test]
+async fn terminal_checkpoint_finalization_failure_recovers_one_seal_and_preserves_siblings() {
+    let fixture = Fixture::new(None);
+    let battle = battle::prepare(&fixture.store, &fixture.project_id, "Finalize fixture").unwrap();
+    let variant = fixture.store.growth_variants(&battle.id).unwrap()[0]
+        .id
+        .clone();
+    let transaction = fixture.store.begin().unwrap();
+    transaction.execute_batch(&format!("CREATE TRIGGER fixture_seal_failure BEFORE UPDATE ON growth_battle_runs WHEN NEW.archive_digest IS NOT NULL AND NEW.variant_id='{variant}' BEGIN SELECT RAISE(ABORT,'synthetic finalization failure'); END;")).unwrap();
+    transaction.commit().unwrap();
+    assert!(
+        battle::execute(&fixture.store, &battle.id, &Fixture::plan())
+            .await
+            .is_err()
+    );
+    let attempts = fixture.store.growth_attempts(&battle.id).unwrap();
+    let interrupted = attempts
+        .iter()
+        .find(|attempt| attempt.run.variant_id == variant)
+        .unwrap();
+    assert!(interrupted.archive_digest.is_none());
+    assert_eq!(interrupted.run.status, "done");
+    let original_hash = interrupted.checkpoint_digest.clone().unwrap();
+    let siblings = fixture.store.sealed_growth_runs(&battle.id).unwrap();
+    assert_eq!(siblings.len(), 2);
+    let transaction = fixture.store.begin().unwrap();
+    transaction
+        .execute_batch("DROP TRIGGER fixture_seal_failure;")
+        .unwrap();
+    transaction.commit().unwrap();
+    let result = super::recovery::recover(&fixture.store, &battle.id).unwrap();
+    assert_eq!(result.recovered_attempts, vec![interrupted.run.id.clone()]);
+    let sealed = fixture.store.sealed_growth_runs(&battle.id).unwrap();
+    assert!(siblings.iter().all(|sibling| sealed.contains(sibling)));
+    assert!(sealed
+        .iter()
+        .any(|seal| seal.archive_digest == original_hash && seal.run == interrupted.run));
+    assert_eq!(
+        super::evaluation::compare(&fixture.store, &battle.id)
+            .unwrap()
+            .recommended_candidates
+            .len(),
+        2
+    );
+    assert_eq!(
+        super::recovery::recover(&fixture.store, &battle.id)
+            .unwrap()
+            .status,
+        "unchanged"
+    );
+    fixture.unchanged();
+}
+
+#[tokio::test]
+async fn tampered_checkpoint_refuses_recovery_before_any_outcome_changes() {
+    let fixture = Fixture::new(None);
+    let battle = battle::prepare(
+        &fixture.store,
+        &fixture.project_id,
+        "Checkpoint tamper fixture",
+    )
+    .unwrap();
+    let attempts = abandon_controller(&fixture, &battle.id, &WaitingAgent, false).await;
+    let target = fixture
+        .store
+        .data_root()
+        .join("growth-archives")
+        .join(attempts[0].checkpoint_digest.as_ref().unwrap())
+        .join("proposal-input.json");
+    let original = std::fs::read(&target).unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&target, std::fs::Permissions::from_mode(0o600)).unwrap();
+    }
+    std::fs::write(&target, "tampered").unwrap();
+    assert!(super::recovery::recover(&fixture.store, &battle.id).is_err());
+    assert_eq!(fixture.store.growth_attempts(&battle.id).unwrap(), attempts);
+    assert!(fixture
+        .store
+        .sealed_growth_runs(&battle.id)
+        .unwrap()
+        .is_empty());
+    assert_eq!(
+        fixture
+            .store
+            .get_growth_battle(&battle.id)
+            .unwrap()
+            .unwrap()
+            .status,
+        BattleStatus::Running
+    );
+    std::fs::write(target, original).unwrap();
+    fixture
+        .store
+        .request_growth_battle_cancel(&battle.id)
+        .unwrap();
+    let result = super::recovery::recover(&fixture.store, &battle.id).unwrap();
+    assert_eq!(result.battle.status, BattleStatus::Cancelled);
+    assert_eq!(result.recovered_attempts.len(), 3);
+    assert!(fixture
+        .store
+        .sealed_growth_runs(&battle.id)
+        .unwrap()
+        .iter()
+        .all(|seal| seal.run.status == "cancelled"));
+    fixture.unchanged();
+}
+
+#[tokio::test]
+async fn failed_active_job_checkpoint_prevents_command_launch_and_preserves_terminal_failures() {
+    let fixture = Fixture::new(None);
+    let battle = battle::prepare(
+        &fixture.store,
+        &fixture.project_id,
+        "Checkpoint persistence fixture",
+    )
+    .unwrap();
+    let transaction = fixture.store.begin().unwrap();
+    transaction.execute_batch("CREATE TRIGGER fixture_checkpoint_failure BEFORE UPDATE ON growth_battle_runs WHEN json_type(NEW.payload_json,'$.activeValidation') IS NOT NULL BEGIN SELECT RAISE(ABORT,'synthetic checkpoint failure'); END;").unwrap();
+    transaction.commit().unwrap();
+    let result = battle::execute(&fixture.store, &battle.id, &Fixture::plan())
+        .await
+        .unwrap();
+    assert_eq!(result.status, BattleStatus::Failed);
+    assert!(
+        !fixture.store.data_root().join("growth-jobs").exists(),
+        "job cannot launch before its durable link checkpoint"
+    );
+    let jobs = fixture
+        .store
+        .list_runs_by_project(&fixture.project_id)
+        .unwrap();
+    assert_eq!(jobs.len(), 3);
+    assert!(jobs.iter().all(|job| job.status == "failed"));
+    let seals = fixture.store.sealed_growth_runs(&battle.id).unwrap();
+    assert_eq!(seals.len(), 3);
+    assert!(seals.iter().all(|seal| seal.run.status == "failed"
+        && seal.run.validations.is_empty()
+        && seal.run.active_validation.is_none()));
+    assert_eq!(
+        super::recovery::recover(&fixture.store, &battle.id)
+            .unwrap()
+            .status,
+        "unchanged"
+    );
+    assert_eq!(
+        serde_json::to_value(
+            fixture
+                .store
+                .list_runs_by_project(&fixture.project_id)
+                .unwrap()
+        )
+        .unwrap(),
+        serde_json::to_value(jobs).unwrap()
+    );
+    fixture.unchanged();
+}
+
 #[tokio::test]
 async fn selected_delivery_uses_sealed_objects_and_preserves_head_index_and_remotes() {
     let fixture = Fixture::new(None);
@@ -493,6 +856,9 @@ fn git(root: &Path, args: &[&str]) -> String {
 
 impl Fixture {
     fn new(command: Option<&str>) -> Self {
+        Self::with_timeout(command, 1)
+    }
+    fn with_timeout(command: Option<&str>, timeout: u64) -> Self {
         let root =
             std::env::temp_dir().join(format!("growth-battle-fixture-{}", uuid::Uuid::new_v4()));
         let product = root.join("product");
@@ -500,7 +866,7 @@ impl Fixture {
         let mut config = super::config::fixture();
         if let Some(command) = command {
             config.validation.commands = vec![command.into()];
-            config.validation.timeout_seconds = 1;
+            config.validation.timeout_seconds = timeout;
         }
         config.write_new(&product).unwrap();
         std::fs::write(

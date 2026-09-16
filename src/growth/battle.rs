@@ -296,14 +296,14 @@ impl BattleAgent for HarnessAgent {
     }
 }
 
-struct ExecutionLease(std::fs::File);
+pub(super) struct ExecutionLease(std::fs::File);
 impl Drop for ExecutionLease {
     fn drop(&mut self) {
         let _ = self.0.unlock();
     }
 }
 
-fn lease(store: &Store, id: &str) -> Result<ExecutionLease> {
+pub(super) fn lease(store: &Store, id: &str) -> Result<ExecutionLease> {
     uuid::Uuid::parse_str(id).map_err(|_| anyhow!("Invalid battle ID"))?;
     let directory = store.data_root().join("growth-leases");
     archive::private_directory(&directory)?;
@@ -312,12 +312,29 @@ fn lease(store: &Store, id: &str) -> Result<ExecutionLease> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::OpenOptionsExt;
-        options.mode(0o600);
+        options.mode(0o600).custom_flags(libc::O_NOFOLLOW);
     }
-    let file = options.open(directory.join(format!("{id}.lock")))?;
+    let path = directory.join(format!("{id}.lock"));
+    if std::fs::symlink_metadata(&path)
+        .is_ok_and(|metadata| !metadata.is_file() || metadata.file_type().is_symlink())
+    {
+        return Err(anyhow!("Battle lease must be a regular file"));
+    }
+    let file = options.open(path)?;
     file.try_lock()
         .map_err(|_| anyhow!("A live controller owns this Growth Battle"))?;
     Ok(ExecutionLease(file))
+}
+
+pub(super) fn checkpoint(
+    store: &Store,
+    run: &BattleRun,
+    files: &mut BTreeMap<String, Vec<u8>>,
+) -> Result<String> {
+    files.insert("run.json".into(), serde_json::to_vec(run)?);
+    let hash = archive::seal(store.data_root(), files)?;
+    store.checkpoint_growth_attempt(run, &hash)?;
+    Ok(hash)
 }
 
 fn cancelled(store: &Store, id: &str) -> Result<bool> {
@@ -430,13 +447,14 @@ async fn run_variant(
     index: usize,
     agent: &dyn BattleAgent,
 ) -> Result<BattleRun> {
-    let mut run = BattleRun { id:uuid::Uuid::new_v4().to_string(),variant_id:variant.id.clone(),battle_id:battle.id.clone(),contract_digest:battle.contract_digest.clone(),source_snapshot_commit:battle.contract.source_snapshot_commit.clone(),candidate_commit:None,agent:agent.metadata(),implementation:None,validations:vec![],status:"running".into(),error:None,started_at:now_ms(),ended_at:0,provenance:agent.provenance(),confidence:Confidence { label:ConfidenceLabel::Low,rationale:"Proposal and command checks do not establish qualified growth; outcome telemetry is absent.".into() },outcome_provenance:Provenance::Untested };
+    let mut run = BattleRun { id:uuid::Uuid::new_v4().to_string(),variant_id:variant.id.clone(),battle_id:battle.id.clone(),contract_digest:battle.contract_digest.clone(),source_snapshot_commit:battle.contract.source_snapshot_commit.clone(),candidate_commit:None,agent:agent.metadata(),implementation:None,validations:vec![],status:"running".into(),error:None,started_at:now_ms(),ended_at:0,provenance:agent.provenance(),confidence:Confidence { label:ConfidenceLabel::Low,rationale:"Proposal and command checks do not establish qualified growth; outcome telemetry is absent.".into() },outcome_provenance:Provenance::Untested,active_validation:None };
     store.save_growth_attempt(&run)?;
     let mut files = BTreeMap::new();
     files.insert(
         "contract.json".into(),
         serde_json::to_vec(&battle.contract)?,
     );
+    checkpoint(store, &run, &mut files)?;
     let result = async {
         if cancelled(store,&battle.id)? { return Err(anyhow!("Battle cancelled")); }
         let project = store.get_local_project(&battle.project_id)?.ok_or_else(|| anyhow!("Product missing"))?;
@@ -459,12 +477,14 @@ async fn run_variant(
         let input = AgentInput { contract:&battle.contract,hypothesis:&battle.contract.hypotheses[index],files:context,competitor_index:index };
         files.insert("proposal-input.json".into(),proposal_prompt(&input)?.into_bytes());
         files.insert("proposal-instructions.txt".into(),PROPOSAL_INSTRUCTIONS.as_bytes().to_vec());
+        checkpoint(store,&run,&mut files)?;
         let proposal = agent.implement(input);
         let implementation = tokio::select! {
             result=proposal => result?,
             result=wait_cancel(store,&battle.id) => { result?; return Err(anyhow!("Battle cancelled")); }
         };
         files.insert("agent.log".into(),redact(&serde_json::to_string(&implementation)?).into_bytes());
+        checkpoint(store,&run,&mut files)?;
         apply_edits(&battle.contract.config,root,&implementation)?;
         for changed in git::changed_files(root,&battle.contract.source_snapshot_commit)? {
             battle.contract.config.check_write(root,&changed.path)?;
@@ -480,16 +500,18 @@ async fn run_variant(
         let diff=git::working_tree_diff_against(root,Some(&battle.contract.source_snapshot_commit))?;
         if diff.truncated { return Err(anyhow!("Implementation diff exceeds the archive limit")); }
         files.insert("implementation.diff".into(),redact(&diff.diff).into_bytes());
+        capture_committed_files(&run, root, &mut files)?;
+        checkpoint(store,&run,&mut files)?;
         let mut experiment=store.get_local_experiment(&variant.id)?.ok_or_else(|| anyhow!("Experiment missing"))?;
         experiment.agent_status="running".into(); store.update_local_experiment(&experiment)?;
         let snapshot=SourceSnapshot::create_at(&project,&experiment,false,store.data_root())?;
         if snapshot.revision!=commit { return Err(anyhow!("Candidate branch changed before validation")); }
-        store.save_growth_attempt(&run)?;
         for (position,command) in battle.contract.config.validation.commands.iter().enumerate() {
-            let (validation,log)=validate(store,battle,variant,&snapshot,command).await?;
+            let (validation,log)=validate(store,battle,variant,&snapshot,command,&mut run,&mut files).await?;
             files.insert(format!("validation-{position}.log"),redact(&log).into_bytes());
             run.validations.push(validation);
-            store.save_growth_attempt(&run)?;
+            run.active_validation=None;
+            checkpoint(store,&run,&mut files)?;
             if cancelled(store,&battle.id)? { return Err(anyhow!("Battle cancelled")); }
         }
         if run.validations.iter().any(|validation| validation.status!="done") { return Err(anyhow!("One or more configured validation commands failed")); }
@@ -507,6 +529,26 @@ async fn run_variant(
             }
         }
     };
+    if run.active_validation.is_some() {
+        run.status = "running".into();
+        run.ended_at = 0;
+        checkpoint(store, &run, &mut files)?;
+        return Err(anyhow!("An active validation could not be finalized; inspect/recover this battle before retrying"));
+    }
+    let hash = checkpoint(store, &run, &mut files)?;
+    store.seal_growth_attempt(&run, &hash)?;
+    if let Some(mut experiment) = store.get_local_experiment(&variant.id)? {
+        experiment.agent_status = run.status.clone();
+        store.update_local_experiment(&experiment)?;
+    }
+    Ok(run)
+}
+
+fn capture_committed_files(
+    run: &BattleRun,
+    root: &Path,
+    files: &mut BTreeMap<String, Vec<u8>>,
+) -> Result<()> {
     if let Some(implementation) = &run.implementation {
         for edit in &implementation.files {
             if edit.contents.is_some() {
@@ -516,24 +558,12 @@ async fn run_variant(
                     .ok_or_else(|| anyhow!("Candidate snapshot is missing"))?;
                 files.insert(
                     format!("files/{}", edit.path),
-                    read_blob(
-                        Path::new(&variant.worktree),
-                        commit,
-                        &edit.path,
-                        FILE_CAP as u64,
-                    )?,
+                    read_blob(root, commit, &edit.path, FILE_CAP as u64)?,
                 );
             }
         }
     }
-    files.insert("run.json".into(), serde_json::to_vec(&run)?);
-    let hash = archive::seal(store.data_root(), &files)?;
-    store.seal_growth_attempt(&run, &hash)?;
-    if let Some(mut experiment) = store.get_local_experiment(&variant.id)? {
-        experiment.agent_status = run.status.clone();
-        store.update_local_experiment(&experiment)?;
-    }
-    Ok(run)
+    Ok(())
 }
 
 async fn wait_cancel(store: &Store, id: &str) -> Result<()> {
@@ -558,6 +588,8 @@ async fn validate(
     variant: &GrowthVariant,
     snapshot: &SourceSnapshot,
     command: &str,
+    attempt: &mut BattleRun,
+    files: &mut BTreeMap<String, Vec<u8>>,
 ) -> Result<(ValidationRecord, String)> {
     let id = uuid::Uuid::new_v4().to_string();
     let directory = store.data_root().join("growth-jobs").join(&id);
@@ -607,12 +639,25 @@ async fn validate(
         cancel_requested: false,
         chat_session_id: None,
     })?;
-    localbox::run_job_with_timeout(
+    attempt.active_validation = Some(ActiveValidation {
+        run_id: id.clone(),
+        command_index: attempt.validations.len(),
+    });
+    if let Err(error) = checkpoint(store, attempt, files) {
+        store.update_status(&id, RunStatus::Failed, Some(now_ms()), None)?;
+        attempt.active_validation = None;
+        return Err(error);
+    }
+    if let Err(error) = localbox::run_job_with_timeout(
         &spec,
         &directory,
         false,
         Some(battle.contract.config.validation.timeout_seconds),
-    )?;
+    ) {
+        store.update_status(&id, RunStatus::Failed, Some(now_ms()), None)?;
+        attempt.active_validation = None;
+        return Err(error);
+    }
     store.update_status(&id, RunStatus::Running, None, None)?;
     let timer = Instant::now();
     let mut reason = None;

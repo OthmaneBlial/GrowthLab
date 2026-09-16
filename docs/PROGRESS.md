@@ -1,9 +1,11 @@
 # GrowthLab progress
 
-Current milestone: **Phase 2 — Selected delivery and local reports** (2026-09-16).
+Current milestone: **Phase 2 — Attempt checkpoints and interrupted-job recovery** (2026-09-16).
 Overall completion: **about 30%, subjective estimate against the full specification**.
 The configuration/import and three-variant replay CLI slices pass locally.
 Selected delivery and report behavior pass local Rust, real CLI and browser checks.
+Recovery passes local Rust and real CLI interruption/legacy-archive checks.
+GitHub Actions is disabled at the user's request.
 The complete dashboard/native-agent/visual-demo vertical slice and credible release
 have not passed yet.
 
@@ -67,20 +69,28 @@ have not passed yet.
   counts, selected candidate, digests, low confidence and visible provenance.
   Private context is withheld by default; disclosure and footer removal are explicit.
   Report summaries remain exportable when the original checkout is unavailable.
+- Added transactional growth schema-v4 checkpoint records while preserving
+  older sealed run serialization. Proposal context, committed files/diffs,
+  collected logs and active job links are captured before external execution.
+- Added explicit CLI recovery using the battle lease, verified checkpoints and
+  registered jobs. Live jobs stay waiting; interrupted attempts remain failed
+  or cancelled. Complete terminal checkpoints can finalize their original seals.
+  Recovery never reruns providers/commands or reads/resets mutable worktrees.
 
 ## Work in progress
 
 The Phase 1 identity/domain foundation is implemented. Broader URL/manual
 brief/non-Git onboarding and richer context remain required product work.
-Phase 2 has a tested replay CLI backend, selected delivery and local reports;
-native-agent verification, interrupted-attempt/delivery recovery and host execution
-confinement remain pending. GrowthLab API/dashboard operations are missing.
+Phase 2 has a tested replay CLI backend, selected delivery, local reports and
+checkpoint-based CLI recovery validated locally. Native-agent verification,
+incomplete launcher registration, interrupted selected-delivery recovery and host
+execution confinement remain pending. GrowthLab API/dashboard operations are missing.
 The inherited dashboard was inspected in an empty isolated dev slot, then
 stopped cleanly. This was baseline behavior, not a Growth Battle demo.
 
 ## Next three concrete tasks
 
-1. Close execution confinement and interrupted-attempt/delivery recovery gates, then
+1. Close execution confinement and remaining launch/delivery recovery gates, then
    verify genuine native-agent proposal execution without inventing provider data.
 2. Expose the working loop through GrowthLab domain APIs and a dashboard with
    actual run progress, inspectable evidence/diffs and explicit delivery controls.
@@ -110,9 +120,15 @@ stopped cleanly. This was baseline behavior, not a Growth Battle demo.
 - `node ui/scripts/check-i18n.mjs`: **passed**.
 - `node ui/scripts/check-styles.mjs`: **passed**.
 - `cargo fmt --all --check`: **passed**.
-- `cargo test --locked`: **passed**, 889 tests per binary on macOS; 2 inherited
+- `cargo test --locked`: **passed**, 895 tests per binary on macOS; 2 inherited
   tests ignored per binary (production telemetry contract and live Slurm cluster).
 - `cargo clippy --all-targets -- -D warnings`: **passed**.
+- Recovery Rust checks: **passed**. Real gated child jobs survive controller
+  interruption and remain waiting until terminal. Tampered checkpoints,
+  unrelated controller paths and missing source digests refuse outcome changes.
+  Missing process registration stays unverified. Terminal seal-finalization faults
+  preserve complete checkpoints and sealed siblings; launch-checkpoint failure
+  prevents command submission. Migration failures retain old records/version.
 - `cargo build --locked` and real-binary `scripts/test-growth-cli.py`: **passed**.
   Three UNTESTED templates persisted; permissions rejected invalid targets;
   product files/HEAD/remotes and existing cache on refused update were preserved.
@@ -123,6 +139,14 @@ stopped cleanly. This was baseline behavior, not a Growth Battle demo.
   reports omitted private context; overwrite, rerun and evidence tampering were
   refused. Product files stayed unchanged until explicit apply. These are synthetic fixtures,
   not native-agent or real growth-outcome evidence.
+- Real-binary `scripts/test-growth-recovery.py`: **passed**, including an actual
+  pre-checkpoint binary. Only its own synthetic CLI controller was hard-killed;
+  three real child commands stayed alive on their registered handles. Recovery
+  waited, then retained actual logs, exit 2, proposal context, diffs and committed
+  file artifacts with the product checkout unavailable. Interrupted attempts
+  stayed failed and ineligible. Repeat recovery preserved seals; no new jobs were
+  launched and the product HEAD/index/remotes/files stayed unchanged. Actual older
+  sealed comparisons and selected patch export survived schema-v4 migration.
 - HTML report browser review: **passed**, desktop 1600×782 CSS pixels and phone
   390×844 CSS pixels; scrollWidth equaled innerWidth, including expanded command,
   seal and reproducibility details on phone. Keyboard Enter toggled a disclosure;
@@ -145,8 +169,9 @@ stopped cleanly. This was baseline behavior, not a Growth Battle demo.
   874 tests per binary and the inherited private-output/ETXTBSY regressions.
   Removed unnecessary Windows flag clearing while retaining direct tampering
   and verification-refusal assertions. Selected delivery/report commit `76bedfa`
-  ended with Linux/Windows Clippy failures before runtime checks. These require
-  local fixes; cross-platform runtime validation remains unverified. GitHub CI
+  ended with Linux/Windows Clippy failures before runtime checks. Replaced the
+  constant `chunks_exact(2)` loop with checked `as_chunks::<2>()`; local Clippy
+  and full tests pass. Cross-platform runtime validation remains unverified. GitHub CI
   will remain disabled per the latest user instruction.
 - Community issue templates: **passed**, parsed with Ruby standard YAML.
 - GitHub topics/discussions/private vulnerability reporting: **verified enabled**.
@@ -155,7 +180,8 @@ Known environment warning: installed external Claude CLI `--version` failed
 during inherited harness detection. Native-agent execution is not verified.
 Local CLI/domain/replay validation passed. Selected delivery/report behavior on Linux/Windows,
 GrowthLab dashboard, native-agent battles, host execution confinement,
-interrupted-attempt/delivery recovery, archived render artifacts, visual
+incomplete launcher registration, interrupted selected-delivery recovery,
+archived render artifacts, visual
 demo, release installers and telemetry adapters remain **unverified / not
 implemented**. No growth lift, adoption, native-agent execution or public release
 is claimed.

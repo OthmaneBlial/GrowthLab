@@ -32,12 +32,20 @@
 - Added create-only local patch/report files and self-contained HTML/Markdown
   reports with actual command failures, provenance, diff counts, selection and
   reproducibility digests. Private context is omitted by default; disclosure is
-  explicit and footer attribution removable. Screenshots remain pending.
+  explicit and footer attribution removable. Actual CLI report screenshots are
+  committed; archived product render screenshots remain pending.
 - Removed unnecessary Windows read-only flag clearing from the archive tamper
   fixture; its write-and-refuse-verification assertions remain intact.
+- Added transactional growth schema-v4 checkpoint migration, durable attempt/job
+  links and explicit recovery without command/provider reruns or worktree resets.
+  Interrupted attempts remain failed/cancelled; verified complete terminal
+  checkpoints can finalize their original seals without changing sealed siblings.
+- Disabled all six GitHub Actions workflows at the user's request. Validation is
+  local only until a new instruction enables automation.
 
 This is not a tagged credible release. The growth-native dashboard,
-verified native execution, host execution confinement, interrupted-attempt recovery,
+verified native execution, host execution confinement, incomplete launcher registration
+and interrupted selected-delivery recovery,
 bundled visual replay demo, archived render artifacts and real outcome measurement
 remain work in the roadmap. No telemetry lift, production readiness, public
 installer or demonstrated adoption is claimed.

@@ -9,7 +9,8 @@ Local-first. Open source. No Docker required.
 > Development status: source alpha. Product configuration, Git workspace import
 > and a three-variant CLI replay battle are implemented, with real isolated edits,
 > validations, sealed evidence, transparent command comparison, explicit candidate
-> selection, guarded apply/export and private-by-default HTML/Markdown reports. The dashboard
+> selection, guarded apply/export, interrupted-attempt recovery and private-by-default
+> HTML/Markdown reports. The dashboard
 > retains the inherited research UI; the visual demo and a credible release are being built.
 > No conversion lift, winning variant, adoption, or production readiness is claimed.
 
@@ -50,6 +51,8 @@ entry point. Install only the canonical command with
 The [battle workflow](docs/battles.md) documents replay execution and current native limits.
 The [delivery workflow](docs/delivery.md) covers selected patches, apply previews
 and self-contained reports with explicit context disclosure.
+The [recovery workflow](docs/recovery.md) explains verified checkpoints, surviving
+jobs and interrupted outcomes without rerunning providers or commands.
 Do not use the upstream OpenResearch installer to install GrowthLab.
 
 ## Architecture and privacy

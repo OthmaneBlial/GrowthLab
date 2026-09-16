@@ -107,6 +107,13 @@ pub struct ValidationRecord {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ActiveValidation {
+    pub run_id: String,
+    pub command_index: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct BattleRun {
     pub id: String,
     pub variant_id: String,
@@ -125,6 +132,9 @@ pub struct BattleRun {
     pub provenance: Provenance,
     pub confidence: Confidence,
     pub outcome_provenance: Provenance,
+    // Keep old sealed run serialization byte-for-byte compatible.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_validation: Option<ActiveValidation>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -132,4 +142,13 @@ pub struct BattleRun {
 pub struct SealedBattleRun {
     pub run: BattleRun,
     pub archive_digest: String,
+}
+
+/// A live attempt/checkpoint is not a terminal seal or evaluation result.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct GrowthAttempt {
+    pub run: BattleRun,
+    pub checkpoint_digest: Option<String>,
+    pub archive_digest: Option<String>,
 }

@@ -251,11 +251,12 @@ fn patch(store: &Store, selected: &SelectedCandidate) -> Result<(PathBuf, Vec<u8
         .split(|byte| *byte == 0)
         .filter(|field| !field.is_empty())
         .collect();
-    if fields.is_empty() || fields.len() % 2 != 0 {
+    let (pairs, remainder) = fields.as_chunks::<2>();
+    if pairs.is_empty() || !remainder.is_empty() {
         return Err(anyhow!("Candidate change metadata is missing or malformed"));
     }
     let mut paths = Vec::new();
-    for pair in fields.chunks_exact(2) {
+    for pair in pairs {
         let metadata =
             std::str::from_utf8(pair[0]).map_err(|_| anyhow!("Invalid candidate metadata"))?;
         let path = std::str::from_utf8(pair[1]).map_err(|_| anyhow!("Invalid candidate path"))?;

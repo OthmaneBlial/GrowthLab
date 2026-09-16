@@ -458,6 +458,7 @@ mod tests {
             "growthlab select variant",
             "growthlab export variant --output patch",
             "growthlab report battle --output report.html",
+            "growthlab recover battle",
             "growthlab battle-status battle --cancel",
             "growthlab config future-write",
         ] {
