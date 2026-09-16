@@ -124,7 +124,10 @@ def main():
             assert current_module and module.group(1) == current_module.group(1), "The dashboard must serve the latest built asset path."
             assert get(module.group(1)) == (ui_root / module.group(1).lstrip("/")).read_bytes(), "The dashboard server must serve the current built asset."
             report = get(f"/api/growth/battles/{battle}/report?format=html").decode()
-            assert all(label in report for label in ["SIMULATED", "OBSERVED", "UNTESTED", "SEO page hygiene"])
+            expected_report_labels = ["SIMULATED", "OBSERVED", "UNTESTED", "SEO page hygiene"]
+            if os.environ.get("GROWTHLAB_REQUIRE_SCREENSHOT") == "1":
+                expected_report_labels.extend(["Static render checks", "static-render-hints-v1"])
+            assert all(label in report for label in expected_report_labels)
             assert "PatchKit" not in report and str(root) not in report
             products = list((root / "lab/growth-demo").glob("*/product"))
             assert len(products) == 1
