@@ -37,6 +37,8 @@ pub struct EvaluationRow {
     pub render: Option<RenderRubric>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub performance: Option<RenderRubric>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub accessibility: Option<RenderRubric>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -570,6 +572,187 @@ pub fn page_quality_rubric(html: &str) -> PageQualityRubric {
     }
 }
 
+/// Score conservative accessibility structure hints from archived HTML. This
+/// is an estimated source review: it checks language, landmarks, heading
+/// structure, image alternatives, named controls and form labels without
+/// pretending to replace a screen reader, keyboard session or WCAG audit.
+pub fn accessibility_rubric(html: &str) -> Option<RenderRubric> {
+    if html.trim().is_empty() {
+        return None;
+    }
+
+    let language = openings(html, "html")
+        .first()
+        .and_then(|tag| attribute(tag, "lang"))
+        .is_some_and(|value| !value.trim().is_empty());
+    let main_count = openings(html, "main").len();
+    let navigation = openings(html, "nav");
+    let labelled_navigation = navigation
+        .iter()
+        .filter(|tag| {
+            non_empty_attribute(tag, "aria-label") || non_empty_attribute(tag, "aria-labelledby")
+        })
+        .count();
+
+    let heading_levels = Regex::new(r"(?is)<h([1-6])\b")
+        .expect("static heading-level pattern is valid")
+        .captures_iter(html)
+        .filter_map(|capture| capture.get(1)?.as_str().parse::<u8>().ok())
+        .collect::<Vec<_>>();
+    let h1_count = paired(html, "h1")
+        .iter()
+        .filter(|heading| !text_content(heading).is_empty())
+        .count();
+    let skipped_heading = heading_levels
+        .windows(2)
+        .any(|levels| levels[1] > levels[0].saturating_add(1));
+
+    let images = openings(html, "img");
+    let missing_alt = images
+        .iter()
+        .filter(|tag| attribute(tag, "alt").is_none())
+        .count();
+    let (interactive, unnamed, forms, labelled) = quality_control_counts(html);
+
+    let dimensions = vec![
+        dimension(
+            "language",
+            "Document language",
+            u8::from(language) * 15,
+            15,
+            [if language {
+                "The html element declares a non-empty lang attribute.".into()
+            } else {
+                "The html element does not declare a non-empty lang attribute.".into()
+            }],
+        ),
+        dimension(
+            "landmarks",
+            "Landmark structure",
+            if main_count == 1 && (navigation.is_empty() || labelled_navigation == navigation.len()) {
+                15
+            } else if main_count == 1 || labelled_navigation > 0 {
+                8
+            } else {
+                0
+            },
+            15,
+            [format!(
+                "Found {main_count} main landmark(s) and {labelled_navigation} labelled navigation landmark(s) out of {}.",
+                navigation.len()
+            )],
+        ),
+        dimension(
+            "headings",
+            "Heading hierarchy",
+            if h1_count == 1 && !skipped_heading {
+                20
+            } else if h1_count == 1 {
+                14
+            } else if h1_count > 1 {
+                8
+            } else {
+                0
+            },
+            20,
+            [format!(
+                "Found {h1_count} non-empty h1 and {} heading elements; skipped levels: {}.",
+                heading_levels.len(),
+                if skipped_heading { "yes" } else { "no" }
+            )],
+        ),
+        dimension(
+            "images",
+            "Image alternatives",
+            if images.is_empty() || missing_alt == 0 {
+                15
+            } else if missing_alt < images.len() {
+                7
+            } else {
+                0
+            },
+            15,
+            [if images.is_empty() {
+                "No images are present; there are no image alternatives to inspect.".into()
+            } else {
+                format!(
+                    "Found {} images; {missing_alt} are missing an alt attribute. Empty alt text is allowed for intentionally decorative images.",
+                    images.len()
+                )
+            }],
+        ),
+        dimension(
+            "controls",
+            "Named interactive controls",
+            if interactive == 0 || unnamed == 0 {
+                20
+            } else if unnamed < interactive {
+                10
+            } else {
+                0
+            },
+            20,
+            [format!(
+                "Found {interactive} links or buttons; {unnamed} have no visible or explicit accessible name."
+            )],
+        ),
+        dimension(
+            "forms",
+            "Form control labels",
+            if forms == 0 || labelled == forms {
+                15
+            } else if labelled > 0 {
+                7
+            } else {
+                0
+            },
+            15,
+            [format!(
+                "Found {forms} form controls; {labelled} have an explicit label association or accessible name."
+            )],
+        ),
+    ];
+    let recommendations = dimensions
+        .iter()
+        .filter(|item| item.status != "strong")
+        .filter_map(|item| match item.key.as_str() {
+            "language" => {
+                Some("Declare the document language with a non-empty html lang attribute.".into())
+            }
+            "landmarks" => {
+                Some("Provide one main landmark and label each navigation landmark.".into())
+            }
+            "headings" => Some("Use one clear h1 and avoid skipping heading levels.".into()),
+            "images" => Some(
+                "Add an alt attribute to every image, using empty text only for decorative images."
+                    .into(),
+            ),
+            "controls" => Some(
+                "Give every link and button visible text or an explicit accessible name.".into(),
+            ),
+            "forms" => Some(
+                "Associate every form control with a visible label or an accessible name.".into(),
+            ),
+            _ => None,
+        })
+        .collect();
+    Some(RenderRubric {
+        id: "accessibility-structure-v1".into(),
+        label: "Accessibility structure hints (estimated)".into(),
+        score: dimensions.iter().map(|item| item.score as u16).sum::<u16>() as u8,
+        max_score: 100,
+        provenance: Provenance::Estimated,
+        dimensions,
+        recommendations,
+        calculation: "100-point source-structure review: language 15, landmarks 15, heading hierarchy 20, image alternatives 15, named controls 20 and form labels 15. It is a transparent prompt for follow-up testing, not a WCAG or assistive-technology score.".into(),
+        limitations: vec![
+            "This inspects archived HTML only; it does not run a browser, keyboard path, screen reader or automated axe/WCAG audit.".into(),
+            "Color contrast, focus visibility, dynamic announcements, target size, timing and interaction semantics are not established by these hints.".into(),
+            "Review the rendered page with keyboard and assistive technology before shipping; the estimate does not prove accessibility or conversion lift.".into(),
+        ],
+    })
+}
+
 /// Score the evidence captured by the local static-preview renderer. This is
 /// deliberately an observed inspection rubric: it rewards complete desktop
 /// and phone captures, a page that fits the browser viewport and non-empty
@@ -914,10 +1097,10 @@ pub trait BattleEvaluator {
 pub struct ConfiguredCommandEvaluator;
 impl BattleEvaluator for ConfiguredCommandEvaluator {
     fn id(&self) -> &str {
-        "configured-command-pass-v1+seo-page-hygiene-v1+static-render-hints-v1+browser-timing-hints-v1"
+        "configured-command-pass-v1+seo-page-hygiene-v1+page-accessibility-hints-v1+static-render-hints-v1+browser-timing-hints-v1"
     }
     fn calculation(&self) -> &str {
-        "Configured command pass fraction is shown alongside independent estimated SEO/page-quality hints, observed static-render checks and optional observed browser-timing hints. Eligibility requires a successful sealed run, the exact frozen command list and one immutable candidate commit; none of these signals proves traffic, ranking, performance, accessibility or conversion lift."
+        "Configured command pass fraction is shown alongside independent estimated SEO/page-quality/accessibility hints, observed static-render checks and optional observed browser-timing hints. Eligibility requires a successful sealed run, the exact frozen command list and one immutable candidate commit; none of these signals proves traffic, ranking, performance, accessibility or conversion lift."
     }
     fn evaluate(
         &self,
@@ -947,13 +1130,14 @@ impl BattleEvaluator for ConfiguredCommandEvaluator {
         let html = run.and_then(|run| html_for_run(battle, run));
         let rubric = html.map(seo_rubric);
         let quality = html.map(page_quality_rubric);
+        let accessibility = html.and_then(accessibility_rubric);
         let render = sealed
             .and_then(|sealed| sealed.run.static_preview.as_ref())
             .and_then(render_rubric);
         let performance = sealed
             .and_then(|sealed| sealed.run.static_preview.as_ref())
             .and_then(performance_rubric);
-        EvaluationRow { variant_id:variant_id.into(),hypothesis_id:None,title:title.into(),status:run.map(|run|run.status.clone()).unwrap_or("untested".into()),passed_commands:passed,required_commands:required,pass_fraction:(!checks.is_empty() && required>0).then_some(passed as f64 / required.max(1) as f64),eligible:required>0 && matches && passed==required && run.is_some_and(|run|run.status=="done"),checks,implementation_provenance:run.map(|run|run.provenance).unwrap_or(Provenance::Untested),check_provenance:if run.is_some_and(|run|!run.validations.is_empty()) {Provenance::Observed} else {Provenance::Untested},outcome_provenance:Provenance::Untested,confidence:Confidence { label:ConfidenceLabel::Low,rationale:"Command checks and structural SEO, page-quality or static-render signals cannot establish outcome lift; candidate choice needs user review and real product evidence.".into() },archive_digest:sealed.map(|sealed|sealed.archive_digest.clone()),rubric,quality,render,performance }
+        EvaluationRow { variant_id:variant_id.into(),hypothesis_id:None,title:title.into(),status:run.map(|run|run.status.clone()).unwrap_or("untested".into()),passed_commands:passed,required_commands:required,pass_fraction:(!checks.is_empty() && required>0).then_some(passed as f64 / required.max(1) as f64),eligible:required>0 && matches && passed==required && run.is_some_and(|run|run.status=="done"),checks,implementation_provenance:run.map(|run|run.provenance).unwrap_or(Provenance::Untested),check_provenance:if run.is_some_and(|run|!run.validations.is_empty()) {Provenance::Observed} else {Provenance::Untested},outcome_provenance:Provenance::Untested,confidence:Confidence { label:ConfidenceLabel::Low,rationale:"Command checks and structural SEO, page-quality, accessibility or static-render signals cannot establish outcome lift; candidate choice needs user review and real product evidence.".into() },archive_digest:sealed.map(|sealed|sealed.archive_digest.clone()),rubric,quality,accessibility,render,performance }
     }
 }
 
@@ -1023,7 +1207,10 @@ pub fn compare_with(
 
 #[cfg(test)]
 mod tests {
-    use super::{page_quality_rubric, performance_rubric, render_rubric, seo_rubric, Provenance};
+    use super::{
+        accessibility_rubric, page_quality_rubric, performance_rubric, render_rubric, seo_rubric,
+        Provenance,
+    };
     use crate::growth::preview::{PreviewRecord, PreviewRenderCheck, PreviewStatus};
 
     #[test]
@@ -1113,6 +1300,53 @@ mod tests {
         );
         assert_eq!(rubric.dimensions[3].key, "loading");
         assert_eq!(rubric.dimensions[3].status, "strong");
+    }
+
+    #[test]
+    fn accessibility_rubric_scores_complete_structure_without_certification_claims() {
+        let html = r#"<!doctype html><html lang="en"><head><title>Accessible page</title></head>
+            <body><header><nav aria-label="Primary"><a href="/">Home</a></nav></header>
+            <main><h1>Make your next test clearer</h1><h2>Review the evidence</h2>
+              <p>Useful copy keeps the goal and the next action together.</p>
+              <img src="hero.png" alt="Product review screen">
+              <form><label for="email">Email</label><input id="email" type="email"></form>
+              <button type="button">Continue</button></main><footer>GrowthLab</footer></body></html>"#;
+        let rubric =
+            accessibility_rubric(html).expect("non-empty HTML produces accessibility hints");
+        assert_eq!(rubric.id, "accessibility-structure-v1");
+        assert_eq!(rubric.provenance, Provenance::Estimated);
+        assert_eq!(rubric.max_score, 100);
+        assert_eq!(rubric.score, 100);
+        assert_eq!(rubric.dimensions.len(), 6);
+        assert!(rubric.recommendations.is_empty());
+        assert!(rubric
+            .limitations
+            .iter()
+            .any(|limitation| limitation.contains("screen reader")));
+    }
+
+    #[test]
+    fn accessibility_rubric_flags_missing_names_alternatives_and_landmarks() {
+        let rubric = accessibility_rubric(
+            r#"<html><body><h2>Skipped heading</h2><img src="hero.png"><a href="/next"></a><button></button><input id="name"></body></html>"#,
+        )
+        .expect("non-empty HTML produces accessibility hints");
+        assert!(rubric.score < 40);
+        assert_eq!(rubric.dimensions[0].status, "missing");
+        assert_eq!(rubric.dimensions[1].status, "missing");
+        assert_eq!(rubric.dimensions[2].status, "missing");
+        assert_eq!(rubric.dimensions[3].status, "missing");
+        assert_eq!(rubric.dimensions[4].status, "missing");
+        assert_eq!(rubric.dimensions[5].status, "missing");
+        assert!(rubric
+            .recommendations
+            .iter()
+            .any(|recommendation| recommendation.contains("accessible name")));
+    }
+
+    #[test]
+    fn accessibility_rubric_stays_absent_for_empty_documents() {
+        assert!(accessibility_rubric("   ").is_none());
     }
 
     #[test]

@@ -84,6 +84,12 @@ def main():
                 if index == 1:
                     assert any("<h1>" in recommendation for recommendation in rubric["recommendations"])
                 assert all(0 <= dimension["score"] <= dimension["maxScore"] for dimension in rubric["dimensions"])
+                accessibility = row.get("accessibility")
+                assert accessibility and accessibility["id"] == "accessibility-structure-v1"
+                assert accessibility["provenance"] == "ESTIMATED" and accessibility["maxScore"] == 100
+                assert len(accessibility["dimensions"]) == 6
+                assert isinstance(accessibility["recommendations"], list)
+                assert all(0 <= dimension["score"] <= dimension["maxScore"] for dimension in accessibility["dimensions"])
                 variant = row["variantId"]
                 artifacts = json.loads(get(f"/api/growth/variants/{variant}/artifacts"))
                 assert artifacts["sealed"]
@@ -130,7 +136,7 @@ def main():
             assert current_module and module.group(1) == current_module.group(1), "The dashboard must serve the latest built asset path."
             assert get(module.group(1)) == (ui_root / module.group(1).lstrip("/")).read_bytes(), "The dashboard server must serve the current built asset."
             report = get(f"/api/growth/battles/{battle}/report?format=html").decode()
-            expected_report_labels = ["SIMULATED", "OBSERVED", "UNTESTED", "SEO page hygiene", "Hypothesis ID"]
+            expected_report_labels = ["SIMULATED", "OBSERVED", "UNTESTED", "SEO page hygiene", "Accessibility structure hints", "Hypothesis ID"]
             if os.environ.get("GROWTHLAB_REQUIRE_SCREENSHOT") == "1":
                 expected_report_labels.extend(["Static render checks", "static-render-hints-v1", "Local browser timing hints (observed)", "browser-timing-hints-v1"])
             missing_report_labels = [label for label in expected_report_labels if label not in report]

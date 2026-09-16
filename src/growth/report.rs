@@ -62,6 +62,8 @@ pub struct ReportVariant {
     pub render: Option<RenderRubric>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub performance: Option<RenderRubric>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub accessibility: Option<RenderRubric>,
 }
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -242,6 +244,7 @@ pub fn build(store: &Store, id: &str, options: &ReportOptions) -> Result<BattleR
             quality: row.quality.clone(),
             render: row.render.clone(),
             performance: row.performance.clone(),
+            accessibility: row.accessibility.clone(),
         });
     }
     Ok(BattleReport {
@@ -306,10 +309,10 @@ pub fn markdown(report: &BattleReport) -> String {
         )),
         None => out.push_str("No candidate has been selected.\n\n"),
     }
-    out.push_str("| Variant | Hypothesis ID | Status | Configured checks | SEO page hygiene | Page quality hints | Static render | Browser timing | Eligible | Proposal | Checks | Outcome |\n|---|---|---|---|---|---|---|---|---|---|---|---|\n");
+    out.push_str("| Variant | Hypothesis ID | Status | Configured checks | SEO page hygiene | Page quality hints | Accessibility hints | Static render | Browser timing | Eligible | Proposal | Checks | Outcome |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|\n");
     for row in &report.variants {
         out.push_str(&format!(
-            "| {} | {} | {} | {} / {} | {} | {} | {} | {} | {} | {} | {} | {} |\n",
+            "| {} | {} | {} | {} / {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |\n",
             md(&row.label),
             md(row.hypothesis_id.as_deref().unwrap_or("Not recorded")),
             md(&row.status),
@@ -322,6 +325,13 @@ pub fn markdown(report: &BattleReport) -> String {
             row.quality
                 .as_ref()
                 .map(|quality| format!("{}/{} ESTIMATED", quality.score, quality.max_score))
+                .unwrap_or_else(|| "—".into()),
+            row.accessibility
+                .as_ref()
+                .map(|accessibility| format!(
+                    "{}/{} ESTIMATED",
+                    accessibility.score, accessibility.max_score
+                ))
                 .unwrap_or_else(|| "—".into()),
             row.render
                 .as_ref()
@@ -423,6 +433,44 @@ pub fn markdown(report: &BattleReport) -> String {
             }
             out.push_str("### Quality-hint limits\n\n");
             for limitation in &quality.limitations {
+                out.push_str(&format!("- {}\n", md(limitation)));
+            }
+            out.push('\n');
+        }
+        if let Some(accessibility) = &row.accessibility {
+            out.push_str(&format!(
+                "Accessibility structure hints: **{}/{}** (**ESTIMATED**). {}\n\n",
+                accessibility.score,
+                accessibility.max_score,
+                md(&accessibility.calculation)
+            ));
+            for dimension in &accessibility.dimensions {
+                out.push_str(&format!(
+                    "- **{}**: {}/{} ({}) — {}\n",
+                    md(&dimension.label),
+                    dimension.score,
+                    dimension.max_score,
+                    md(&dimension.status),
+                    dimension
+                        .evidence
+                        .iter()
+                        .map(|evidence| md(evidence))
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                ));
+            }
+            out.push('\n');
+            out.push_str("### Accessibility next steps\n\n");
+            if accessibility.recommendations.is_empty() {
+                out.push_str("- No structural gaps were found by these local hints.\n\n");
+            } else {
+                for recommendation in &accessibility.recommendations {
+                    out.push_str(&format!("- {}\n", md(recommendation)));
+                }
+                out.push('\n');
+            }
+            out.push_str("### Accessibility limits\n\n");
+            for limitation in &accessibility.limitations {
                 out.push_str(&format!("- {}\n", md(limitation)));
             }
             out.push('\n');
@@ -680,6 +728,47 @@ pub fn document(report: &BattleReport) -> String {
                 limitations
             )
         }).unwrap_or_default();
+        let accessibility = row.accessibility.as_ref().map(|accessibility| {
+            let dimensions = accessibility
+                .dimensions
+                .iter()
+                .map(|dimension| {
+                    format!(
+                        "<li><strong>{}</strong> {}/{} · {}<span>{}</span></li>",
+                        html(&dimension.label),
+                        dimension.score,
+                        dimension.max_score,
+                        html(&dimension.status),
+                        html(&dimension.evidence.join(" "))
+                    )
+                })
+                .collect::<String>();
+            let limitations = accessibility
+                .limitations
+                .iter()
+                .map(|limitation| format!("<li>{}</li>", html(limitation)))
+                .collect::<String>();
+            let recommendations = if accessibility.recommendations.is_empty() {
+                "<li>No structural gaps were found by these local hints.</li>".into()
+            } else {
+                accessibility
+                    .recommendations
+                    .iter()
+                    .map(|recommendation| format!("<li>{}</li>", html(recommendation)))
+                    .collect::<String>()
+            };
+            format!(
+                r#"<details class="rubric accessibility"><summary><span>{}</span><strong>{}/{} · {}</strong></summary><p>{}</p><ul>{}</ul><p class="rubric-recommendations">Suggested next steps</p><ul>{}</ul><p class="rubric-limits">Limits</p><ul>{}</ul></details>"#,
+                html(&accessibility.label),
+                accessibility.score,
+                accessibility.max_score,
+                provenance(accessibility.provenance),
+                html(&accessibility.calculation),
+                dimensions,
+                recommendations,
+                limitations
+            )
+        }).unwrap_or_default();
         let render = row.render.as_ref().map(|render| {
             let dimensions = render
                 .dimensions
@@ -762,8 +851,8 @@ pub fn document(report: &BattleReport) -> String {
                 limitations
             )
         }).unwrap_or_default();
-        out.push_str(&format!(r#"</div></details>{}{}{}{}<dl class="provenance"><dt>Proposal</dt><dd>{}</dd><dt>Checks</dt><dd>{}</dd><dt>Growth outcome</dt><dd>{}</dd></dl><p class="diff-summary"><strong>{}</strong> files changed <span>+{} / −{} text lines</span></p>"#,
-            rubric,quality,render,performance,provenance(row.implementation_provenance),provenance(row.check_provenance),provenance(row.outcome_provenance),row.files_changed,row.lines_added,row.lines_removed));
+        out.push_str(&format!(r#"</div></details>{}{}{}{}{}<dl class="provenance"><dt>Proposal</dt><dd>{}</dd><dt>Checks</dt><dd>{}</dd><dt>Growth outcome</dt><dd>{}</dd></dl><p class="diff-summary"><strong>{}</strong> files changed <span>+{} / −{} text lines</span></p>"#,
+            rubric,quality,accessibility,render,performance,provenance(row.implementation_provenance),provenance(row.check_provenance),provenance(row.outcome_provenance),row.files_changed,row.lines_added,row.lines_removed));
         if let Some(summary) = &row.implementation_summary {
             out.push_str(&format!(
                 "<p class=\"implementation\">{}</p>",

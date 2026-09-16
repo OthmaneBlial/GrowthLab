@@ -73,6 +73,7 @@ export interface SeoRubric { id: string; label: string; score: number; maxScore:
 export interface PageQualityRubric { id: string; label: string; score: number; maxScore: number; provenance: Provenance; dimensions: RubricDimension[]; recommendations: string[]; calculation: string; limitations: string[] }
 export interface RenderRubric { id: string; label: string; score: number; maxScore: number; provenance: Provenance; dimensions: RubricDimension[]; recommendations: string[]; calculation: string; limitations: string[] }
 export type PerformanceRubric = RenderRubric;
+export type AccessibilityRubric = RenderRubric;
 export interface RemoteSeoAudit {
   url: string; retrievedAt: number; httpStatus: number; contentType: string | null;
   robots: { url: string; status: number; allowed: boolean; matchedRule: string | null; retrievedAt: number; limitation: string };
@@ -88,7 +89,7 @@ export interface Comparison {
   recommendedCandidates: string[];
   rows: { variantId: string; hypothesisId?: string; title: string; status: string; checks: Check[];
     passedCommands: number; requiredCommands: number; eligible: boolean; archiveDigest: string | null;
-    implementationProvenance: Provenance; checkProvenance: Provenance; outcomeProvenance: Provenance; confidence: Confidence; rubric?: SeoRubric; quality?: PageQualityRubric; render?: RenderRubric; performance?: PerformanceRubric }[];
+    implementationProvenance: Provenance; checkProvenance: Provenance; outcomeProvenance: Provenance; confidence: Confidence; rubric?: SeoRubric; quality?: PageQualityRubric; accessibility?: AccessibilityRubric; render?: RenderRubric; performance?: PerformanceRubric }[];
 }
 export interface ArtifactList {
   runId: string; archiveDigest: string; sealed: boolean;
