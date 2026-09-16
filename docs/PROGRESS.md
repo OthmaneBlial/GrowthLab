@@ -1,15 +1,16 @@
 # GrowthLab progress
 
-Current milestone: **Phase 2 — Required validation isolation, verified on macOS** (2026-09-16).
-Overall completion: **about 30%, subjective estimate against the full specification**.
+Current milestone: **Phase 2/3 — GrowthLab domain API and dashboard validation** (2026-09-16).
+Overall completion: **about 35%, subjective estimate against the full specification**.
 The configuration/import and three-variant replay CLI slices pass locally.
 Selected delivery and report behavior pass local Rust, real CLI and browser checks.
 Recovery passes local Rust and real CLI interruption/legacy-archive checks.
 Validation commands now require an OS confinement driver. macOS isolation and
 sealed policy digests pass local checks; Linux runtime verification remains pending.
 GitHub Actions is disabled at the user's request.
-The complete dashboard/native-agent/visual-demo vertical slice and credible release
-have not passed yet.
+The GrowthLab API and initial dashboard pass local Rust/UI and synthetic real
+browser checks. The complete native-agent/visual-demo vertical slice
+and credible release have not passed yet.
 
 ## Completed
 
@@ -89,6 +90,26 @@ have not passed yet.
 - Kept captured logs outside the jail through trusted pipe relays. Unix cancellation
   now signals the registered process group directly and uses absolute process tools,
   preserving termination when the supervisor's PATH contains no tools.
+- Added GrowthLab domain APIs for committed workspace import, hypotheses, battles,
+  execution/cancellation/recovery, comparison, verified artifacts and explicit
+  selected delivery/report downloads, reusing the exact Rust CLI battle engine.
+- Added owned background controllers with captured Store roots, exact project
+  admission and shared storage leases. Other dashboards cannot move storage
+  during these API operations/controllers; live readers do not hold the execution
+  gate. Shutdown requests cancellation only for owned workers.
+- Added real HTTP integration tests with three genuinely live gated jobs, two
+  eligible variants and actual exit 2. They verify cancellation/shutdown,
+  storage/deletion guards, cross-origin refusal, verified SSE snapshots, artifact
+  privacy/tampering refusal and explicit delivery with product HEAD/index/remotes
+  preserved. Gates strengthened live-overlap proof without weakening assertions.
+- Added GrowthLab home/recent workspaces, workspace/goal composer, battle cards,
+  active checkpoint/sealed status, decomposable configured-check fractions,
+  evidence and escaped diff/files/logs, explicit selection/export/apply preview
+  and private-context-free report downloads through those APIs.
+  Replay proposals, observed checks and untested growth outcomes remain distinct.
+- Added deep-link UUID validation, keyboard inspection tabs, phone-accessible
+  workspace links, theme support, stale-view guards and failed-evidence delivery
+  refusal. Inherited research routes and their resume tests remain compatible.
 
 ## Work in progress
 
@@ -98,18 +119,18 @@ Phase 2 has a tested replay CLI backend, selected delivery, local reports and
 checkpoint-based CLI recovery and macOS validation confinement validated locally.
 Native-agent verification, incomplete launcher registration, interrupted
 selected-delivery recovery and Linux confinement runtime verification remain pending.
-GrowthLab API/dashboard operations are missing. Windows validation is unsupported.
-The inherited dashboard was inspected in an empty isolated dev slot, then
-stopped cleanly. This was baseline behavior, not a Growth Battle demo.
+The initial GrowthLab API/dashboard operations now pass local and real synthetic
+browser checks. Complete tree/settings/localized UX and bundled
+candidate renders remain pending. Windows validation is unsupported.
 
 ## Next three concrete tasks
 
-1. Expose the working loop through GrowthLab domain APIs and a dashboard with
-   actual run progress, inspectable evidence/diffs and explicit delivery controls.
+1. Add the bundled one-command visual demo and archived candidate render artifacts,
+   then create a concise real recording and richer inspectable quality evaluation.
 2. Close remaining launch/delivery recovery and cross-platform confinement gates,
    then verify genuine native-agent proposals without inventing provider data.
-3. Add the bundled one-command visual demo and archived render artifacts,
-   inspect interactions/mobile, capture real screenshots/video and validate releases.
+3. Complete tree/settings/localized UX, broader inputs/playbooks/measurement and
+   validate credible release packaging against the full specification.
 
 ## Architectural decisions
 
@@ -134,7 +155,7 @@ stopped cleanly. This was baseline behavior, not a Growth Battle demo.
 - `node ui/scripts/check-i18n.mjs`: **passed**.
 - `node ui/scripts/check-styles.mjs`: **passed**.
 - `cargo fmt --all --check`: **passed**.
-- `cargo test --locked`: **passed**, 897 tests per binary on macOS; 2 inherited
+- `cargo test --locked`: **passed**, 900 tests per binary on macOS; 2 inherited
   tests ignored per binary (production telemetry contract and live Slurm cluster).
 - `cargo clippy --all-targets -- -D warnings`: **passed**.
 - Real macOS isolation checks: **passed**. Node can write its candidate/scratch
@@ -183,7 +204,41 @@ stopped cleanly. This was baseline behavior, not a Growth Battle demo.
   `screenshots/cli-report-desktop.jpg` and `screenshots/cli-report-phone.jpg`, with
   current phone isolation details in `screenshots/cli-report-phone-isolation.png`;
   these show synthetic CLI report output, not the future dashboard or product renders.
-- UI localized generation/typecheck/unit tests: **passed**, 163 tests.
+- UI localized generation/typecheck/unit tests: **passed**, 166 tests. New view
+  tests distinguish seals/checkpoints, completed selections and actual active
+  command phases; deep-link tests preserve inherited route assertions.
+- `pnpm build` in ui: **passed**, regenerated embedded assets. The inherited
+  circular route-generator warning and eager bundle size warning remain visible.
+  GrowthLab screen localization and bundle splitting remain pending.
+- GrowthLab dashboard real Chrome flow: **passed** on an owned fictional product
+  in an empty isolated development slot. UI import, goal preparation, local replay
+  file loading and actual execution produced three real worktrees/checks. All
+  three displayed active command execution; terminal exit codes were 0, 2 and 0.
+  The failed candidate could not be selected. Actual source diffs, captured logs,
+  observed failure/calculation/policy digests and private-context-free reporting
+  were inspectable. No native execution or growth-outcome evidence is inferred.
+- Dashboard selected delivery: **passed**. UI selection/export generated the
+  exact reviewed patch while leaving the product untouched. A separate apply
+  checkbox/button changed only the selected homepage in the owned fixture;
+  actual filesystem checks preserved product HEAD/index/remotes and confirmed
+  the completed delivery receipt. No product commit/push/deploy occurred.
+- Dashboard responsive/keyboard checks: **passed**, desktop 1280×800 and phone
+  390×844 CSS pixels. Root scrollWidth equaled innerWidth; main scrollWidth equaled
+  clientWidth, including expanded failure details and wrapped artifact text.
+  ArrowRight/End selected the artifact tab; keyboard Enter expanded the failed
+  check. Phone Home exposed existing workspace links. Invalid non-Git import
+  showed an actionable error without creating another workspace. No captured
+  console warnings/errors. Temporary viewport override was reset and the owned
+  browser tab closed after verification.
+- Actual browser HTML report download: **passed**, 16,137 bytes, verified against
+  the same API report apart from its fresh generation timestamp. Private product
+  name/path were absent; SIMULATED/OBSERVED/UNTESTED remained visible. The browser
+  download-event watcher timed out although the file was successfully saved;
+  file contents provided the authoritative confirmation.
+- Actual dashboard screenshots are committed in `screenshots/growth-battle-live.png`,
+  `growth-battle-desktop.png`, `growth-battle-phone.png`, `growth-battle-phone-failure.png`
+  and `growth-battle-phone-artifacts.png`. They show real Rust execution of an
+  owned synthetic replay, not native-agent runs, candidate HTML renders or growth lift.
 - Upstream baseline `node scripts/dev-slot.mjs start --db empty`: **passed**,
   backend 4901/UI 5201; slot subsequently stopped cleanly.
 - Upstream baseline `/api/health`: **passed**, protocol 2, version 0.2.3.
@@ -207,7 +262,7 @@ stopped cleanly. This was baseline behavior, not a Growth Battle demo.
 Known environment warning: installed external Claude CLI `--version` failed
 during inherited harness detection. Native-agent execution is not verified.
 Local CLI/domain/replay validation passed. Selected delivery/report behavior on Linux/Windows,
-GrowthLab dashboard, native-agent battles, Linux confinement runtime verification,
+complete GrowthLab tree/settings/localized UX, native-agent battles, Linux confinement runtime verification,
 incomplete launcher registration, interrupted selected-delivery recovery,
 archived render artifacts, visual
 demo, release installers and telemetry adapters remain **unverified / not

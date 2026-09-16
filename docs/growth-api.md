@@ -1,0 +1,81 @@
+# GrowthLab domain API (source alpha)
+
+The local dashboard serves these routes under `/api/growth`. JSON fields use
+camelCase for domain records; the committed configuration retains its documented
+snake_case schema. Unknown request fields are refused. JSON bodies are limited
+to 1 MiB. The existing loopback/origin and remote-host authentication guards apply.
+
+| Method | Path | Behavior |
+|---|---|---|
+| GET | `/capabilities` | OS isolation availability and tools-disabled harness capabilities; not authentication/provider proof |
+| GET / POST | `/workspaces` | List imported contexts / import `{ "path": "/local/git/product" }` |
+| GET | `/workspaces/{id}` | Read the recorded committed product context |
+| GET / POST | `/workspaces/{id}/hypotheses` | List / create three UNTESTED starter hypotheses |
+| GET / POST | `/battles` | List (optional `projectId` query) / prepare `{ "projectId": "…", "goal": "…" }` |
+| GET | `/battles/{id}` | Frozen battle, variants, verified sealed runs/checkpoints, selections and owned-controller status |
+| POST | `/battles/{id}/run` | Submit an explicit replay/native request; HTTP 202 means accepted |
+| POST | `/battles/{id}/cancel` | Persist a cancellation request; not instant termination proof |
+| POST | `/battles/{id}/recover` | Existing verified recovery, without rerunning proposals or commands |
+| GET | `/battles/{id}/compare` | Transparent configured-command comparison; no measured growth inference |
+| GET | `/battles/{id}/report` | Self-contained attachment; `format=html` or `markdown` |
+| GET | `/variants/{id}/artifacts` | Verified checkpoint/archive entries, sizes, digests and seal status |
+| GET | `/variants/{id}/artifact?name=…` | Verified UTF-8 text artifact; refuses traversal, private prompts and policies |
+| POST | `/variants/{id}/select` | Record an eligible reviewed candidate |
+| GET | `/variants/{id}/apply-preview` | Read-only selected-patch preview and baseline checks |
+| POST | `/variants/{id}/apply` | Explicit selected working-tree apply with `{ "confirmed": true }` |
+| POST | `/variants/{id}/export` | Create-only selected patch with `{ "path": "/new/selected.patch" }` |
+| GET | `/events` | SSE invalidations derived from persisted state, with reconnect snapshot |
+
+Replay execution accepts:
+
+```json
+{
+  "mode": "replay",
+  "plan": {
+    "version": 1,
+    "implementations": [
+      {"summary": "Declared proposal A", "files": [], "risks": []},
+      {"summary": "Declared proposal B", "files": [], "risks": []},
+      {"summary": "Declared proposal C", "files": [], "risks": []}
+    ]
+  }
+}
+```
+
+This illustrates the request shape, not useful implementation content; add the
+actual allowed file edits documented in [battles.md](battles.md). The engine checks
+file paths, secrets, edits and the frozen contract. Native execution accepts
+`mode: "native"`, `harness`, optional `model`, and `agentTimeoutSeconds` (1–3600,
+default 120). Adapter capability does not establish installation or authentication.
+
+An owned worker retains its Store, project admission and shared storage lease
+through execution. The host admits at most two active battles; configured
+parallelism controls competitors inside each battle. Duplicate/previously started
+battles are refused. Shutdown requests cancellation only for this host's workers,
+waits briefly and preserves unfinished checkpoints for explicit recovery.
+
+SSE `growth.updated` carries workspace IDs, battle/attempt statuses, cancellation
+intent, checkpoint digests and selection statuses. It is an invalidation snapshot,
+not raw logs or an execution claim. Clients fetch authoritative records after
+notifications. `resync.required` indicates unavailable metadata; reconnect sends
+the current snapshot. Streams are bounded and stop when their client disconnects.
+
+Artifact reads verify every archive byte, frozen contract/run serialization and
+recorded confinement policy digests. Only `implementation.diff`, `agent.log`,
+`validation-{index}.log` and `files/…` are viewer entries. Binary text reads are
+refused. Never use this text endpoint as an executable HTML preview.
+
+Dashboard delivery requires the latest completed selection to match the requested
+variant. Confirmation does not bypass clean-baseline, permission or seal checks.
+The CLI's explicit `apply <variant-id>` authorization remains compatible.
+
+Reports default to private-context omission. Optional `includeContext=true`,
+`publicGoal=…` and `withoutAttribution=true` mirror the CLI's explicit report
+options. Attachments are `no-store`; sharing remains the user's decision.
+
+Conflicts return HTTP 409 (active controller, storage move, deletion or started
+battle); stopping/unavailable controller startup returns 503. Domain validation
+errors return 400, absent records 404 and unavailable storage 500. JSON errors
+contain an `error` string; framework body/query rejections may be plain text.
+No endpoint automatically publishes, messages, commits the original product,
+pushes to it, deploys or connects outcome telemetry.

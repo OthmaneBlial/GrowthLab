@@ -45,6 +45,7 @@ use crate::updates;
 use crate::workspace_state::{GlobalWorkspaceState, WorkspaceState};
 use crate::{browser, UpArgs};
 
+mod growth_api;
 mod harness_setup;
 
 pub async fn run(args: UpArgs) -> Result<()> {
@@ -112,6 +113,7 @@ pub async fn run(args: UpArgs) -> Result<()> {
         claude: claude.clone(),
         harnesses: Arc::new(tokio::sync::Mutex::new(None)),
         project_lifecycle: Arc::new(ProjectLifecycle::default()),
+        growth: Arc::new(growth_api::GrowthHost::default()),
         project_creation_lock: Arc::new(tokio::sync::Mutex::new(())),
         publication_locks: Arc::new(tokio::sync::Mutex::new(HashMap::new())),
         data_dir_move_in_progress: Arc::new(std::sync::atomic::AtomicBool::new(false)),
@@ -228,9 +230,8 @@ pub async fn run(args: UpArgs) -> Result<()> {
         }
         false
     };
-    if persistent_host {
-        stopping.store(true, std::sync::atomic::Ordering::SeqCst);
-    }
+    stopping.store(true, std::sync::atomic::Ordering::SeqCst);
+    state.growth.shutdown().await;
     if explicit_stop {
         state.chat.interrupt_all().await;
     }
@@ -314,6 +315,7 @@ struct AppState {
     /// limited to once per TTL unless the UI asks for a refresh.
     harnesses: Arc<tokio::sync::Mutex<Option<(std::time::Instant, Value)>>>,
     project_lifecycle: Arc<ProjectLifecycle>,
+    growth: Arc<growth_api::GrowthHost>,
     project_creation_lock: Arc<tokio::sync::Mutex<()>>,
     publication_locks: Arc<tokio::sync::Mutex<HashMap<String, Arc<tokio::sync::Mutex<()>>>>>,
     /// Set while a data-dir move is running. New chat turns and run launches
@@ -429,6 +431,7 @@ impl ProjectLifecycle {
 
 fn router(state: AppState, remote_auth: Option<RemoteAuth>) -> Router {
     let app = Router::new()
+        .merge(growth_api::routes())
         .route("/api/health", get(health))
         .route("/api/onboarding/complete", post(complete_onboarding))
         .route("/api/project-path/status", get(project_path_status))
@@ -4607,8 +4610,24 @@ async fn validate_data_dir(Json(req): Json<DataDirReq>) -> ApiResult {
 /// permits a populated existing dir since nothing is copied.
 async fn set_data_dir(State(state): State<AppState>, Json(req): Json<DataDirReq>) -> ApiResult {
     use crate::local::datadir::TargetIntent;
+    reject_if_stopping(&state)?;
     reject_if_moving(&state)?;
     ensure_not_env_forced()?;
+    let data_dir_guard = state.data_dir_gate.clone().lock_owned().await;
+    reject_if_moving(&state)?;
+    if state.project_lifecycle.operation_count() > 0 {
+        return Err(ApiError(
+            StatusCode::CONFLICT,
+            "Finish or cancel active project operations before switching GrowthLab storage.".into(),
+        ));
+    }
+    // GrowthLab workers in another dashboard hold shared storage leases too.
+    let storage_switch_lock = Store::open()?.acquire_data_dir_move_lock().map_err(|_| {
+        ApiError(
+            StatusCode::CONFLICT,
+            "Another dashboard is using or moving GrowthLab storage.".into(),
+        )
+    })?;
     let path = req.path.trim().to_string();
     if path.is_empty() {
         return Err(bad_request("path is required"));
@@ -4642,9 +4661,13 @@ async fn set_data_dir(State(state): State<AppState>, Json(req): Json<DataDirReq>
     .map_err(|error| ApiError(StatusCode::CONFLICT, error.to_string()))?;
 
     state.chat.shutdown_harnesses().await;
-    tokio::task::spawn_blocking(move || crate::config::set_settings_data_dir(Some(path)))
-        .await
-        .map_err(|e| ApiError::from(anyhow!("settings task failed: {e}")))??;
+    tokio::task::spawn_blocking(move || {
+        let _data_dir_guard = data_dir_guard;
+        let _storage_switch_lock = storage_switch_lock;
+        crate::config::set_settings_data_dir(Some(path))
+    })
+    .await
+    .map_err(|e| ApiError::from(anyhow!("settings task failed: {e}")))??;
     *state.dashboard_lock.lock().unwrap() = Some(next_lock);
     state.chat.shutdown_harnesses().await;
     Ok(Json(data_dir_json()))

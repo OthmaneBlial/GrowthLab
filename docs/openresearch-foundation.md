@@ -107,6 +107,13 @@ workspace screens; `App.tsx` composes the existing research workspace. Keep
 generic tree, console, viewers and query invalidation; build a growth-native
 home, goal composer, battle, evidence, rubric and permissions flow backed by Rust.
 Existing demo session state is a UI fixture, not proof of executed growth agents.
+GrowthLab's domain API now lives in `src/commands/up/growth_api.rs`, merged into
+the inherited guarded Axum router. It reuses the GrowthLab CLI battle, recovery,
+evaluation, selection and report modules. Owned workers retain their Store root,
+project admission and shared storage lease; native !Send harness futures run on
+a local runtime inside the worker thread. GrowthLab React screens consume these
+APIs and verified checkpoints/seals rather than inheriting research results or
+inventing frontend execution state. The underlying generic routes remain compatible.
 Use `scripts/dev-slot.mjs --db empty` for isolated runtime verification, never
 copy a normal user's database into a public demo. Build and commit `ui/dist`
 after UI changes because release binaries embed it.

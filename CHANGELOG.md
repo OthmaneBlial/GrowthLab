@@ -49,7 +49,15 @@
   captures logs while supervisor files remain outside command permissions.
   Linux runtime proof is pending; Windows isolation is not implemented.
 
-This is not a tagged credible release. The growth-native dashboard,
+- Added GrowthLab domain APIs and local dashboard screens for product import,
+  goal composition, three-variant execution, captured status/evidence/diffs/logs,
+  check breakdowns, explicit selection/export/apply and report downloads.
+- Owned API controllers retain project admission and shared storage leases;
+  cancellation/shutdown preserve actual attempts. HTTP integration tests cover
+  actual jobs, observed exit 2, cross-origin refusal, seal tampering and selected
+  delivery without changing product HEAD/index/remotes.
+
+This is not a tagged credible release. The complete experiment-tree/settings UX,
 verified native execution, cross-platform confinement proof, incomplete launcher registration
 and interrupted selected-delivery recovery,
 bundled visual replay demo, archived render artifacts and real outcome measurement

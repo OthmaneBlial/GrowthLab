@@ -22,8 +22,9 @@ by this roadmap.
   evidence/rubric/settings screens, keyboard/mobile checks, one-command bundled
   demo, sanitized self-contained reports, badge, real screenshots/video,
   contributor/security/community documents and release packaging.
-  CLI report design is implemented; this does not complete the dashboard or
-  demonstrate a bundled product battle with archived screenshots.
+  CLI reports and GrowthLab home/workspace/goal/battle/evidence/diff/delivery
+  screens are implemented through Rust APIs. Complete tree/settings/localized
+  UX, bundled demo and archived candidate renders/screenshots remain pending.
 - [ ] **4 — Playbooks:** focused roles and practical positioning, activation,
   onboarding, ethical SEO, pricing research and launch templates with evidence.
 - [ ] **5 — Measurement:** CSV import, baseline/variant comparison, sample size,

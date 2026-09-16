@@ -32,6 +32,8 @@ function loadModule(filename, api = {}, remembered = null) {
       if (id === "./api") return { isDemoProjectId: () => false, ...api };
       if (id === "./workspaceTabs") return load(new URL("./workspaceTabs.ts", url));
       if (id === "../App") return { default: () => null };
+      if (id === "../growth/GrowthDashboard") return { GrowthDashboard: () => null };
+      if (id === "../growth/view") return load(new URL("../growth/view.ts", url));
       if (id === "../RemoteRuntime") return { RuntimeRoot: () => null, useRuntime: () => ({ kind: "local" }) };
       if (id === "../routePages") return { ResumeGlobal: () => null, ResumeProject: () => null, ProjectsPage: () => null };
       if (id.startsWith("./routes/")) return load(new URL(`${id}.tsx`, url));
@@ -52,6 +54,8 @@ async function match(path) {
 test("real file routes distinguish task/new, task IDs, project index, and settings", async () => {
   for (const [path, routeId] of [
     ["/", "/"],
+    ["/growth/00000000-0000-4000-8000-000000000001", "/growth/$battleId"],
+    ["/growth/workspaces/00000000-0000-4000-8000-000000000002", "/growth/workspaces/$projectId"],
     ["/projects", "/projects/"],
     ["/projects/p", "/projects/$projectId/"],
     ["/projects/p/tasks/new", "/projects/$projectId/tasks/new"],
@@ -64,7 +68,7 @@ test("real file routes distinguish task/new, task IDs, project index, and settin
     assert.equal(router.state.matches.at(-1).routeId, routeId, path);
     assert.equal(router.state.matches.at(-1).status, "success", path);
   }
-  for (const path of ["/projects/p/settings/unknown", "/projects/p/tasks/%00"]) {
+  for (const path of ["/projects/p/settings/unknown", "/projects/p/tasks/%00", "/growth/%00", "/growth/workspaces/not-an-id"]) {
     const invalid = await match(path);
     assert(invalid.state.matches.some((route) => route.status === "notFound"), path);
   }

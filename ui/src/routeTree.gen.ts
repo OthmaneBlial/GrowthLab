@@ -12,8 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as RemoteLaunchRouteImport } from './routes/remote-launch'
+import { Route as GrowthBattleIdRouteImport } from './routes/growth.$battleId'
 import { Route as ProjectsIndexRouteImport } from './routes/projects.index'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
+import { Route as GrowthWorkspacesProjectIdRouteImport } from './routes/growth.workspaces.$projectId'
 import { Route as ProjectsProjectIdIndexRouteImport } from './routes/projects.$projectId.index'
 import { Route as ProjectsProjectIdSkillsRouteImport } from './routes/projects.$projectId.skills'
 import { Route as ProjectsProjectIdSettingsTabRouteImport } from './routes/projects.$projectId.settings.$tab'
@@ -35,6 +37,11 @@ const RemoteLaunchRoute = RemoteLaunchRouteImport.update({
   path: '/remote-launch',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GrowthBattleIdRoute = GrowthBattleIdRouteImport.update({
+  id: '/growth/$battleId',
+  path: '/growth/$battleId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProjectsIndexRoute = ProjectsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -45,6 +52,12 @@ const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
   path: '/$projectId',
   getParentRoute: () => ProjectsRoute,
 } as any)
+const GrowthWorkspacesProjectIdRoute =
+  GrowthWorkspacesProjectIdRouteImport.update({
+    id: '/growth/workspaces/$projectId',
+    path: '/growth/workspaces/$projectId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ProjectsProjectIdIndexRoute = ProjectsProjectIdIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -78,8 +91,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/projects': typeof ProjectsRouteWithChildren
   '/remote-launch': typeof RemoteLaunchRoute
+  '/growth/$battleId': typeof GrowthBattleIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/projects/': typeof ProjectsIndexRoute
+  '/growth/workspaces/$projectId': typeof GrowthWorkspacesProjectIdRoute
   '/projects/$projectId/skills': typeof ProjectsProjectIdSkillsRoute
   '/projects/$projectId/': typeof ProjectsProjectIdIndexRoute
   '/projects/$projectId/settings/$tab': typeof ProjectsProjectIdSettingsTabRoute
@@ -89,7 +104,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/remote-launch': typeof RemoteLaunchRoute
+  '/growth/$battleId': typeof GrowthBattleIdRoute
   '/projects': typeof ProjectsIndexRoute
+  '/growth/workspaces/$projectId': typeof GrowthWorkspacesProjectIdRoute
   '/projects/$projectId/skills': typeof ProjectsProjectIdSkillsRoute
   '/projects/$projectId': typeof ProjectsProjectIdIndexRoute
   '/projects/$projectId/settings/$tab': typeof ProjectsProjectIdSettingsTabRoute
@@ -101,8 +118,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/projects': typeof ProjectsRouteWithChildren
   '/remote-launch': typeof RemoteLaunchRoute
+  '/growth/$battleId': typeof GrowthBattleIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/projects/': typeof ProjectsIndexRoute
+  '/growth/workspaces/$projectId': typeof GrowthWorkspacesProjectIdRoute
   '/projects/$projectId/skills': typeof ProjectsProjectIdSkillsRoute
   '/projects/$projectId/': typeof ProjectsProjectIdIndexRoute
   '/projects/$projectId/settings/$tab': typeof ProjectsProjectIdSettingsTabRoute
@@ -115,8 +134,10 @@ export interface FileRouteTypes {
     | '/'
     | '/projects'
     | '/remote-launch'
+    | '/growth/$battleId'
     | '/projects/$projectId'
     | '/projects/'
+    | '/growth/workspaces/$projectId'
     | '/projects/$projectId/skills'
     | '/projects/$projectId/'
     | '/projects/$projectId/settings/$tab'
@@ -126,7 +147,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/remote-launch'
+    | '/growth/$battleId'
     | '/projects'
+    | '/growth/workspaces/$projectId'
     | '/projects/$projectId/skills'
     | '/projects/$projectId'
     | '/projects/$projectId/settings/$tab'
@@ -137,8 +160,10 @@ export interface FileRouteTypes {
     | '/'
     | '/projects'
     | '/remote-launch'
+    | '/growth/$battleId'
     | '/projects/$projectId'
     | '/projects/'
+    | '/growth/workspaces/$projectId'
     | '/projects/$projectId/skills'
     | '/projects/$projectId/'
     | '/projects/$projectId/settings/$tab'
@@ -150,6 +175,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ProjectsRoute: typeof ProjectsRouteWithChildren
   RemoteLaunchRoute: typeof RemoteLaunchRoute
+  GrowthBattleIdRoute: typeof GrowthBattleIdRoute
+  GrowthWorkspacesProjectIdRoute: typeof GrowthWorkspacesProjectIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -175,6 +202,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RemoteLaunchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/growth/$battleId': {
+      id: '/growth/$battleId'
+      path: '/growth/$battleId'
+      fullPath: '/growth/$battleId'
+      preLoaderRoute: typeof GrowthBattleIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/projects/': {
       id: '/projects/'
       path: '/'
@@ -188,6 +222,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/projects/$projectId'
       preLoaderRoute: typeof ProjectsProjectIdRouteImport
       parentRoute: typeof ProjectsRoute
+    }
+    '/growth/workspaces/$projectId': {
+      id: '/growth/workspaces/$projectId'
+      path: '/growth/workspaces/$projectId'
+      fullPath: '/growth/workspaces/$projectId'
+      preLoaderRoute: typeof GrowthWorkspacesProjectIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/projects/$projectId/': {
       id: '/projects/$projectId/'
@@ -264,6 +305,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ProjectsRoute: ProjectsRouteWithChildren,
   RemoteLaunchRoute: RemoteLaunchRoute,
+  GrowthBattleIdRoute: GrowthBattleIdRoute,
+  GrowthWorkspacesProjectIdRoute: GrowthWorkspacesProjectIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

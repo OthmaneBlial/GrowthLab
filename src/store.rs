@@ -71,6 +71,47 @@ pub(crate) struct DataDirMoveLock {
     thread: Option<std::thread::JoinHandle<()>>,
 }
 
+/// A shared lease pins a data directory during GrowthLab API work. The guard
+/// lives on its own thread so an owned lease can span !Send execution futures.
+pub(crate) struct DataDirUseLock {
+    _lease: DataDirMoveLock,
+}
+
+fn acquire_data_dir_use_lock(path: PathBuf) -> Result<DataDirUseLock> {
+    let (ready_tx, ready_rx) = std::sync::mpsc::sync_channel(1);
+    let (release_tx, release_rx) = std::sync::mpsc::channel();
+    let thread = std::thread::spawn(move || {
+        let result = (|| -> Result<()> {
+            let lock = open_lifecycle_lock_at(&path)?;
+            let _guard = lock.try_read()?;
+            ready_tx
+                .send(Ok(()))
+                .map_err(|_| anyhow!("storage lease receiver closed"))?;
+            let _ = release_rx.recv();
+            Ok(())
+        })();
+        if let Err(error) = result {
+            let _ = ready_tx.send(Err(error.to_string()));
+        }
+    });
+    match ready_rx.recv() {
+        Ok(Ok(())) => Ok(DataDirUseLock {
+            _lease: DataDirMoveLock {
+                release: Some(release_tx),
+                thread: Some(thread),
+            },
+        }),
+        Ok(Err(error)) => {
+            let _ = thread.join();
+            Err(anyhow!(error))
+        }
+        Err(_) => {
+            let _ = thread.join();
+            Err(anyhow!("storage lease thread exited"))
+        }
+    }
+}
+
 impl Drop for DataDirMoveLock {
     fn drop(&mut self) {
         self.release.take();
@@ -1427,6 +1468,10 @@ impl Store {
 
     pub(crate) fn acquire_data_dir_move_lock(&self) -> Result<DataDirMoveLock> {
         acquire_data_dir_move_lock(self.data_dir_move_lock_path.clone())
+    }
+
+    pub(crate) fn acquire_data_dir_use_lock(&self) -> Result<DataDirUseLock> {
+        acquire_data_dir_use_lock(self.data_dir_move_lock_path.clone())
     }
 
     fn clear_stale_data_dir_move_lease(&self) -> Result<()> {

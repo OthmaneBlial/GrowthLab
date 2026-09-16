@@ -10,8 +10,9 @@ Local-first. Open source. No Docker required.
 > and a three-variant CLI replay battle are implemented, with real isolated edits,
 > validations, sealed evidence, transparent command comparison, explicit candidate
 > selection, guarded apply/export, interrupted-attempt recovery and private-by-default
-> HTML/Markdown reports. The dashboard
-> retains the inherited research UI; the visual demo and a credible release are being built.
+> HTML/Markdown reports. The GrowthLab dashboard now exposes local import, goal
+> composition, battle execution, captured evidence/diffs and explicit delivery
+> through Rust domain APIs. The bundled visual demo and a credible release are being built.
 > No conversion lift, winning variant, adoption, or production readiness is claimed.
 
 ## Why GrowthLab?
@@ -56,6 +57,8 @@ The [recovery workflow](docs/recovery.md) explains verified checkpoints, survivi
 jobs and interrupted outcomes without rerunning providers or commands.
 The [validation isolation policy](docs/confinement.md) explains permitted runtime
 files, offline dependency limits, private policy evidence and platform support.
+The [dashboard workflow](docs/dashboard.md) covers the local app and its current
+limits; the [domain API](docs/growth-api.md) documents controller and artifact semantics.
 Do not use the upstream OpenResearch installer to install GrowthLab.
 
 ## Architecture and privacy
