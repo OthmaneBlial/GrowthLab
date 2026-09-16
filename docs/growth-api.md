@@ -109,3 +109,9 @@ For a single page outside a battle, the local CLI also exposes
 `seo-page-hygiene-v1` rubric and supports `--format markdown`; it reads only a
 regular UTF-8 file up to 4 MiB and makes no network request. See
 [seo-audit.md](seo-audit.md).
+
+For user-supplied outcome rows, `growthlab measure --csv ./telemetry.csv`
+produces a local descriptive comparison with sample sizes, optional date range
+and arithmetic baseline differences. It is labelled **MEASURED** from the
+supplied CSV, does not contact a provider, and does not establish causality or
+statistical significance. See [measurement.md](measurement.md).

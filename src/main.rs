@@ -85,6 +85,8 @@ enum Command {
     /// Audit one local HTML file with the explainable SEO page rubric.
     #[command(name = "seo-audit")]
     SeoAudit(growth::cli::SeoAuditArgs),
+    /// Summarize user-supplied local CSV telemetry without network access.
+    Measure(growth::cli::MeasureArgs),
     /// Inspect a battle or request cancellation.
     #[command(name = "battle-status")]
     BattleStatus(growth::cli::BattleStatusArgs),
@@ -1052,6 +1054,7 @@ fn command_name(command: &Command) -> &'static str {
         Command::Experiments(_) => "experiments",
         Command::Compare(_) => "compare",
         Command::SeoAudit(_) => "seo-audit",
+        Command::Measure(_) => "measure",
         Command::BattleStatus(_) => "battle-status",
         Command::Recover(_) => "recover",
         Command::RecoverDelivery(_) => "recover-delivery",
@@ -1115,6 +1118,7 @@ async fn dispatch(command: Command) -> error::Result<()> {
         Command::Experiments(args) => growth::cli::experiments(args),
         Command::Compare(args) => growth::cli::compare(args),
         Command::SeoAudit(args) => growth::cli::seo_audit(args),
+        Command::Measure(args) => growth::cli::measure(args),
         Command::BattleStatus(args) => growth::cli::battle_status(args),
         Command::Recover(args) => growth::cli::recover(args),
         Command::RecoverDelivery(args) => growth::cli::recover_delivery(args),
@@ -1176,6 +1180,7 @@ fn command_uses_lifecycle_lock(command: &Command) -> bool {
             | Command::Experiments(_)
             | Command::Compare(_)
             | Command::SeoAudit(_)
+            | Command::Measure(_)
             | Command::BattleStatus(_)
             | Command::Recover(_)
             | Command::RecoverDelivery(_)
@@ -1435,6 +1440,32 @@ mod cli_tests {
                 format: growth::cli::SeoAuditFormat::Markdown,
                 ..
             })
+        ));
+    }
+
+    #[test]
+    fn measure_is_a_local_readonly_command() {
+        let cli = Cli::try_parse_from([
+            "growthlab",
+            "measure",
+            "--csv",
+            "metrics.csv",
+            "--baseline",
+            "control",
+            "--format",
+            "markdown",
+        ])
+        .unwrap();
+        let command = cli.command.unwrap();
+        assert_eq!(command_name(&command), "measure");
+        assert!(!command_uses_lifecycle_lock(&command));
+        assert!(matches!(
+            command,
+            Command::Measure(growth::cli::MeasureArgs {
+                baseline,
+                format: growth::measurement::MeasurementFormat::Markdown,
+                ..
+            }) if baseline == "control"
         ));
     }
 

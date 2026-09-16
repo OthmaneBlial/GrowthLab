@@ -45,6 +45,7 @@ const WHOLE_VERB_READS: &[&str] = &[
     "experiments",
     "compare",
     "seo-audit",
+    "measure",
 ];
 
 /// Shell no-ops allowed as glue between read-only segments in a batch —
@@ -444,6 +445,7 @@ mod tests {
             "growthlab hypotheses p --list",
             "growthlab compare battle",
             "growthlab experiments",
+            "growthlab measure --csv metrics.csv",
             "growthlab battle-status battle",
             "growthlab apply variant --check",
             "/tmp/growthlab workspace list",
@@ -487,6 +489,7 @@ mod tests {
             "orx paper 2301.00001",
             "orx skill",
             "orx projects --json",
+            "orx measure --csv metrics.csv",
             "/usr/local/bin/orx runs",
             "orx", // bare usage
         ] {

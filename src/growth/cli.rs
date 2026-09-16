@@ -163,6 +163,34 @@ pub struct SeoAuditArgs {
 }
 
 #[derive(Debug, Args)]
+pub struct MeasureArgs {
+    /// Read a regular local CSV; no analytics or network request is made.
+    #[arg(long)]
+    pub csv: PathBuf,
+    /// Variant value used as the arithmetic comparison baseline.
+    #[arg(long, default_value = "baseline")]
+    pub baseline: String,
+    /// Include only rows whose metric column matches this value.
+    #[arg(long)]
+    pub metric: Option<String>,
+    /// CSV column containing the variant name.
+    #[arg(long, default_value = "variant")]
+    pub variant_column: String,
+    /// CSV column containing one numeric observation per row.
+    #[arg(long, default_value = "value")]
+    pub value_column: String,
+    /// Optional CSV column grouping observations into metrics.
+    #[arg(long, default_value = "metric")]
+    pub metric_column: String,
+    /// Optional CSV column used to report the observed date range.
+    #[arg(long, default_value = "timestamp")]
+    pub timestamp_column: String,
+    /// Choose machine-readable JSON or a compact Markdown review.
+    #[arg(long, value_enum, default_value = "json")]
+    pub format: super::measurement::MeasurementFormat,
+}
+
+#[derive(Debug, Args)]
 pub struct ExperimentsArgs {
     #[arg(long)]
     pub project: Option<String>,
@@ -445,6 +473,25 @@ pub fn seo_audit(args: SeoAuditArgs) -> Result<()> {
     }
 }
 
+pub fn measure(args: MeasureArgs) -> Result<()> {
+    let report = super::measurement::import(
+        &args.csv,
+        &args.baseline,
+        args.metric.as_deref(),
+        &args.variant_column,
+        &args.value_column,
+        &args.metric_column,
+        &args.timestamp_column,
+    )?;
+    match args.format {
+        super::measurement::MeasurementFormat::Json => print_json(&report),
+        super::measurement::MeasurementFormat::Markdown => {
+            print!("{}", super::measurement::markdown(&report));
+            Ok(())
+        }
+    }
+}
+
 pub fn experiments(args: ExperimentsArgs) -> Result<()> {
     let store = Store::open()?;
     let battles = store.list_growth_battles(args.project.as_deref())?;
@@ -644,6 +691,35 @@ mod tests {
         std::fs::write(&target, "<html></html>").unwrap();
         std::os::unix::fs::symlink(&target, &link).unwrap();
         assert!(read_audit_html(&link).is_err());
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn measure_reads_local_csv_and_reports_descriptive_comparison() {
+        let dir =
+            std::env::temp_dir().join(format!("growthlab-measure-cli-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("metrics.csv");
+        std::fs::write(
+            &path,
+            "timestamp,variant,metric,value\n2026-09-01,baseline,signup,10\n2026-09-02,hero,signup,15\n",
+        )
+        .unwrap();
+        let report = super::super::measurement::import(
+            &path,
+            "baseline",
+            None,
+            "variant",
+            "value",
+            "metric",
+            "timestamp",
+        )
+        .unwrap();
+        let markdown = super::super::measurement::markdown(&report);
+        assert!(markdown.contains("# Local growth measurement"));
+        assert!(markdown.contains("Provenance: **MEASURED**"));
+        assert!(markdown.contains("Relative change"));
+        assert!(markdown.contains("does not establish causality"));
         std::fs::remove_dir_all(dir).unwrap();
     }
     #[test]

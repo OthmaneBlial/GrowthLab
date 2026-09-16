@@ -11,6 +11,7 @@ pub mod confinement;
 mod confinement_tests;
 pub mod demo;
 pub mod evaluation;
+pub mod measurement;
 pub mod model;
 pub mod preview;
 pub mod recovery;
