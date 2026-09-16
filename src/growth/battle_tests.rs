@@ -210,6 +210,41 @@ async fn interrupted_jobs_wait_then_recover_sealed_context_without_rerunning_or_
     );
 }
 
+#[test]
+fn prepared_battle_preserves_the_workspace_experiment_map_lineage() {
+    let fixture = Fixture::new(None);
+    let workspace = fixture
+        .store
+        .get_growth_workspace(&fixture.project_id)
+        .unwrap()
+        .unwrap();
+    let hypotheses = super::model::starter_hypotheses(&workspace);
+    fixture
+        .store
+        .insert_growth_hypotheses(&fixture.project_id, &hypotheses)
+        .unwrap();
+
+    let battle = battle::prepare(&fixture.store, &fixture.project_id, "Map lineage goal").unwrap();
+    assert_eq!(battle.contract.goal, "Map lineage goal");
+    assert_eq!(battle.contract.hypotheses.len(), 3);
+    for (persisted, contract) in hypotheses.iter().zip(&battle.contract.hypotheses) {
+        assert_eq!(persisted.id, contract.id);
+        assert_eq!(contract.goal, "Map lineage goal");
+    }
+    let variants = fixture.store.growth_variants(&battle.id).unwrap();
+    assert_eq!(
+        variants
+            .iter()
+            .map(|variant| variant.hypothesis_id.as_str())
+            .collect::<Vec<_>>(),
+        hypotheses
+            .iter()
+            .map(|hypothesis| hypothesis.id.as_str())
+            .collect::<Vec<_>>()
+    );
+    fixture.unchanged();
+}
+
 #[tokio::test]
 async fn terminal_checkpoint_finalization_failure_recovers_one_seal_and_preserves_siblings() {
     let fixture = Fixture::new(None);

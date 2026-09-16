@@ -117,7 +117,19 @@ pub fn prepare(store: &Store, project_id: &str, goal: &str) -> Result<GrowthBatt
     safe_source(repo, &workspace.source_snapshot_commit, &workspace.config)?;
     archive::private_directory(&store.data_root().join("growth-worktrees"))?;
     let id = uuid::Uuid::new_v4().to_string();
-    let mut hypotheses = starter_hypotheses(&workspace);
+    // A workspace experiment map is the source of truth once it exists. This
+    // keeps the branch IDs and evidence lineage visible from the map through
+    // the battle contract. Older workspaces may not have persisted hypotheses,
+    // so the deterministic starter portfolio remains the safe fallback.
+    let mut hypotheses = store.list_growth_hypotheses(project_id)?;
+    if hypotheses.len() != 3
+        || hypotheses.iter().any(|hypothesis| {
+            hypothesis.project_id != project_id
+                || hypothesis.source_snapshot_commit != workspace.source_snapshot_commit
+        })
+    {
+        hypotheses = starter_hypotheses(&workspace);
+    }
     for hypothesis in &mut hypotheses {
         hypothesis.goal = goal.into();
     }

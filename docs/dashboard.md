@@ -45,6 +45,10 @@ contract, and an isolated worktree. Worktree execution requires implementation
 permission. The playbook catalog is available in every mode; analysis-only and
 Draft artifact execution remain a separate product gate.
 
+If you create the workspace experiment map first, preparation reuses its stable
+hypothesis IDs. The map cards, battle variants and archived contract then keep
+one inspectable lineage instead of creating an unrelated second portfolio.
+
 ## Execute and inspect
 
 Choose an explicit proposal source:

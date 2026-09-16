@@ -141,10 +141,11 @@ Current milestone: **Public repository review, manual-brief onboarding, executab
 - Distribution-aware local measurement comparisons that keep channel baselines separate
 - Explicit public GitHub checkout import into a local, configured workspace
 - Workspace experiment map showing the shared goal and three untested growth branches
+- Prepared battles reuse persisted hypothesis IDs so the map remains linked to each variant
 
 | Validation | Current evidence |
 | --- | --- |
-| Rust tests | **passed** — 942 tests per binary; 940 passed, zero failures and two inherited ignored tests |
+| Rust tests | **passed** — 945 tests per binary; 943 passed, zero failures and two inherited ignored tests (serial run) |
 | UI tests | **passed** — 172 tests; zero failures or skips |
 | Local quality checks | **passed** — Formatting, Clippy, UI types, styles and builds |
 | Actual demo and browser flow | **passed** — Real CLI/HTTP execution, desktop/phone checks, verified PNG endpoint checks, SEO rubric records and standalone local audit on owned fixtures |
@@ -161,6 +162,7 @@ Current milestone: **Public repository review, manual-brief onboarding, executab
 | Distribution-aware measurement | **passed** — Local Rust and browser CSV summaries group by metric, distribution or channel and variant; comparisons stay within each distribution and remain MEASURED from user-supplied rows |
 | Public repository checkout import | **passed** — CLI, API and Home UI clone only after an explicit new destination is supplied; existing contracts are preserved, missing contracts are committed locally, and no push or provider request occurs |
 | Workspace experiment map | **passed** — Chrome smoke created the deterministic starter map and rendered the shared goal with positioning, conversion and onboarding branches; cards remain UNTESTED until a battle and local evidence exist |
+| Experiment map lineage | **passed** — Rust battle preparation tests confirm a persisted three-hypothesis map is reused in the frozen contract and variant records, while older workspaces retain the deterministic fallback |
 
 **Still ahead**
 
