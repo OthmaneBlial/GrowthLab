@@ -100,6 +100,41 @@ impl Store {
         results
     }
 
+    pub fn get_growth_selection(&self, id: &str) -> Result<Option<SelectionRecord>> {
+        let json: Option<String> = self
+            .conn
+            .query_row(
+                "SELECT payload_json FROM growth_selections WHERE id=?1",
+                [id],
+                |row| row.get(0),
+            )
+            .optional()?;
+        json.map(|json| {
+            let record: SelectionRecord = decode(&json)?;
+            if record.id != id {
+                return Err(anyhow!(
+                    "Stored delivery receipt does not match its identity"
+                ));
+            }
+            Ok(record)
+        })
+        .transpose()
+    }
+
+    /// Return unfinished delivery intents for a product workspace. Pending
+    /// receipts are durable audit records and must be resolved before another
+    /// working-tree write starts.
+    pub fn pending_growth_selections(&self, project_id: &str) -> Result<Vec<SelectionRecord>> {
+        let mut query = self.conn.prepare(
+            "SELECT payload_json FROM growth_selections WHERE status='pending' AND battle_id IN (SELECT id FROM growth_battles WHERE project_id=?1) ORDER BY created_at,rowid",
+        )?;
+        let records = query
+            .query_map([project_id], |row| row.get::<_, String>(0))?
+            .map(|row| decode(&row?))
+            .collect();
+        records
+    }
+
     pub fn register_growth_battle(
         &self,
         battle: &GrowthBattle,

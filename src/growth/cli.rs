@@ -170,6 +170,22 @@ pub fn recover(args: RecoverArgs) -> Result<()> {
 }
 
 #[derive(Debug, Args)]
+pub struct RecoverDeliveryArgs {
+    pub receipt_id: String,
+    /// Apply only exact baseline files that remain; never roll back conflicts.
+    #[arg(long)]
+    pub resume: bool,
+}
+
+pub fn recover_delivery(args: RecoverDeliveryArgs) -> Result<()> {
+    print_json(&super::selection::recover_delivery(
+        &Store::open()?,
+        &args.receipt_id,
+        args.resume,
+    )?)
+}
+
+#[derive(Debug, Args)]
 pub struct SelectArgs {
     pub variant_id: String,
 }

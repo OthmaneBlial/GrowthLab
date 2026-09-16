@@ -63,6 +63,7 @@ Current milestone: **Three real variants with sealed evidence and archived stati
 - Key-free bundled replay demo with one deliberate validation failure
 - Published project website and searchable docs with current progress and actual captures
 - Published v0.1.0-alpha.1 as a source prerelease with explicit alpha limitations
+- Inspected and explicitly resumed pending selected-delivery receipts without rollback
 
 | Validation | Current evidence |
 | --- | --- |
@@ -71,12 +72,13 @@ Current milestone: **Three real variants with sealed evidence and archived stati
 | Local quality checks | **passed** — Formatting, Clippy, UI types, styles and builds |
 | Actual demo and browser flow | **passed** — Real CLI/HTTP execution and desktop/phone checks on owned fictional fixtures |
 | Release build and runtime smokes | **passed** — Fresh locked macOS arm64 build; real CLI import, delivery and HTTP demo; embedded UI verified |
+| Selected-delivery recovery | **passed** — 20 battle tests on both binaries; exact candidate finalization and local conflict preservation |
 | GitHub CI | **disabled** — All six workflows manually disabled; validation runs locally |
 
 **Still ahead**
 
 - Automatic per-run PNG capture and a short real demo recording
-- Native-agent battle verification and remaining launch/delivery recovery
+- Native-agent battle verification and stronger launcher registration
 - Complete experiment tree, settings and localized interface
 - Broader inputs, growth playbooks and real measurement
 - Cross-platform runtime proof, portable binaries/installers and distribution notices

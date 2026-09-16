@@ -87,6 +87,9 @@ enum Command {
     BattleStatus(growth::cli::BattleStatusArgs),
     /// Inspect abandoned jobs and recover attempts from verified checkpoints.
     Recover(growth::cli::RecoverArgs),
+    /// Inspect or explicitly resume an interrupted selected delivery.
+    #[command(name = "recover-delivery")]
+    RecoverDelivery(growth::cli::RecoverDeliveryArgs),
     /// Record an explicitly selected, eligible sealed candidate.
     Select(growth::cli::SelectArgs),
     /// Copy a selected patch to a clean matching product baseline.
@@ -1047,6 +1050,7 @@ fn command_name(command: &Command) -> &'static str {
         Command::Compare(_) => "compare",
         Command::BattleStatus(_) => "battle-status",
         Command::Recover(_) => "recover",
+        Command::RecoverDelivery(_) => "recover-delivery",
         Command::Select(_) => "select",
         Command::Apply(_) => "apply",
         Command::Export(_) => "export",
@@ -1108,6 +1112,7 @@ async fn dispatch(command: Command) -> error::Result<()> {
         Command::Compare(args) => growth::cli::compare(args),
         Command::BattleStatus(args) => growth::cli::battle_status(args),
         Command::Recover(args) => growth::cli::recover(args),
+        Command::RecoverDelivery(args) => growth::cli::recover_delivery(args),
         Command::Select(args) => growth::cli::select(args),
         Command::Apply(args) => growth::cli::apply(args),
         Command::Export(args) => growth::cli::export(args),
@@ -1167,6 +1172,7 @@ fn command_uses_lifecycle_lock(command: &Command) -> bool {
             | Command::Compare(_)
             | Command::BattleStatus(_)
             | Command::Recover(_)
+            | Command::RecoverDelivery(_)
             | Command::Select(_)
             | Command::Apply(_)
             | Command::Export(_)

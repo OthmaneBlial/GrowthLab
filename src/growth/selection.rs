@@ -122,7 +122,63 @@ pub fn select(store: &Store, variant_id: &str) -> Result<SelectionRecord> {
     Ok(receipt)
 }
 
-fn safe_git(repo: &Path, args: &[&str], input: Option<&[u8]>) -> Result<Vec<u8>> {
+pub(super) struct DeliveryLease(std::fs::File);
+
+impl DeliveryLease {
+    pub(super) fn inherit(&self, command: &mut Command) {
+        #[cfg(unix)]
+        {
+            use std::os::fd::AsRawFd;
+            use std::os::unix::process::CommandExt;
+            let descriptor = self.0.as_raw_fd();
+            unsafe {
+                command.pre_exec(move || {
+                    if libc::fcntl(descriptor, libc::F_SETFD, 0) == -1 {
+                        return Err(std::io::Error::last_os_error());
+                    }
+                    Ok(())
+                });
+            }
+        }
+        #[cfg(not(unix))]
+        let _ = (&self.0, command);
+    }
+}
+
+pub(super) fn delivery_lease(store: &Store, project_id: &str) -> Result<DeliveryLease> {
+    uuid::Uuid::parse_str(project_id).map_err(|_| anyhow!("Invalid product workspace ID"))?;
+    let directory = store.data_root().join("growth-delivery-leases");
+    archive::private_directory(&directory)?;
+    let path = directory.join(format!("{project_id}.lock"));
+    if std::fs::symlink_metadata(&path)
+        .is_ok_and(|metadata| !metadata.is_file() || metadata.file_type().is_symlink())
+    {
+        return Err(anyhow!("Delivery lease must be a regular file"));
+    }
+    let mut options = std::fs::OpenOptions::new();
+    options.read(true).write(true).create(true).truncate(false);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600).custom_flags(libc::O_NOFOLLOW);
+    }
+    let file = options.open(path)?;
+    file.try_lock().map_err(|_| {
+        anyhow!("A live delivery process owns this product workspace; wait before recovery")
+    })?;
+    Ok(DeliveryLease(file))
+}
+
+pub(super) fn safe_git(repo: &Path, args: &[&str], input: Option<&[u8]>) -> Result<Vec<u8>> {
+    safe_git_with_lease(repo, args, input, None)
+}
+
+pub(super) fn safe_git_with_lease(
+    repo: &Path,
+    args: &[&str],
+    input: Option<&[u8]>,
+    lease: Option<&DeliveryLease>,
+) -> Result<Vec<u8>> {
     let mut command = Command::new("git");
     command.current_dir(repo).env_clear();
     for key in [
@@ -145,6 +201,7 @@ fn safe_git(repo: &Path, args: &[&str], input: Option<&[u8]>) -> Result<Vec<u8>>
         .env("GIT_OPTIONAL_LOCKS", "0")
         .args([
             "--no-pager",
+            "--literal-pathspecs",
             "-c",
             &format!("core.hooksPath={}", disabled.display()),
             "-c",
@@ -160,6 +217,9 @@ fn safe_git(repo: &Path, args: &[&str], input: Option<&[u8]>) -> Result<Vec<u8>>
         })
         .stdout(Stdio::piped())
         .stderr(Stdio::null());
+    if let Some(lease) = lease {
+        lease.inherit(&mut command);
+    }
     let mut child = command
         .spawn()
         .map_err(|_| anyhow!("Selected candidate Git operation could not start"))?;
@@ -187,7 +247,7 @@ fn safe_git(repo: &Path, args: &[&str], input: Option<&[u8]>) -> Result<Vec<u8>>
     Ok(output.stdout)
 }
 
-fn git_text(repo: &Path, args: &[&str]) -> Result<String> {
+pub(super) fn git_text(repo: &Path, args: &[&str]) -> Result<String> {
     String::from_utf8(safe_git(repo, args, None)?)
         .map(|text| text.trim().to_owned())
         .map_err(|_| anyhow!("Git metadata is not UTF-8"))
@@ -199,7 +259,10 @@ fn valid_commit(commit: &str) -> bool {
 
 /// Build a portable patch from exact immutable object IDs, verifying changed
 /// blobs against the sealed artifacts. Mutable branches/worktrees are ignored.
-fn patch(store: &Store, selected: &SelectedCandidate) -> Result<(PathBuf, Vec<u8>, Vec<String>)> {
+pub(super) fn patch(
+    store: &Store,
+    selected: &SelectedCandidate,
+) -> Result<(PathBuf, Vec<u8>, Vec<String>)> {
     let project = store
         .get_local_project(&selected.battle.project_id)?
         .ok_or_else(|| anyhow!("Product workspace is unavailable"))?;
@@ -457,7 +520,7 @@ pub fn preview_apply(store: &Store, variant_id: &str) -> Result<ApplyPreview> {
     Ok(apply_preflight(store, &candidate(store, variant_id)?)?.2)
 }
 
-fn finish(
+pub(super) fn finish(
     store: &Store,
     mut receipt: SelectionRecord,
     result: Result<()>,
@@ -483,41 +546,39 @@ fn finish(
 
 pub fn apply(store: &Store, variant_id: &str) -> Result<SelectionRecord> {
     let selected = candidate(store, variant_id)?;
+    let lease = delivery_lease(store, &selected.battle.project_id)?;
+    if store
+        .pending_growth_selections(&selected.battle.project_id)?
+        .iter()
+        .any(|receipt| receipt.action == SelectionAction::Apply)
+    {
+        return Err(anyhow!("An unfinished apply intent exists; inspect delivery recovery before starting another apply"));
+    }
     let (repo, bytes, _) = apply_preflight(store, &selected)?;
     let mut receipt = record(&selected, SelectionAction::Apply)?;
     receipt.artifact_digest = Some(digest(&bytes));
     store.create_growth_selection(&receipt)?;
     // Re-check immediately before writes in case another app edited the checkout
     // while persisting the intent. Git's all-hunk check is repeated on apply.
-    let result = (|| {
-        apply_preflight(store, &selected)?;
-        safe_git(
+    if let Err(error) = apply_preflight(store, &selected) {
+        return finish(store, receipt, Err(error));
+    }
+    safe_git_with_lease(
             &repo,
             &["apply", "--binary", "--whitespace=nowarn", "-"],
             Some(&bytes),
-        )?;
-        Ok(())
-    })();
-    finish(store, receipt, result)
+            Some(&lease),
+    ).map_err(|_| anyhow!("Selected apply did not complete verifiably; intent {} remains pending. Inspect delivery recovery before another write", receipt.id))?;
+    finish(store, receipt, Ok(()))
 }
 
 /// Atomic create-only file publication. Hard linking a completed same-directory
 /// temporary file refuses an existing destination, including a dangling symlink.
 pub fn write_new_file(target: &Path, bytes: &[u8]) -> Result<PathBuf> {
-    let absolute = if target.is_absolute() {
-        target.to_path_buf()
-    } else {
-        std::env::current_dir()?.join(target)
-    };
-    let parent = crate::paths::canonicalize(
-        absolute
-            .parent()
-            .ok_or_else(|| anyhow!("Output requires a parent directory"))?,
-    )?;
-    let name = absolute
-        .file_name()
-        .ok_or_else(|| anyhow!("Output requires a file name"))?;
-    let target = parent.join(name);
+    let target = absolute_output_path(target)?;
+    let parent = target
+        .parent()
+        .ok_or_else(|| anyhow!("Output requires a parent directory"))?;
     let temporary = parent.join(format!(".growthlab-output-{}", uuid::Uuid::new_v4()));
     let result = (|| {
         let mut options = std::fs::OpenOptions::new();
@@ -536,6 +597,23 @@ pub fn write_new_file(target: &Path, bytes: &[u8]) -> Result<PathBuf> {
     })();
     let _ = std::fs::remove_file(temporary);
     result
+}
+
+pub(super) fn absolute_output_path(target: &Path) -> Result<PathBuf> {
+    let absolute = if target.is_absolute() {
+        target.to_path_buf()
+    } else {
+        std::env::current_dir()?.join(target)
+    };
+    let parent = crate::paths::canonicalize(
+        absolute
+            .parent()
+            .ok_or_else(|| anyhow!("Output requires a parent directory"))?,
+    )?;
+    let name = absolute
+        .file_name()
+        .ok_or_else(|| anyhow!("Output requires a file name"))?;
+    Ok(parent.join(name))
 }
 
 pub fn refuse_product_output(store: &Store, battle: &GrowthBattle, target: &Path) -> Result<()> {
@@ -573,14 +651,365 @@ pub fn refuse_product_output(store: &Store, battle: &GrowthBattle, target: &Path
 
 pub fn export(store: &Store, variant_id: &str, output: &Path) -> Result<SelectionRecord> {
     let selected = candidate(store, variant_id)?;
-    refuse_product_output(store, &selected.battle, output)?;
+    let _lease = delivery_lease(store, &selected.battle.project_id)?;
+    let output = absolute_output_path(output)?;
+    refuse_product_output(store, &selected.battle, &output)?;
     let (_, bytes, _) = patch(store, &selected)?;
     let mut receipt = record(&selected, SelectionAction::Export)?;
     receipt.artifact_digest = Some(digest(&bytes));
     receipt.output_path = Some(output.to_string_lossy().into_owned());
     store.create_growth_selection(&receipt)?;
-    let result = write_new_file(output, &bytes).map(|_| ());
+    let result = write_new_file(&output, &bytes).map(|_| ());
     finish(store, receipt, result)
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeliveryRecoveryOutcome {
+    pub receipt_id: String,
+    pub action: SelectionAction,
+    pub status: SelectionStatus,
+    /// `baseline`, `candidate`, `conflict`, or `needs_resume`.
+    pub state: String,
+    pub resumed: bool,
+    pub message: String,
+    pub record: Option<SelectionRecord>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FileState {
+    Baseline,
+    Candidate,
+    Conflict,
+}
+
+fn tree_entry(repo: &Path, commit: &str, path: &str) -> Result<Option<(String, Vec<u8>)>> {
+    let raw = safe_git(repo, &["ls-tree", "-z", commit, "--", path], None)?;
+    if raw.is_empty() {
+        return Ok(None);
+    }
+    let text = std::str::from_utf8(&raw)
+        .map_err(|_| anyhow!("Candidate tree metadata is not UTF-8"))?
+        .trim_end_matches('\0');
+    let (metadata, actual_path) = text
+        .split_once('\t')
+        .ok_or_else(|| anyhow!("Candidate tree metadata is malformed"))?;
+    if actual_path != path {
+        return Err(anyhow!(
+            "Candidate tree path does not match its declaration"
+        ));
+    }
+    let fields: Vec<_> = metadata.split_whitespace().collect();
+    if fields.len() != 3 || !["100644", "100755"].contains(&fields[0]) || fields[1] != "blob" {
+        return Err(anyhow!("Candidate contains a non-regular file"));
+    }
+    let bytes = safe_git(repo, &["show", &format!("{commit}:{path}")], None)?;
+    Ok(Some((fields[0].to_owned(), bytes)))
+}
+
+fn worktree_matches(repo: &Path, path: &str, entry: Option<&(String, Vec<u8>)>) -> Result<bool> {
+    let target = repo.join(path);
+    let metadata = match std::fs::symlink_metadata(&target) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(entry.is_none()),
+        Err(error) => return Err(error.into()),
+    };
+    let Some((mode, bytes)) = entry else {
+        return Ok(false);
+    };
+    if !metadata.is_file() || metadata.file_type().is_symlink() || std::fs::read(&target)? != *bytes
+    {
+        return Ok(false);
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let expected = u32::from_str_radix(&mode[3..], 8).unwrap();
+        if metadata.permissions().mode() & 0o777 != expected {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+fn delivery_file_state(
+    repo: &Path,
+    source: &str,
+    candidate_commit: &str,
+    path: &str,
+) -> Result<FileState> {
+    let baseline = tree_entry(repo, source, path)?;
+    let candidate = tree_entry(repo, candidate_commit, path)?;
+    let candidate_match = worktree_matches(repo, path, candidate.as_ref())?;
+    if candidate_match {
+        Ok(FileState::Candidate)
+    } else if worktree_matches(repo, path, baseline.as_ref())? {
+        Ok(FileState::Baseline)
+    } else {
+        Ok(FileState::Conflict)
+    }
+}
+
+fn delivery_preflight(
+    store: &Store,
+    selected: &SelectedCandidate,
+) -> Result<(PathBuf, Vec<u8>, Vec<String>)> {
+    let (repo, bytes, paths) = patch(store, selected)?;
+    let config = GrowthConfig::load(&repo)?;
+    if config != selected.battle.contract.config {
+        return Err(anyhow!(
+            "Product configuration changed; delivery recovery refused"
+        ));
+    }
+    let toplevel = crate::paths::canonicalize(Path::new(&git_text(
+        &repo,
+        &["rev-parse", "--show-toplevel"],
+    )?))?;
+    if toplevel != repo
+        || git_text(&repo, &["rev-parse", "HEAD^{commit}"])?
+            != selected.battle.contract.source_snapshot_commit
+    {
+        return Err(anyhow!(
+            "Product HEAD differs from the frozen baseline; local work was preserved"
+        ));
+    }
+    for path in &paths {
+        selected.battle.contract.config.check_write(&repo, path)?;
+    }
+    Ok((repo, bytes, paths))
+}
+
+fn resume_apply(
+    store: &Store,
+    selected: &SelectedCandidate,
+    lease: &DeliveryLease,
+    paths: &[String],
+) -> Result<()> {
+    let (repo, _, _) = delivery_preflight(store, selected)?;
+    let source = selected.battle.contract.source_snapshot_commit.as_str();
+    let candidate_commit = selected
+        .sealed
+        .run
+        .candidate_commit
+        .as_deref()
+        .ok_or_else(|| anyhow!("Candidate commit is unavailable"))?;
+    for path in paths {
+        let state = delivery_file_state(&repo, source, candidate_commit, path)?;
+        if state == FileState::Candidate {
+            continue;
+        }
+        if state == FileState::Conflict {
+            return Err(anyhow!(
+                "Product file {path} conflicts with both the frozen baseline and selected candidate; local work was preserved"
+            ));
+        }
+        let args = [
+            "diff",
+            "--binary",
+            "--full-index",
+            "--no-ext-diff",
+            "--no-textconv",
+            "--no-renames",
+            source,
+            candidate_commit,
+            "--",
+            path,
+        ];
+        let bytes = safe_git(&repo, &args, None)?;
+        safe_git(
+            &repo,
+            &["apply", "--check", "--binary", "--whitespace=nowarn", "-"],
+            Some(&bytes),
+        )?;
+        safe_git_with_lease(
+            &repo,
+            &["apply", "--binary", "--whitespace=nowarn", "-"],
+            Some(&bytes),
+            Some(lease),
+        )?;
+    }
+    let candidate_commit = selected
+        .sealed
+        .run
+        .candidate_commit
+        .as_deref()
+        .ok_or_else(|| anyhow!("Candidate commit is unavailable"))?;
+    if paths.iter().any(|path| {
+        delivery_file_state(&repo, source, candidate_commit, path)
+            .map(|state| state != FileState::Candidate)
+            .unwrap_or(true)
+    }) {
+        return Err(anyhow!(
+            "Selected delivery remains incomplete; its pending receipt was preserved"
+        ));
+    }
+    Ok(())
+}
+
+fn pending_delivery(
+    receipt: &SelectionRecord,
+    state: impl Into<String>,
+    message: impl Into<String>,
+    resumed: bool,
+) -> DeliveryRecoveryOutcome {
+    DeliveryRecoveryOutcome {
+        receipt_id: receipt.id.clone(),
+        action: receipt.action,
+        status: receipt.status,
+        state: state.into(),
+        resumed,
+        message: message.into(),
+        record: None,
+    }
+}
+
+/// Inspect or explicitly resume a delivery whose durable intent remained
+/// pending after its original process stopped. Recovery never rolls files back:
+/// it finalizes an exact candidate state, applies only exact baseline files, or
+/// leaves a conflict pending for the user to resolve.
+pub fn recover_delivery(
+    store: &Store,
+    receipt_id: &str,
+    resume: bool,
+) -> Result<DeliveryRecoveryOutcome> {
+    let receipt = store
+        .get_growth_selection(receipt_id)?
+        .ok_or_else(|| anyhow!("Delivery receipt not found"))?;
+    if receipt.status != SelectionStatus::Pending {
+        return Ok(DeliveryRecoveryOutcome {
+            receipt_id: receipt.id.clone(),
+            action: receipt.action,
+            status: receipt.status,
+            state: "terminal".into(),
+            resumed: false,
+            message: "Delivery receipt is already terminal; no files were changed.".into(),
+            record: Some(receipt),
+        });
+    }
+    let battle = store
+        .get_growth_battle(&receipt.battle_id)?
+        .ok_or_else(|| anyhow!("Delivery battle not found"))?;
+    let _lease = delivery_lease(store, &battle.project_id)?;
+    match receipt.action {
+        SelectionAction::Apply => {
+            let selected = candidate(store, &receipt.variant_id)?;
+            let (repo, _, paths) = delivery_preflight(store, &selected)?;
+            let candidate_commit = selected
+                .sealed
+                .run
+                .candidate_commit
+                .as_deref()
+                .ok_or_else(|| anyhow!("Candidate commit is unavailable"))?;
+            let states: Vec<_> = paths
+                .iter()
+                .map(|path| {
+                    delivery_file_state(
+                        &repo,
+                        &battle.contract.source_snapshot_commit,
+                        candidate_commit,
+                        path,
+                    )
+                })
+                .collect::<Result<Vec<_>>>()?;
+            if states.iter().any(|state| *state == FileState::Conflict) {
+                return Ok(pending_delivery(
+                    &receipt,
+                    "conflict",
+                    "Selected apply found local file bytes or modes that match neither baseline nor candidate; local work was preserved.",
+                    false,
+                ));
+            }
+            if states.iter().all(|state| *state == FileState::Candidate) {
+                let record = finish(store, receipt, Ok(()))?;
+                return Ok(DeliveryRecoveryOutcome {
+                    receipt_id: record.id.clone(),
+                    action: record.action,
+                    status: record.status,
+                    state: "candidate".into(),
+                    resumed: false,
+                    message: "The selected candidate was already applied exactly; its receipt is finalized.".into(),
+                    record: Some(record),
+                });
+            }
+            if !resume {
+                return Ok(pending_delivery(
+                    &receipt,
+                    "needs_resume",
+                    "The selected apply is still at its baseline for at least one file. Use --resume only after reviewing the exact candidate patch.",
+                    false,
+                ));
+            }
+            resume_apply(store, &selected, &_lease, &paths)?;
+            let record = finish(store, receipt, Ok(()))?;
+            Ok(DeliveryRecoveryOutcome {
+                receipt_id: record.id.clone(),
+                action: record.action,
+                status: record.status,
+                state: "candidate".into(),
+                resumed: true,
+                message:
+                    "The remaining exact baseline files were applied and the receipt was finalized."
+                        .into(),
+                record: Some(record),
+            })
+        }
+        SelectionAction::Export => {
+            let selected = candidate(store, &receipt.variant_id)?;
+            let (_, bytes, _) = patch(store, &selected)?;
+            let output = absolute_output_path(Path::new(
+                receipt
+                    .output_path
+                    .as_deref()
+                    .ok_or_else(|| anyhow!("Pending export receipt has no output path"))?,
+            ))?;
+            if digest(&bytes) != receipt.artifact_digest.clone().unwrap_or_default() {
+                return Err(anyhow!(
+                    "Pending export patch digest no longer matches sealed evidence"
+                ));
+            }
+            if let Ok(existing) = std::fs::symlink_metadata(&output) {
+                if existing.is_file()
+                    && !existing.file_type().is_symlink()
+                    && std::fs::read(&output)? == bytes
+                {
+                    let record = finish(store, receipt, Ok(()))?;
+                    return Ok(DeliveryRecoveryOutcome {
+                        receipt_id: record.id.clone(),
+                        action: record.action,
+                        status: record.status,
+                        state: "candidate".into(),
+                        resumed: false,
+                        message:
+                            "The exact exported patch already exists; its receipt is finalized."
+                                .into(),
+                        record: Some(record),
+                    });
+                }
+                return Ok(pending_delivery(&receipt, "conflict", "The export destination exists with different bytes; local output was preserved.", false));
+            }
+            if !resume {
+                return Ok(pending_delivery(&receipt, "needs_resume", "The export destination is missing. Use --resume to create the exact sealed patch.", false));
+            }
+            refuse_product_output(store, &battle, &output)?;
+            write_new_file(&output, &bytes)?;
+            let record = finish(store, receipt, Ok(()))?;
+            Ok(DeliveryRecoveryOutcome {
+                receipt_id: record.id.clone(),
+                action: record.action,
+                status: record.status,
+                state: "candidate".into(),
+                resumed: true,
+                message: "The exact sealed patch was created and the receipt was finalized.".into(),
+                record: Some(record),
+            })
+        }
+        SelectionAction::Select => Ok(pending_delivery(
+            &receipt,
+            "unsupported",
+            "Selection receipts are finalized atomically and cannot remain pending.",
+            false,
+        )),
+    }
 }
 
 #[cfg(test)]

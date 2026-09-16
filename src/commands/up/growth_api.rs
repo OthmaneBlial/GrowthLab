@@ -223,6 +223,7 @@ where
         )
         .route("/api/growth/variants/{id}/apply", post(apply_variant))
         .route("/api/growth/variants/{id}/export", post(export_variant))
+        .route("/api/growth/delivery/{id}/recover", post(recover_delivery))
         .route("/api/growth/events", get(growth_events))
         .layer(DefaultBodyLimit::max(1024 * 1024))
 }
@@ -894,6 +895,24 @@ async fn export_variant(
     with_store(state, None, move |store| {
         require_selected(store, &id)?;
         value(selection::export(store, &id, &request.path).map_err(domain_error)?)
+    })
+    .await
+}
+
+#[derive(Default, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct DeliveryRecoveryRequest {
+    #[serde(default)]
+    resume: bool,
+}
+
+async fn recover_delivery(
+    State(state): State<GrowthState>,
+    Path(id): Path<String>,
+    Json(request): Json<DeliveryRecoveryRequest>,
+) -> ApiResult {
+    with_store(state, None, move |store| {
+        value(selection::recover_delivery(store, &id, request.resume).map_err(domain_error)?)
     })
     .await
 }

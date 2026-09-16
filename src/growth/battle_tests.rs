@@ -589,6 +589,78 @@ async fn failed_delivery_intent_refuses_product_and_export_writes() {
 }
 
 #[tokio::test]
+async fn pending_apply_recovery_finalizes_exact_candidate_without_rollback() {
+    let fixture = Fixture::new(None);
+    let battle =
+        battle::prepare(&fixture.store, &fixture.project_id, "Pending apply fixture").unwrap();
+    battle::execute(&fixture.store, &battle.id, &Fixture::plan())
+        .await
+        .unwrap();
+    let id = fixture.store.growth_variants(&battle.id).unwrap()[0]
+        .id
+        .clone();
+    let transaction = fixture.store.begin().unwrap();
+    transaction
+        .execute_batch("CREATE TRIGGER fixture_pending_apply BEFORE UPDATE ON growth_selections WHEN NEW.status='done' BEGIN SELECT RAISE(ABORT,'synthetic receipt finalization failure'); END;")
+        .unwrap();
+    transaction.commit().unwrap();
+    assert!(super::selection::apply(&fixture.store, &id).is_err());
+    let pending = fixture
+        .store
+        .growth_selections(&battle.id)
+        .unwrap()
+        .into_iter()
+        .find(|receipt| receipt.action == super::selection::SelectionAction::Apply)
+        .expect("apply intent is durable before the working-tree write");
+    assert_eq!(pending.status, super::selection::SelectionStatus::Pending);
+    assert_eq!(
+        std::fs::read_to_string(fixture.product.join("website/index.html")).unwrap(),
+        "<h1>Outcome-first</h1>"
+    );
+    std::fs::write(
+        fixture.product.join("website/index.html"),
+        "<h1>Builder's local recovery conflict</h1>",
+    )
+    .unwrap();
+    let conflict = super::selection::recover_delivery(&fixture.store, &pending.id, true).unwrap();
+    assert_eq!(conflict.state, "conflict");
+    assert_eq!(conflict.status, super::selection::SelectionStatus::Pending);
+    assert_eq!(
+        std::fs::read_to_string(fixture.product.join("website/index.html")).unwrap(),
+        "<h1>Builder's local recovery conflict</h1>"
+    );
+    std::fs::write(
+        fixture.product.join("website/index.html"),
+        "<h1>Outcome-first</h1>",
+    )
+    .unwrap();
+    let transaction = fixture.store.begin().unwrap();
+    transaction
+        .execute_batch("DROP TRIGGER fixture_pending_apply;")
+        .unwrap();
+    transaction.commit().unwrap();
+    let recovered = super::selection::recover_delivery(&fixture.store, &pending.id, false).unwrap();
+    assert_eq!(recovered.state, "candidate");
+    assert_eq!(recovered.status, super::selection::SelectionStatus::Done);
+    assert!(!recovered.resumed);
+    assert_eq!(
+        super::selection::recover_delivery(&fixture.store, &pending.id, true)
+            .unwrap()
+            .state,
+        "terminal"
+    );
+    assert_eq!(
+        git(&fixture.product, &["rev-parse", "HEAD"]),
+        fixture.commit
+    );
+    assert_eq!(
+        git(&fixture.product, &["diff", "--cached", "--name-only"]),
+        ""
+    );
+    assert_eq!(git(&fixture.product, &["remote"]), "");
+}
+
+#[tokio::test]
 async fn selected_preflight_never_executes_repository_content_filters() {
     let fixture = Fixture::new(None);
     let battle = battle::prepare(

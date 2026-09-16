@@ -62,9 +62,26 @@ window still needs a stronger launch protocol. Recovery does not clean up or
 rerun an unknown launcher. Checkpoints are retained as private content-addressed
 bundles; automatic checkpoint garbage collection is not implemented.
 
-This workflow covers CLI attempts and recorded jobs. Interrupted selected-delivery
-receipts, data-root relocation, native-agent runtime verification and operating
-system isolation verification across target platforms remain release gates.
+This workflow covers CLI attempts and recorded jobs. Selected delivery has its
+own explicit recovery command:
+
+```sh
+growthlab recover-delivery RECEIPT_ID
+growthlab recover-delivery RECEIPT_ID --resume
+```
+
+The first form only inspects a pending apply/export intent. An apply receipt is
+finalized when every declared file already matches the sealed candidate exactly;
+an export receipt is finalized when its exact patch already exists. `--resume`
+applies only declared files still matching the frozen baseline or creates a
+missing export with the sealed bytes. A file matching neither baseline nor
+candidate is reported as `conflict`, remains pending, and is never rolled back.
+The per-workspace delivery lease is inherited by the Git child so an orphaned
+writer cannot be mistaken for a completed delivery. The API equivalent is
+`POST /api/growth/delivery/{receiptId}/recover` with `{ "resume": true }`.
+
+Data-root relocation, native-agent runtime verification and operating system
+isolation verification across target platforms remain release gates.
 New validation checkpoints capture confinement metadata and exact policy bytes;
 recovery verifies their digest before inspecting an active job, then retains the
 original metadata with its exit/log. Older checks without metadata keep their

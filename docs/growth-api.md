@@ -26,6 +26,7 @@ to 1 MiB. The existing loopback/origin and remote-host authentication guards app
 | GET | `/variants/{id}/apply-preview` | Read-only selected-patch preview and baseline checks |
 | POST | `/variants/{id}/apply` | Explicit selected working-tree apply with `{ "confirmed": true }` |
 | POST | `/variants/{id}/export` | Create-only selected patch with `{ "path": "/new/selected.patch" }` |
+| POST | `/delivery/{receiptId}/recover` | Inspect or explicitly resume a pending selected delivery with `{ "resume": true }` |
 | GET | `/events` | SSE invalidations derived from persisted state, with reconnect snapshot |
 
 Replay execution accepts:
