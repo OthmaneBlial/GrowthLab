@@ -8,7 +8,7 @@ checks and evidence behind each one. Choose what ships.
 **Local-first · Rust + SQLite · Isolated Git worktrees · No Docker**
 
 <!-- project-links:start -->
-[Website](https://othmaneblial.github.io/GrowthLab/) · [Docs](https://othmaneblial.github.io/GrowthLab/docs.html) · [Roadmap](docs/ROADMAP.md) · [Contribute](CONTRIBUTING.md)
+[Website](https://othmaneblial.github.io/GrowthLab/) · [Docs](https://othmaneblial.github.io/GrowthLab/docs.html) · [Alpha release](https://github.com/OthmaneBlial/GrowthLab/releases/tag/v0.1.0-alpha.1) · [Roadmap](docs/ROADMAP.md) · [Contribute](CONTRIBUTING.md)
 <!-- project-links:end -->
 
 ![Real bundled battle with two eligible candidates and one deliberately failed heading check](docs/screenshots/growth-demo-failure.png)
@@ -62,6 +62,7 @@ Current milestone: **Three real variants with sealed evidence and archived stati
 - Private-by-default offline HTML/Markdown reports and interrupted-run recovery
 - Key-free bundled replay demo with one deliberate validation failure
 - Published project website and searchable docs with current progress and actual captures
+- Published v0.1.0-alpha.1 as a source prerelease with explicit alpha limitations
 
 | Validation | Current evidence |
 | --- | --- |

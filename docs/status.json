@@ -13,7 +13,8 @@
     "Dashboard comparison, source previews, diffs, logs and explicit selected apply/export",
     "Private-by-default offline HTML/Markdown reports and interrupted-run recovery",
     "Key-free bundled replay demo with one deliberate validation failure",
-    "Published project website and searchable docs with current progress and actual captures"
+    "Published project website and searchable docs with current progress and actual captures",
+    "Published v0.1.0-alpha.1 as a source prerelease with explicit alpha limitations"
   ],
   "validation": [
     {
@@ -59,5 +60,12 @@
     "published": true,
     "url": "https://othmaneblial.github.io/GrowthLab/",
     "docsUrl": "https://othmaneblial.github.io/GrowthLab/docs.html"
+  },
+  "release": {
+    "published": true,
+    "version": "0.1.0-alpha.1",
+    "url": "https://github.com/OthmaneBlial/GrowthLab/releases/tag/v0.1.0-alpha.1",
+    "platform": "Source prerelease",
+    "limitation": "Tagged source archives; no standalone binaries or installers. Native-agent verification and cross-platform packaging remain pending."
   }
 }

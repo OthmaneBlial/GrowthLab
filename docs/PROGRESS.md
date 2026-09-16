@@ -15,6 +15,13 @@ and credible release have not passed yet.
 
 ## Completed
 
+- Published [source prerelease v0.1.0-alpha.1](https://github.com/OthmaneBlial/GrowthLab/releases/tag/v0.1.0-alpha.1)
+  at immutable source commit `c477d2998df4b91f1145b0d347239b4e95efdef3`. GitHub
+  confirmed public, non-draft prerelease metadata and tagged source archive links;
+  no binaries/installers are attached. README and website share its release link
+  and the explicitly subjective 40% full-spec estimate. All six workflows remain
+  manually disabled; source publication does not close pending product gates.
+
 - Published the canonical [website](https://othmaneblial.github.io/GrowthLab/)
   and [searchable docs](https://othmaneblial.github.io/GrowthLab/docs.html). Native
   Pages build `1ea269a3d75ad5db6ff34ea4aee8451791082222` completed; landing, docs,
