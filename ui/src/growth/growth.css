@@ -70,6 +70,11 @@
 .growth-hypothesis-actions { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:14px; padding-top:12px; border-top:1px solid var(--border); }
 .growth-hypothesis-actions .growth-button { padding:8px 10px; font-size:0.625rem; }
 .growth-hypothesis-actions code { max-width:9ch; overflow:hidden; color:var(--subtext); font-size:0.5625rem; text-overflow:ellipsis; white-space:nowrap; }
+.growth-hypothesis-editor { display:grid; gap:12px; margin-top:14px; padding:14px; border-top:1px solid var(--border); background:var(--surface); }
+.growth-editor-heading { display:grid; gap:4px; }
+.growth-hypothesis-editor label { display:grid; gap:6px; color:var(--subtext); font-size:.72rem; font-weight:600; letter-spacing:.04em; text-transform:uppercase; }
+.growth-hypothesis-editor input,.growth-hypothesis-editor textarea { width:100%; box-sizing:border-box; color:var(--text); background:var(--surface-bright); border:1px solid var(--border-strong); border-radius:4px; padding:9px 10px; font:inherit; font-size:.84rem; letter-spacing:normal; text-transform:none; resize:vertical; }
+.growth-hypothesis-editor input:focus,.growth-hypothesis-editor textarea:focus { outline:2px solid var(--accent); outline-offset:1px; }
 .growth-lineage { overflow-wrap:anywhere; font-family:var(--mono); font-size:0.5625rem; }
 @media (max-width: 760px) { .growth-hypothesis-branches { grid-template-columns:1fr; } .growth-experiment-map > .growth-line { display:block; } .growth-experiment-map > .growth-line button { margin-top:14px; } }
 .growth-url-audit { margin-top:28px; }

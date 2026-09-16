@@ -208,6 +208,10 @@ where
             "/api/growth/workspaces/{id}/hypotheses",
             get(hypotheses).post(create_hypotheses),
         )
+        .route(
+            "/api/growth/workspaces/{id}/hypotheses/{hypothesis_id}",
+            patch(update_hypothesis),
+        )
         .route("/api/growth/workspaces/{id}/playbooks", get(playbook_runs))
         .route(
             "/api/growth/workspaces/{id}/playbooks/{role}",
@@ -605,6 +609,98 @@ async fn create_hypotheses(State(state): State<GrowthState>, Path(id): Path<Stri
         let hypotheses = model::starter_hypotheses(&workspace);
         store.insert_growth_hypotheses(&id, &hypotheses)?;
         value(hypotheses)
+    })
+    .await
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct HypothesisUpdateRequest {
+    title: String,
+    hypothesis: String,
+    mechanism: String,
+    baseline_definition: String,
+    primary_metric: String,
+    #[serde(default)]
+    guardrail_metrics: Vec<String>,
+    #[serde(default)]
+    success_threshold: Option<String>,
+    #[serde(default)]
+    risks: Vec<String>,
+}
+
+fn valid_text(label: &str, value: &str, max: usize) -> std::result::Result<(), ApiError> {
+    if value.trim().is_empty() || value.len() > max {
+        return Err(bad_request(format!("{label} must contain 1–{max} bytes")));
+    }
+    Ok(())
+}
+
+fn validate_hypothesis_update(
+    request: &HypothesisUpdateRequest,
+) -> std::result::Result<(), ApiError> {
+    for (label, value) in [
+        ("title", request.title.as_str()),
+        ("hypothesis", request.hypothesis.as_str()),
+        ("mechanism", request.mechanism.as_str()),
+        ("baselineDefinition", request.baseline_definition.as_str()),
+        ("primaryMetric", request.primary_metric.as_str()),
+    ] {
+        valid_text(label, value, 4096)?;
+    }
+    if request.guardrail_metrics.len() > 16
+        || request
+            .guardrail_metrics
+            .iter()
+            .any(|value| value.trim().is_empty() || value.len() > 1024)
+        || request.risks.len() > 16
+        || request
+            .risks
+            .iter()
+            .any(|value| value.trim().is_empty() || value.len() > 2048)
+        || request
+            .success_threshold
+            .as_ref()
+            .is_some_and(|value| value.len() > 4096)
+    {
+        return Err(bad_request(
+            "Guardrails, risks and success threshold exceed the editable field limits",
+        ));
+    }
+    if crate::growth::redaction::contains_secret(
+        &serde_json::to_string(request).map_err(bad_request)?,
+    ) {
+        return Err(bad_request(
+            "Hypothesis wording contains a possible credential",
+        ));
+    }
+    Ok(())
+}
+
+async fn update_hypothesis(
+    State(state): State<GrowthState>,
+    Path((id, hypothesis_id)): Path<(String, String)>,
+    Json(request): Json<HypothesisUpdateRequest>,
+) -> ApiResult {
+    validate_hypothesis_update(&request)?;
+    with_store(state, Some(id.clone()), move |store| {
+        let mut hypothesis = store
+            .list_growth_hypotheses(&id)?
+            .into_iter()
+            .find(|item| item.id == hypothesis_id)
+            .ok_or_else(|| not_found("Growth hypothesis"))?;
+        hypothesis.title = request.title;
+        hypothesis.hypothesis = request.hypothesis;
+        hypothesis.mechanism = request.mechanism;
+        hypothesis.baseline_definition = request.baseline_definition;
+        hypothesis.primary_metric = request.primary_metric;
+        hypothesis.guardrail_metrics = request.guardrail_metrics;
+        hypothesis.success_threshold = request.success_threshold;
+        hypothesis.risks = request.risks;
+        store
+            .update_growth_hypothesis(&id, &hypothesis)
+            .map_err(domain_error)?;
+        value(hypothesis)
     })
     .await
 }

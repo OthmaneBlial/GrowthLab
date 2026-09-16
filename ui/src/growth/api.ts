@@ -24,6 +24,10 @@ export interface Hypothesis {
   guardrailMetrics: string[]; successThreshold: string | null; evidence: Evidence[];
   risks: string[]; provenance: Provenance; confidence: Confidence;
 }
+export interface HypothesisUpdate {
+  title: string; hypothesis: string; mechanism: string; baselineDefinition: string;
+  primaryMetric: string; guardrailMetrics: string[]; successThreshold: string | null; risks: string[];
+}
 export interface Battle {
   id: string; projectId: string; status: "ready" | "running" | "completed" | "failed" | "cancelled";
   createdAt: number; endedAt: number | null; cancelRequested: boolean; contractDigest: string;
@@ -143,6 +147,7 @@ export const growth = {
   runPlaybook: (projectId: string, role: string, answers: string[] = []) => request<PlaybookRun>(`/workspaces/${id(projectId)}/playbooks/${id(role)}`, "POST", { answers }),
   hypotheses: (projectId: string, signal?: AbortSignal) => request<Hypothesis[]>(`/workspaces/${id(projectId)}/hypotheses`, "GET", undefined, signal),
   createHypotheses: (projectId: string) => request<Hypothesis[]>(`/workspaces/${id(projectId)}/hypotheses`, "POST"),
+  updateHypothesis: (projectId: string, hypothesisId: string, update: HypothesisUpdate) => request<Hypothesis>(`/workspaces/${id(projectId)}/hypotheses/${id(hypothesisId)}`, "PATCH", update),
   urlAudit: (url: string) => request<RemoteSeoAudit>("/url-audit", "POST", { url }),
   repositoryAudit: (url: string) => request<PublicRepositoryAudit>("/repository-audit", "POST", { url }),
   repositoryImport: (input: { url: string; path: string; name?: string; audience?: string; goal?: string; description?: string; metric?: string; mode?: "analyze_only" | "draft" | "implementation"; allowedPaths?: string[]; deniedPaths?: string[]; commands?: string[]; shallow?: boolean }) => request<Workspace>("/repository-import", "POST", input),

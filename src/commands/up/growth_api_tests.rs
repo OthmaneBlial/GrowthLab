@@ -103,6 +103,10 @@ impl Fixture {
         self.request(reqwest::Method::POST, path, body, expected)
             .await
     }
+    async fn patch(&self, path: &str, body: Value, expected: u16) -> Value {
+        self.request(reqwest::Method::PATCH, path, Some(body), expected)
+            .await
+    }
     async fn prepare(&self) -> Value {
         let workspace = self
             .post("/workspaces", Some(json!({"path":self.product})), 200)
@@ -943,4 +947,79 @@ async fn api_runs_and_persists_a_local_playbook_contract() {
         )
         .await;
     assert!(unknown["error"].as_str().unwrap().contains("Unknown"));
+}
+
+#[tokio::test]
+async fn api_edits_hypothesis_wording_but_preserves_lineage_and_rejects_active_battles() {
+    let fixture = Fixture::new(false).await;
+    let workspace = fixture
+        .post("/workspaces", Some(json!({"path":fixture.product})), 200)
+        .await;
+    let project_id = workspace["projectId"].as_str().unwrap();
+    let hypotheses = fixture
+        .post(
+            &format!("/workspaces/{project_id}/hypotheses"),
+            None,
+            200,
+        )
+        .await;
+    let original = hypotheses.as_array().unwrap()[0].clone();
+    let id = original["id"].as_str().unwrap();
+    let edited = fixture
+        .patch(
+            &format!("/workspaces/{project_id}/hypotheses/{id}"),
+            json!({
+                "title": "Sharper outcome promise",
+                "hypothesis": "Lead with the first qualified outcome and one action.",
+                "mechanism": "A concrete promise reduces uncertainty before commitment.",
+                "baselineDefinition": "Current product at the recorded source snapshot; no traffic baseline supplied.",
+                "primaryMetric": "qualified_signup_rate",
+                "guardrailMetrics": ["activation_rate"],
+                "successThreshold": "Define after importing telemetry",
+                "risks": ["Copy clarity does not establish conversion lift."]
+            }),
+            200,
+        )
+        .await;
+    assert_eq!(edited["id"], original["id"]);
+    assert_eq!(edited["role"], original["role"]);
+    assert_eq!(edited["sourceSnapshotCommit"], original["sourceSnapshotCommit"]);
+    assert_eq!(edited["evidence"], original["evidence"]);
+    assert_eq!(edited["title"], "Sharper outcome promise");
+    assert_eq!(
+        fixture
+            .get(&format!("/workspaces/{project_id}/hypotheses"))
+            .await
+            .as_array()
+            .unwrap()[0]["primaryMetric"],
+        "qualified_signup_rate"
+    );
+    let battle = fixture
+        .post(
+            "/battles",
+            Some(json!({"projectId":project_id,"goal":"Freeze edited branch"})),
+            200,
+        )
+        .await;
+    let rejected = fixture
+        .patch(
+            &format!("/workspaces/{project_id}/hypotheses/{id}"),
+            json!({
+                "title": "Should be refused",
+                "hypothesis": "The frozen battle must not drift.",
+                "mechanism": "A frozen contract is stable.",
+                "baselineDefinition": "Recorded source snapshot.",
+                "primaryMetric": "qualified_signup_rate",
+                "guardrailMetrics": [],
+                "successThreshold": null,
+                "risks": ["No outcome evidence"]
+            }),
+            400,
+        )
+        .await;
+    assert!(rejected["error"]
+        .as_str()
+        .unwrap()
+        .contains("ready or running"));
+    assert_eq!(battle["battle"]["status"], "ready");
 }

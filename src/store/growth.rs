@@ -260,6 +260,80 @@ impl Store {
             .collect()
     }
 
+    /// Replace the user-editable fields of one hypothesis while keeping its
+    /// identity, source snapshot and recorded evidence stable. A prepared or
+    /// running battle owns a frozen copy, so the workspace map cannot drift
+    /// underneath it.
+    pub fn update_growth_hypothesis(
+        &self,
+        project_id: &str,
+        hypothesis: &GrowthHypothesis,
+    ) -> Result<()> {
+        let workspace = self
+            .get_growth_workspace(project_id)?
+            .ok_or_else(|| anyhow!("Growth workspace not found"))?;
+        hypothesis.validate()?;
+        if hypothesis.project_id != project_id
+            || hypothesis.source_snapshot_commit != workspace.source_snapshot_commit
+        {
+            return Err(anyhow!(
+                "Hypothesis must use the workspace and its recorded source snapshot"
+            ));
+        }
+        let existing_json: Option<String> = self
+            .conn
+            .query_row(
+                "SELECT payload_json FROM growth_hypotheses WHERE id=?1 AND project_id=?2",
+                params![hypothesis.id, project_id],
+                |row| row.get(0),
+            )
+            .optional()?;
+        let existing: GrowthHypothesis = existing_json
+            .ok_or_else(|| anyhow!("Growth hypothesis not found"))
+            .and_then(|value| {
+                serde_json::from_str(&value)
+                    .map_err(|_| anyhow!("Stored growth hypothesis has invalid schema"))
+            })?;
+        if existing.id != hypothesis.id
+            || existing.project_id != hypothesis.project_id
+            || existing.goal != hypothesis.goal
+            || existing.audience != hypothesis.audience
+            || existing.channel != hypothesis.channel
+            || existing.role != hypothesis.role
+            || existing.source_snapshot_commit != hypothesis.source_snapshot_commit
+            || existing.evidence != hypothesis.evidence
+            || existing.provenance != hypothesis.provenance
+            || existing.confidence != hypothesis.confidence
+            || existing.decision != hypothesis.decision
+            || existing.created_at != hypothesis.created_at
+        {
+            return Err(anyhow!(
+                "Only hypothesis wording, metric, thresholds and risks can be edited"
+            ));
+        }
+        let tx = self.begin()?;
+        let active_battle: bool = tx.query_row(
+            "SELECT EXISTS(SELECT 1 FROM growth_battles WHERE project_id=?1 AND status IN ('ready','running'))",
+            [project_id],
+            |row| row.get(0),
+        )?;
+        if active_battle {
+            return Err(anyhow!(
+                "Hypotheses cannot be edited while a Growth Battle is ready or running"
+            ));
+        }
+        tx.execute(
+            "UPDATE growth_hypotheses SET payload_json=?1 WHERE id=?2 AND project_id=?3",
+            params![
+                serde_json::to_string(hypothesis)?,
+                hypothesis.id,
+                project_id
+            ],
+        )?;
+        tx.commit()?;
+        Ok(())
+    }
+
     pub fn insert_growth_playbook_run(&self, run: &PlaybookRun) -> Result<()> {
         run.validate()?;
         if self.get_growth_workspace(&run.project_id)?.is_none() {
@@ -518,6 +592,18 @@ mod tests {
         assert!(store.list_growth_hypotheses("p").unwrap().is_empty());
         store.insert_growth_hypotheses("p", &proposals).unwrap();
         assert_eq!(store.list_growth_hypotheses("p").unwrap(), proposals);
+        let mut edited = proposals[0].clone();
+        edited.title = "Sharper outcome-first positioning".into();
+        edited.hypothesis = "Lead with the first qualified outcome and one next action.".into();
+        edited.primary_metric = "qualified_signup_rate".into();
+        store.update_growth_hypothesis("p", &edited).unwrap();
+        let stored = store.list_growth_hypotheses("p").unwrap();
+        assert_eq!(stored[0].title, edited.title);
+        assert_eq!(stored[0].primary_metric, edited.primary_metric);
+        assert_eq!(stored[0].evidence, proposals[0].evidence);
+        let mut tampered = edited.clone();
+        tampered.role = crate::growth::model::AgentRole::Skeptic;
+        assert!(store.update_growth_hypothesis("p", &tampered).is_err());
         let mut foreign = proposals.clone();
         foreign[0].source_snapshot_commit = "b".repeat(40);
         assert!(store.insert_growth_hypotheses("p", &foreign).is_err());
