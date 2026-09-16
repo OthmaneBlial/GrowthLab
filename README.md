@@ -140,6 +140,7 @@ Current milestone: **Public repository review, manual-brief onboarding, executab
 - Saved deterministic playbook runs with ordered answers, outputs and guardrails
 - Distribution-aware local measurement comparisons that keep channel baselines separate
 - Explicit public GitHub checkout import into a local, configured workspace
+- Workspace experiment map showing the shared goal and three untested growth branches
 
 | Validation | Current evidence |
 | --- | --- |
@@ -159,6 +160,7 @@ Current milestone: **Public repository review, manual-brief onboarding, executab
 | Executable playbooks | **passed** — CLI, API and workspace dashboard execute and persist deterministic role contracts with bounded answers; runs remain UNTESTED and make no provider or product-file request |
 | Distribution-aware measurement | **passed** — Local Rust and browser CSV summaries group by metric, distribution or channel and variant; comparisons stay within each distribution and remain MEASURED from user-supplied rows |
 | Public repository checkout import | **passed** — CLI, API and Home UI clone only after an explicit new destination is supplied; existing contracts are preserved, missing contracts are committed locally, and no push or provider request occurs |
+| Workspace experiment map | **passed** — Chrome smoke created the deterministic starter map and rendered the shared goal with positioning, conversion and onboarding branches; cards remain UNTESTED until a battle and local evidence exist |
 
 **Still ahead**
 
