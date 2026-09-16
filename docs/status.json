@@ -5,7 +5,7 @@
   "progressEstimate": 55,
   "progressExplanation": "Subjective estimate against the complete product specification, not a measured delivery metric.",
   "milestone": "Local SEO audit and first local measurement summary validated",
-  "validatedSourceCommit": "d5008439f4bd6c74300591581fc38c17a46eb996",
+  "validatedSourceCommit": "e14687c4e05ad5bd9d8cf5e730df159e41ff1c29",
   "delivered": [
     "Local product import with reviewed growthlab.yaml permissions",
     "Three competing changes from one frozen starting point in isolated workspaces",
