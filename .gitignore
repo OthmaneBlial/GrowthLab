@@ -19,6 +19,13 @@ Claude.local.md
 /orx.db
 /orx.db-wal
 /orx.db-shm
+/growthlab.db
+/growthlab.db-wal
+/growthlab.db-shm
+/.growthlab/
+/.claude/launch.json
+/.claude/settings.local.json
+/ui/project.inlang/cache/
 
 # This repo uses pnpm; ignore an accidental npm lockfile
 ui/package-lock.json

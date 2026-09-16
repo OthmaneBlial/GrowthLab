@@ -54,6 +54,8 @@ permissions:
 
 jobs:
   dispatch:
+    # Inherited upstream publishing is not a GrowthLab release pipeline.
+    if: github.repository == 'alphaXiv/OpenResearch'
     name: dispatch release if Cargo.toml version is unreleased
     runs-on: ubuntu-latest
     steps:

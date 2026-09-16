@@ -45,7 +45,7 @@ jobs:
   # non-secret MACOS_SIGNING_ENABLED variable and confirms the release exists, so
   # a macOS runner (billed 10x) never boots otherwise and no secret is read here.
   check:
-    if: ${{ vars.MACOS_SIGNING_ENABLED == 'true' && (github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'workflow_dispatch')) }}
+    if: ${{ github.repository == 'alphaXiv/OpenResearch' && vars.MACOS_SIGNING_ENABLED == 'true' && (github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'workflow_dispatch')) }}
     runs-on: ubuntu-latest
     outputs:
       ok: ${{ steps.gate.outputs.ok }}
