@@ -84,8 +84,10 @@ Each comparison row may include `rubric` when the sealed implementation contains
 HTML. The `rubric.id` is `seo-page-hygiene-v1`, its `provenance` is `ESTIMATED`,
 and `dimensions` contains the inspectable `key`, `label`, `score`, `maxScore`,
 `status` and `evidence` for title, description, headings, language, useful copy,
-canonical URL, links and image descriptions. The 100-point total is a structural
-page review; it is never a ranking, traffic, accessibility or conversion result.
+canonical URL, links and image descriptions. `recommendations` contains
+deterministic next steps for partial or missing dimensions. The 100-point total
+is a structural page review; it is never a ranking, traffic, accessibility or
+conversion result.
 
 Dashboard delivery requires the latest completed selection to match the requested
 variant. Confirmation does not bypass clean-baseline, permission or seal checks.

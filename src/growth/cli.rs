@@ -412,6 +412,15 @@ fn audit_markdown(path: &Path, rubric: &super::evaluation::SeoRubric) -> String 
         ));
     }
     output.push_str(&format!("\n**Calculation:** {}\n\n", rubric.calculation));
+    output.push_str("## Suggested next steps\n\n");
+    if rubric.recommendations.is_empty() {
+        output.push_str("- No structural gaps were found by this local rubric.\n\n");
+    } else {
+        for recommendation in &rubric.recommendations {
+            output.push_str(&format!("- {recommendation}\n"));
+        }
+        output.push('\n');
+    }
     output.push_str("## Limits\n\n");
     for limitation in &rubric.limitations {
         output.push_str(&format!("- {limitation}\n"));

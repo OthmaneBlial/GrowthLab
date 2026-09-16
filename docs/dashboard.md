@@ -62,6 +62,8 @@ When a recorded option contains HTML, the card also exposes **SEO page hygiene
 observations. The 100-point rubric checks page metadata and basic content shape;
 it does not estimate rankings, traffic or conversion and does not replace a
 real crawl, accessibility audit or performance measurement.
+The expanded card also lists concrete next steps for every partial or missing
+dimension, so the review can turn directly into a page edit.
 
 For a quick review before creating a battle, run
 `growthlab seo-audit --html ./website/index.html`. Add `--format markdown` for a

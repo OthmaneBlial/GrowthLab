@@ -755,6 +755,8 @@ async fn reports_withhold_private_context_escape_explicit_context_and_verify_sea
         );
         assert!(text.contains(&battle.contract_digest));
     }
+    assert!(output.contains("Suggested next steps"));
+    assert!(markdown.contains("Suggested next steps"));
     assert_eq!(report.variants[1].checks[0].exit_code, Some(2));
     let disclosed = super::report::build(
         &fixture.store,

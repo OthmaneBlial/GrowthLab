@@ -78,6 +78,9 @@ def main():
                 assert rubric and rubric["id"] == "seo-page-hygiene-v1"
                 assert rubric["provenance"] == "ESTIMATED" and rubric["maxScore"] == 100
                 assert len(rubric["dimensions"]) == 8
+                assert isinstance(rubric["recommendations"], list)
+                if index == 1:
+                    assert any("<h1>" in recommendation for recommendation in rubric["recommendations"])
                 assert all(0 <= dimension["score"] <= dimension["maxScore"] for dimension in rubric["dimensions"])
                 variant = row["variantId"]
                 artifacts = json.loads(get(f"/api/growth/variants/{variant}/artifacts"))

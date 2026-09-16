@@ -348,8 +348,18 @@ pub fn markdown(report: &BattleReport) -> String {
                 ));
             }
             out.push('\n');
+            out.push_str("### Suggested next steps\n\n");
+            if rubric.recommendations.is_empty() {
+                out.push_str("- No structural gaps were found by this local rubric.\n\n");
+            } else {
+                for recommendation in &rubric.recommendations {
+                    out.push_str(&format!("- {}\n", md(recommendation)));
+                }
+                out.push('\n');
+            }
+            out.push_str("### Limits\n\n");
             for limitation in &rubric.limitations {
-                out.push_str(&format!("  - {}\n", md(limitation)));
+                out.push_str(&format!("- {}\n", md(limitation)));
             }
             out.push('\n');
         }
@@ -463,14 +473,24 @@ pub fn document(report: &BattleReport) -> String {
                 .iter()
                 .map(|limitation| format!("<li>{}</li>", html(limitation)))
                 .collect::<String>();
+            let recommendations = if rubric.recommendations.is_empty() {
+                "<li>No structural gaps were found by this local rubric.</li>".into()
+            } else {
+                rubric
+                    .recommendations
+                    .iter()
+                    .map(|recommendation| format!("<li>{}</li>", html(recommendation)))
+                    .collect::<String>()
+            };
             format!(
-                r#"<details class="rubric"><summary><span>{}</span><strong>{}/{} · {}</strong></summary><p>{}</p><ul>{}</ul><p class="rubric-limits">{}</p><ul>{}</ul></details>"#,
+                r#"<details class="rubric"><summary><span>{}</span><strong>{}/{} · {}</strong></summary><p>{}</p><ul>{}</ul><p class="rubric-recommendations">Suggested next steps</p><ul>{}</ul><p class="rubric-limits">{}</p><ul>{}</ul></details>"#,
                 html(&rubric.label),
                 rubric.score,
                 rubric.max_score,
                 provenance(rubric.provenance),
                 html(&rubric.calculation),
                 dimensions,
+                recommendations,
                 "Limits",
                 limitations
             )

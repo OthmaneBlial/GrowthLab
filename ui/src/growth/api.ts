@@ -66,7 +66,7 @@ export interface BattleStatus {
   controller: { running: boolean; error: string | null } | null;
 }
 export interface RubricDimension { key: string; label: string; score: number; maxScore: number; status: "strong" | "partial" | "missing"; evidence: string[] }
-export interface SeoRubric { id: string; label: string; score: number; maxScore: number; provenance: Provenance; dimensions: RubricDimension[]; calculation: string; limitations: string[] }
+export interface SeoRubric { id: string; label: string; score: number; maxScore: number; provenance: Provenance; dimensions: RubricDimension[]; recommendations: string[]; calculation: string; limitations: string[] }
 export interface Comparison {
   battleId: string; label: string; evaluator: string; calculation: string; limitations: string[];
   recommendedCandidates: string[];

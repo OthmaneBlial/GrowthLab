@@ -101,7 +101,7 @@ Current milestone: **Local SEO audit and an explainable page rubric validated**.
 - Local and SSH launchers self-register their controller PID before payload work
 - Automatic desktop PNG capture from sealed preview documents with archive verification
 - Explainable SEO page-hygiene rubric with dimension scores and limits
-- Standalone local SEO audit with JSON or Markdown output and safe file bounds
+- Standalone local SEO audit with actionable recommendations, JSON or Markdown output and safe file bounds
 
 | Validation | Current evidence |
 | --- | --- |

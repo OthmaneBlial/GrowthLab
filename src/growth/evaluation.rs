@@ -51,6 +51,7 @@ pub struct SeoRubric {
     pub max_score: u8,
     pub provenance: Provenance,
     pub dimensions: Vec<RubricDimension>,
+    pub recommendations: Vec<String>,
     pub calculation: String,
     pub limitations: Vec<String>,
 }
@@ -307,6 +308,25 @@ pub fn seo_rubric(html: &str) -> SeoRubric {
         links_dimension,
         media_dimension,
     ];
+    let recommendations = dimensions
+        .iter()
+        .filter(|dimension| dimension.status != "strong")
+        .filter_map(|dimension| match dimension.key.as_str() {
+            "title" => Some("Add one descriptive <title> between 10 and 60 characters.".into()),
+            "description" => {
+                Some("Add a useful meta description between 70 and 160 characters.".into())
+            }
+            "headings" => Some("Use one clear <h1> and at least one supporting <h2>.".into()),
+            "language" => Some("Declare the document language with an html lang attribute.".into()),
+            "content" => {
+                Some("Add more visible, product-specific copy that explains the page.".into())
+            }
+            "canonical" => Some("Add a canonical link with a stable, non-empty URL.".into()),
+            "links" => Some("Add at least one useful link to the next reader action.".into()),
+            "media" => Some("Give every image a concise, useful alt attribute.".into()),
+            _ => None,
+        })
+        .collect();
     let score = dimensions
         .iter()
         .map(|dimension| dimension.score as u16)
@@ -318,6 +338,7 @@ pub fn seo_rubric(html: &str) -> SeoRubric {
         max_score: 100,
         provenance: Provenance::Estimated,
         dimensions,
+        recommendations,
         calculation: "100-point structural rubric: title 20, description 20, headings 20, language 10, useful copy 15, canonical 5, links 5 and image descriptions 5.".into(),
         limitations: vec![
             "This reviews the archived HTML only; it does not crawl, index, rank or measure traffic.".into(),
@@ -491,6 +512,7 @@ mod tests {
             .dimensions
             .iter()
             .all(|dimension| dimension.score == dimension.max_score));
+        assert!(rubric.recommendations.is_empty());
         assert!(rubric.calculation.contains("title 20"));
         assert_eq!(rubric.limitations.len(), 3);
     }
@@ -504,5 +526,9 @@ mod tests {
         assert_eq!(rubric.dimensions[2].status, "missing");
         assert!(rubric.dimensions[0].evidence[0].contains("No non-empty"));
         assert!(rubric.dimensions[1].evidence[0].contains("No non-empty"));
+        assert!(rubric
+            .recommendations
+            .iter()
+            .any(|recommendation| recommendation.contains("<title>")));
     }
 }

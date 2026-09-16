@@ -125,6 +125,9 @@
 .growth-seo-dimension-strong { border-top:2px solid var(--accent-teal); }
 .growth-seo-dimension-partial { border-top:2px solid var(--accent-amber); }
 .growth-seo-dimension-missing { border-top:2px solid var(--accent-red); }
+.growth-seo-recommendations { margin:16px 0; padding:13px 14px; border-left:2px solid var(--accent-amber); background:var(--surface); line-height:1.7; }
+.growth-seo-recommendations>strong { font-size:0.6875rem; }
+.growth-seo-recommendations ul { margin:8px 0 0; padding-left:18px; color:var(--text); }
 .growth-seo-limitations { color:var(--subtext); margin:14px 0 16px; padding-left:18px; line-height:1.7; }
 .growth-provenance { border-top:1px solid var(--border); padding-top:16px; margin-top:20px; }
 .growth-provenance>div { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px; font-size:0.625rem; }
