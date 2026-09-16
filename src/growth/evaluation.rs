@@ -368,6 +368,13 @@ fn non_empty_attribute(tag: &str, name: &str) -> bool {
     attribute(tag, name).is_some_and(|value| !value.trim().is_empty())
 }
 
+fn has_attribute(tag: &str, name: &str) -> bool {
+    non_empty_attribute(tag, name)
+        || Regex::new(&format!(r"(?is)(?:^|\s){}(?:\s|=|$)", regex::escape(name)))
+            .expect("static boolean attribute pattern is valid")
+            .is_match(tag)
+}
+
 fn quality_control_counts(html: &str) -> (usize, usize, usize, usize) {
     let mut interactive = 0;
     let mut unnamed = 0;
@@ -437,8 +444,8 @@ pub fn page_quality_rubric(html: &str) -> PageQualityRubric {
         .into_iter()
         .filter(|tag| {
             non_empty_attribute(tag, "src")
-                && !non_empty_attribute(tag, "async")
-                && !non_empty_attribute(tag, "defer")
+                && !has_attribute(tag, "async")
+                && !has_attribute(tag, "defer")
                 && !attribute(tag, "type").is_some_and(|value| value.eq_ignore_ascii_case("module"))
         })
         .count();
@@ -747,5 +754,14 @@ mod tests {
             .recommendations
             .iter()
             .any(|recommendation| recommendation.contains("accessible name")));
+    }
+
+    #[test]
+    fn page_quality_rubric_treats_boolean_async_as_a_non_blocking_hint() {
+        let rubric = page_quality_rubric(
+            r#"<html><head><meta name="viewport" content="width=device-width"><script async src="app.js"></script></head><body></body></html>"#,
+        );
+        assert_eq!(rubric.dimensions[3].key, "loading");
+        assert_eq!(rubric.dimensions[3].status, "strong");
     }
 }
