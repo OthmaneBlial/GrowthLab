@@ -5,7 +5,7 @@
   "progressEstimate": 45,
   "progressExplanation": "Subjective estimate against the complete product specification, not a measured delivery metric.",
   "milestone": "Three real growth surfaces with sealed evidence and verified local PNG captures",
-  "validatedSourceCommit": "55a95d3d489c0c6ac0d013b876234ffb7f0f7018",
+  "validatedSourceCommit": "09406c244cbdbcba0d8496c8089493659e4cbeed",
   "delivered": [
     "Local product import with reviewed growthlab.yaml permissions",
     "Three competing changes from one frozen starting point in isolated workspaces",
