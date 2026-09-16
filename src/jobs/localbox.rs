@@ -41,7 +41,22 @@ pub struct LocalJobSpec {
 /// the run dir — the reattach handle stored on the descriptor.
 pub fn run_job(spec: &LocalJobSpec) -> Result<PathBuf> {
     let dir = run_dir(&spec.run_id);
-    std::fs::create_dir_all(&dir)
+    run_job_at(spec, &dir, true)
+}
+
+/// Reuse the controller lifecycle with an explicit run directory. Growth
+/// validation uses a minimal environment, without synced provider credentials.
+pub fn run_job_at(spec: &LocalJobSpec, dir: &Path, inherit_environment: bool) -> Result<PathBuf> {
+    run_job_with_timeout(spec, dir, inherit_environment, None)
+}
+
+pub fn run_job_with_timeout(
+    spec: &LocalJobSpec,
+    dir: &Path,
+    inherit_environment: bool,
+    timeout_seconds: Option<u64>,
+) -> Result<PathBuf> {
+    std::fs::create_dir_all(dir)
         .map_err(|e| anyhow!("Could not create {}: {}", dir.display(), e))?;
     let env = super::default_python_env(&spec.env);
     let exports: String = env
@@ -51,11 +66,21 @@ pub fn run_job(spec: &LocalJobSpec) -> Result<PathBuf> {
         .join("\n");
     // Same subshell shape as the ssh backend: an `exit`/`set -e` failure inside
     // `( … )` ends the subshell, not run.sh, so exit_code is always written.
-    let run_sh = format!(
+    let run_sh = if let Some(timeout_seconds) = timeout_seconds {
+        if timeout_seconds == 0 || timeout_seconds > 3600 {
+            return Err(anyhow!("Local job timeout must be 1–3600 seconds"));
+        }
+        // Job control gives payload/watchdog independent process groups. The
+        // watchdog survives a stalled or crashed Rust controller and finishes
+        // escalation even when the payload's leader exits on TERM.
+        format!("#!/usr/bin/env bash\n{exports}\ncd {dir} || exit 97\nset -m\n(\n{script}\n) > log 2>&1 &\npayload_pid=$!\necho $payload_pid > payload_pid\n(\n sleep {timeout_seconds}\n echo 1 > timed_out\n kill -TERM -- -$payload_pid 2>/dev/null || true\n sleep 0.5\n kill -KILL -- -$payload_pid 2>/dev/null || true\n) >/dev/null 2>&1 &\nwatchdog_pid=$!\necho $watchdog_pid > watchdog_pid\nwait $payload_pid\nlocal_job_exit_code=$?\nif [ -e timed_out ]; then\n wait $watchdog_pid 2>/dev/null || true\n local_job_exit_code=124\nelse\n kill -TERM -- -$watchdog_pid 2>/dev/null || true\n wait $watchdog_pid 2>/dev/null || true\nfi\necho $local_job_exit_code > exit_code\n",dir=sh_quote(&crate::local::bash::bash_path(dir)),script=spec.script)
+    } else {
+        format!(
         "#!/usr/bin/env bash\n{exports}\ncd {dir} || exit 97\n(\n{script}\n) > log 2>&1\necho $? > exit_code\n",
-        dir = sh_quote(&crate::local::bash::bash_path(&dir)),
+        dir = sh_quote(&crate::local::bash::bash_path(dir)),
         script = spec.script,
-    );
+    )
+    };
     let run_sh_path = dir.join("run.sh");
     std::fs::write(&run_sh_path, run_sh)
         .map_err(|e| anyhow!("Could not write {}: {}", run_sh_path.display(), e))?;
@@ -63,11 +88,19 @@ pub fn run_job(spec: &LocalJobSpec) -> Result<PathBuf> {
     {
         // run.sh carries exported tokens — keep both it and the dir owner-only.
         use std::os::unix::fs::PermissionsExt;
-        let _ = std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700));
+        let _ = std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o700));
         let _ = std::fs::set_permissions(&run_sh_path, std::fs::Permissions::from_mode(0o600));
     }
 
     let mut cmd = std::process::Command::new(crate::local::bash::program());
+    if !inherit_environment {
+        cmd.env_clear();
+        for key in ["SystemRoot", "COMSPEC", "TEMP", "TMP", "TMPDIR", "LANG"] {
+            if let Some(value) = std::env::var_os(key) {
+                cmd.env(key, value);
+            }
+        }
+    }
     if let Some(path) =
         crate::local::bash::path_with_toolchain(crate::local::shell_env::search_path())
     {
@@ -75,7 +108,7 @@ pub fn run_job(spec: &LocalJobSpec) -> Result<PathBuf> {
     }
     cmd.arg("run.sh")
         .envs(&spec.secret_env)
-        .current_dir(&dir)
+        .current_dir(dir)
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null());
@@ -84,12 +117,24 @@ pub fn run_job(spec: &LocalJobSpec) -> Result<PathBuf> {
         use std::os::unix::process::CommandExt;
         cmd.process_group(0);
     }
-    let child = cmd
+    let mut child = cmd
         .spawn()
         .map_err(|e| anyhow!("Could not launch the local run: {}", e))?;
-    std::fs::write(dir.join("pid"), format!("{}\n", child.id()))
-        .map_err(|e| anyhow!("Could not record the run's pid: {}", e))?;
-    Ok(dir)
+    if let Err(error) = std::fs::write(dir.join("pid"), format!("{}\n", child.id())) {
+        #[cfg(not(windows))]
+        let _ = terminate_group(&child.id().to_string());
+        #[cfg(windows)]
+        let _ = terminate_tree(&child.id().to_string());
+        let _ = child.kill();
+        let _ = child.wait();
+        return Err(anyhow!("Could not record the run's pid: {error}"));
+    }
+    // The detached handle remains its directory/PID, but this submitting
+    // process still owns the OS child and must reap it when it ends.
+    std::thread::spawn(move || {
+        let _ = child.wait();
+    });
+    Ok(dir.to_path_buf())
 }
 
 /// Is the recorded process still alive? `ps` rather than `kill -0`: a zombie
@@ -226,6 +271,11 @@ pub fn cancel_job(dir: &Path) -> Result<()> {
     }
     #[cfg(not(windows))]
     {
+        for name in ["payload_pid", "watchdog_pid"] {
+            if let Ok(child) = std::fs::read_to_string(dir.join(name)) {
+                terminate_group(child.trim())?;
+            }
+        }
         terminate_group(&pid)
     }
 }
@@ -250,6 +300,16 @@ fn terminate_tree(pid: &str) -> Result<()> {
 
 #[cfg(not(windows))]
 fn terminate_group(pid: &str) -> Result<()> {
+    let leader: i32 = pid
+        .parse()
+        .map_err(|_| anyhow!("Invalid local process id"))?;
+    if leader <= 0 {
+        return Err(anyhow!("Invalid local process id"));
+    }
+    // SAFETY: probe a locally recorded process group; completion races cancel.
+    if unsafe { libc::kill(-leader, 0) } != 0 {
+        return Ok(());
+    }
     let group = std::process::Command::new("kill")
         .args(["-TERM", "--", &format!("-{pid}")])
         .stdout(std::process::Stdio::null())
@@ -269,6 +329,17 @@ fn terminate_group(pid: &str) -> Result<()> {
             return Err(anyhow!("Could not terminate local process group {pid}"));
         }
     }
+    // TERM alone leaves children that ignore it running. A controller owns a
+    // fresh process group; bound cancellation and kill remaining descendants.
+    for _ in 0..25 {
+        // SAFETY: signal 0 probes this locally recorded process group.
+        if unsafe { libc::kill(-leader, 0) } != 0 {
+            return Ok(());
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+    // SAFETY: the recorded positive leader is negated to target its group.
+    let _ = unsafe { libc::kill(-leader, libc::SIGKILL) };
     Ok(())
 }
 

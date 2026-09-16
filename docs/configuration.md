@@ -101,7 +101,9 @@ agent ran or external research occurred. These records are **UNTESTED**, low
 confidence, inconclusive, and have no outcome metric value. Each records the
 committed user brief as observed input; that evidence supports the configured
 audience/goal, not a causal hypothesis or product-market fit.
-Execution, battle ranking and selected apply/export are the next vertical slice.
+The [battle CLI workflow](battles.md) now executes declared replay edits and actual
+configured checks, seals evidence and compares eligible candidates. Selected
+apply/export, the visual demo/dashboard and shareable reports remain in progress.
 
 ## Persistence and provenance
 

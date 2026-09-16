@@ -36,9 +36,23 @@ impl SourceSnapshot {
         experiment: &LocalExperiment,
         include_ray_package: bool,
     ) -> Result<Self> {
+        Self::create_at(
+            project,
+            experiment,
+            include_ray_package,
+            &crate::store::data_dir(),
+        )
+    }
+
+    pub fn create_at(
+        project: &LocalProject,
+        experiment: &LocalExperiment,
+        include_ray_package: bool,
+        data_root: &Path,
+    ) -> Result<Self> {
         let repo = Path::new(&project.repo_path);
         let revision = crate::local::git::local_head_sha(repo, &experiment.branch_name)?;
-        let dir = crate::store::data_dir().join("source-snapshots");
+        let dir = data_root.join("source-snapshots");
         prepare_snapshot_dir(&dir)?;
 
         let nonce = uuid::Uuid::new_v4();

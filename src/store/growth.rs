@@ -20,7 +20,7 @@ pub(super) fn migrate(conn: &Connection) -> Result<()> {
         [],
         |row| row.get(0),
     )?;
-    if version > 1 {
+    if version > 2 {
         return Err(anyhow!(
             "GrowthLab database was created by a newer version; no growth migration applied"
         ));
@@ -47,6 +47,33 @@ pub(super) fn migrate(conn: &Connection) -> Result<()> {
         )?;
         tx.execute(
             "INSERT INTO growth_schema_migrations (version, applied_at) VALUES (1, ?1)",
+            [super::now_ms()],
+        )?;
+    }
+    if version < 2 {
+        tx.execute_batch(
+            "CREATE TABLE growth_battles (
+            id TEXT PRIMARY KEY, project_id TEXT NOT NULL,
+            contract_json TEXT NOT NULL, contract_digest TEXT NOT NULL,
+            status TEXT NOT NULL, created_at INTEGER NOT NULL,
+            ended_at INTEGER, cancel_requested INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE INDEX idx_growth_battles_project ON growth_battles(project_id, created_at);
+        CREATE TABLE growth_variants (
+            id TEXT PRIMARY KEY, battle_id TEXT NOT NULL, payload_json TEXT NOT NULL
+        );
+        CREATE INDEX idx_growth_variants_battle ON growth_variants(battle_id);
+        CREATE TABLE growth_battle_runs (
+            id TEXT PRIMARY KEY, variant_id TEXT NOT NULL UNIQUE,
+            battle_id TEXT NOT NULL, payload_json TEXT NOT NULL, archive_digest TEXT
+        );
+        CREATE TRIGGER freeze_sealed_growth_run BEFORE UPDATE ON growth_battle_runs
+        WHEN OLD.archive_digest IS NOT NULL BEGIN
+            SELECT RAISE(ABORT, 'sealed growth run is immutable');
+        END;",
+        )?;
+        tx.execute(
+            "INSERT INTO growth_schema_migrations (version, applied_at) VALUES (2, ?1)",
             [super::now_ms()],
         )?;
     }
@@ -174,6 +201,32 @@ mod tests {
     use super::*;
 
     #[test]
+    fn failed_battle_migration_preserves_version_one_and_rolls_back_tables() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("CREATE TABLE growth_schema_migrations (version INTEGER PRIMARY KEY,applied_at INTEGER); INSERT INTO growth_schema_migrations VALUES (1,1); CREATE TABLE growth_variants (bad TEXT);").unwrap();
+        assert!(migrate(&conn).is_err());
+        let version: i64 = conn
+            .query_row(
+                "SELECT MAX(version) FROM growth_schema_migrations",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(version, 1);
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE name='growth_battles'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            count, 0,
+            "failed version two must not leave a partial battle schema"
+        );
+    }
+
+    #[test]
     fn upgrading_a_legacy_store_preserves_its_projects_and_transcript_version() {
         let dir = std::env::temp_dir().join(format!("growthlab-legacy-{}", uuid::Uuid::new_v4()));
         let store = Store::open_at(dir.clone()).unwrap();
@@ -181,7 +234,7 @@ mod tests {
         store.create_local_project(&project).unwrap();
         // Remove only the new extension from this isolated fixture to recreate
         // a pre-GrowthLab store with actual inherited schema and product data.
-        store.conn.execute_batch("DROP TRIGGER cleanup_growth_project; DROP TABLE growth_hypotheses; DROP TABLE growth_workspaces; DROP TABLE growth_schema_migrations;").unwrap();
+        store.conn.execute_batch("DROP TRIGGER freeze_sealed_growth_run; DROP TABLE growth_battle_runs; DROP TABLE growth_variants; DROP TABLE growth_battles; DROP TRIGGER cleanup_growth_project; DROP TABLE growth_hypotheses; DROP TABLE growth_workspaces; DROP TABLE growth_schema_migrations;").unwrap();
         let transcript_version: i64 = store
             .conn
             .query_row("PRAGMA user_version", [], |row| row.get(0))
@@ -278,7 +331,7 @@ mod tests {
             count, 0,
             "failed migration must not leave a half-created workspace table"
         );
-        conn.execute_batch("DROP TABLE growth_hypotheses; CREATE TABLE growth_schema_migrations (version INTEGER PRIMARY KEY, applied_at INTEGER); INSERT INTO growth_schema_migrations VALUES (2,1);").unwrap();
+        conn.execute_batch("DROP TABLE growth_hypotheses; CREATE TABLE growth_schema_migrations (version INTEGER PRIMARY KEY, applied_at INTEGER); INSERT INTO growth_schema_migrations VALUES (3,1);").unwrap();
         assert!(migrate(&conn).is_err());
     }
 }

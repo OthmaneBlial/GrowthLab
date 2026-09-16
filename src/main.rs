@@ -72,6 +72,17 @@ enum Command {
 
     /// Create or inspect three untested landing-page hypothesis templates.
     Hypotheses(growth::cli::HypothesesArgs),
+    /// Create three isolated competitors and execute a Growth Battle.
+    Battle(growth::cli::BattleArgs),
+    /// Execute all three competitors of a prepared battle.
+    Run(growth::cli::BattleRunArgs),
+    /// List Growth Battles and their inherited experiment nodes.
+    Experiments(growth::cli::ExperimentsArgs),
+    /// Compare sealed command evidence and eligible candidates.
+    Compare(growth::cli::CompareArgs),
+    /// Inspect a battle or request cancellation.
+    #[command(name = "battle-status")]
+    BattleStatus(growth::cli::BattleStatusArgs),
     /// Log in via the browser and store a token.
     Login(LoginArgs),
 
@@ -1017,6 +1028,11 @@ fn command_name(command: &Command) -> &'static str {
         Command::Config(_) => "config",
         Command::Workspace(_) => "workspace",
         Command::Hypotheses(_) => "hypotheses",
+        Command::Battle(_) => "battle",
+        Command::Run(_) => "run",
+        Command::Experiments(_) => "experiments",
+        Command::Compare(_) => "compare",
+        Command::BattleStatus(_) => "battle-status",
         Command::Login(_) => "login",
         Command::Logout => "logout",
         Command::Projects(_) => "projects",
@@ -1067,6 +1083,11 @@ async fn dispatch(command: Command) -> error::Result<()> {
         Command::Config(args) => growth::cli::config(args),
         Command::Workspace(args) => growth::cli::workspace(args),
         Command::Hypotheses(args) => growth::cli::hypotheses(args),
+        Command::Battle(args) => growth::cli::battle(args).await,
+        Command::Run(args) => growth::cli::battle_run(args).await,
+        Command::Experiments(args) => growth::cli::experiments(args),
+        Command::Compare(args) => growth::cli::compare(args),
+        Command::BattleStatus(args) => growth::cli::battle_status(args),
         Command::Login(args) => commands::login::run(args).await,
         Command::Logout => commands::logout::run().await,
         Command::Projects(args) => commands::projects::run(args).await,
@@ -1115,6 +1136,11 @@ fn command_uses_lifecycle_lock(command: &Command) -> bool {
             | Command::Config(_)
             | Command::Workspace(_)
             | Command::Hypotheses(_)
+            | Command::Battle(_)
+            | Command::Run(_)
+            | Command::Experiments(_)
+            | Command::Compare(_)
+            | Command::BattleStatus(_)
             | Command::Update(_)
             | Command::Login(_)
             | Command::Logout
@@ -1246,7 +1272,6 @@ mod cli_tests {
     fn research_state_commands_are_local_only() {
         for command in [
             "explore",
-            "experiments",
             "env",
             "search-logs",
             "artifacts",
@@ -1270,6 +1295,19 @@ mod cli_tests {
         assert_eq!(error.kind(), clap::error::ErrorKind::UnknownArgument);
 
         Cli::try_parse_from(["orx", "orgs", "--json"]).expect("orgs should parse");
+        // GrowthLab reintroduces `experiments` as a local battle listing, not
+        // the removed remote scientific-state command. Preserve scope checks.
+        let cli =
+            Cli::try_parse_from(["growthlab", "experiments", "--project", "local-project-id"])
+                .unwrap();
+        assert!(
+            matches!(cli.command,Some(Command::Experiments(growth::cli::ExperimentsArgs {project:Some(ref id)})) if id=="local-project-id")
+        );
+        for flag in ["--all", "--organization"] {
+            let error = Cli::try_parse_from(["growthlab", "experiments", flag, "remote-scope"])
+                .expect_err("growth experiments have no remote listing flags");
+            assert_eq!(error.kind(), clap::error::ErrorKind::UnknownArgument);
+        }
     }
 
     #[test]

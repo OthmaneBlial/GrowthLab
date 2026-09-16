@@ -15,9 +15,18 @@
   mechanism, baseline, source commit, confidence, risks and mandatory provenance.
 - Isolated default GrowthLab data/settings/cache and refused the upstream
   updater/release comparison. Upstream publishing/signing jobs are gated away.
+- Added three-variant frozen battle contracts, lab-owned Git worktrees/branches,
+  compensated registration, real replay edits/commits and snapshot-based validation.
+- Reused local controllers/generic runs with minimal environments, independent
+  timeout watchdogs, bounded logs, persisted cancellation and descendant cleanup.
+- Added atomic digest-verified run seals, immutable SQLite outcomes and pluggable
+  transparent command comparison. Replay proposals are simulated; checks observed;
+  growth outcomes untested. Native proposal capability checks fail closed.
+- Added bounded Linux ETXTBSY retry for OpenCode version detection, retaining
+  its deadline, unchanged-binary check and private capture assertions.
 
-This is not a tagged credible release. The growth-native dashboard, executable
-battles, native-agent contracts, sealed run evidence, candidate comparison,
-selected apply/export, reports, bundled replay demo and real outcome measurement
+This is not a tagged credible release. The growth-native dashboard,
+verified native execution, host execution confinement, interrupted-attempt recovery,
+selected apply/export, reports, bundled visual replay demo and real outcome measurement
 remain work in the roadmap. No telemetry lift, production readiness, public
 installer or demonstrated adoption is claimed.

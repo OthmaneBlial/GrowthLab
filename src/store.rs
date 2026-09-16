@@ -18,6 +18,7 @@ use crate::local::model::{LocalExperiment, LocalProject};
 use crate::workspace_state::{GlobalWorkspaceState, WorkspaceState};
 
 mod growth;
+mod growth_battles;
 
 pub fn data_dir() -> PathBuf {
     // Resolution order (most to least authoritative):
@@ -382,9 +383,13 @@ const CHAT_SPAWN_CLAIM_TTL_MS: i64 = 60 * 1000;
 pub struct Store {
     conn: Connection,
     data_dir_move_lock_path: PathBuf,
+    data_root: PathBuf,
 }
 
 impl Store {
+    pub fn data_root(&self) -> &std::path::Path {
+        &self.data_root
+    }
     pub(crate) fn relocate_project_paths(&self, paths: &[(String, String)]) -> Result<()> {
         let tx = self.begin()?;
         for (old, new) in paths {
@@ -824,6 +829,7 @@ impl Store {
         Ok(Self {
             conn,
             data_dir_move_lock_path,
+            data_root: dir,
         })
     }
 

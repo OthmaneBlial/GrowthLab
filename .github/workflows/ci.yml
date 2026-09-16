@@ -84,6 +84,9 @@ jobs:
       - name: GrowthLab CLI onboarding and permission failures
         run: python3 scripts/test-growth-cli.py target/debug/growthlab
 
+      - name: Growth Battle replay, observed failure and archive tamper refusal
+        run: python3 scripts/test-growth-battle.py target/debug/growthlab
+
       - name: Source builds cannot enable production telemetry
         shell: bash
         run: |
@@ -98,12 +101,16 @@ jobs:
         run: cargo test --locked
 
   # Only what differs by platform: the checks above are platform-independent,
-  # and ui/dist is committed, so no Node here.
+  # and ui/dist is committed. Node is needed for real growth validation fixtures.
   windows:
     name: windows build, test
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable

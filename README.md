@@ -7,8 +7,9 @@ with evidence, implementation, and tradeoffs behind every variant.
 Local-first. Open source. No Docker required.
 
 > Development status: source alpha. Product configuration, Git workspace import
-> and untested starter hypotheses are implemented. The dashboard currently retains
-> the inherited research UI; Growth Battles and a credible release are being built.
+> and a three-variant CLI replay battle are implemented, with real isolated edits,
+> validations, sealed evidence and transparent command comparison. The dashboard
+> retains the inherited research UI; the visual demo and a credible release are being built.
 > No conversion lift, winning variant, adoption, or production readiness is claimed.
 
 ## Why GrowthLab?
@@ -45,6 +46,7 @@ its status prints the actual ports. Stop it with
 entry point. Install only the canonical command with
 `cargo install --path . --bin growthlab --locked`. See the
 [configuration workflow](docs/configuration.md) for product import and hypotheses.
+The [battle workflow](docs/battles.md) documents replay execution and current native limits.
 Do not use the upstream OpenResearch installer to install GrowthLab.
 
 ## Architecture and privacy

@@ -7,12 +7,14 @@ by this roadmap.
 - [x] **0 — Foundation:** audit upstream internals/license, validate inherited
   tests and isolated dashboard, preserve history, create public repository and
   remotes, publish attribution and migration map.
-- [ ] **1 — Growth domain:** native CLI, versioned `growthlab.yaml`, product
+- [x] **1 — Growth domain:** native CLI, versioned `growthlab.yaml`, product
   contexts, typed hypotheses/permissions/provenance, SQLite migrations and tests.
 - [ ] **2 — Landing-page loop:** common snapshot/contract, three isolated
   competitors, replay and native harness execution, configured validation,
   immutable run records, failure/cancellation recovery, evidence/diffs/artifacts,
   explainable comparison, safe selected apply/export and local reports.
+  The replay CLI backend passes locally; native execution, safe selection,
+  recovery and reports still prevent marking this phase complete.
 - [ ] **3 — UX/demo:** growth-native onboarding, tree/battle/detail/console/
   evidence/rubric/settings screens, keyboard/mobile checks, one-command bundled
   demo, sanitized self-contained reports, badge, real screenshots/video,

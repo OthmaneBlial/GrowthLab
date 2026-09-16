@@ -82,6 +82,151 @@ pub struct HypothesesArgs {
     pub list: bool,
 }
 
+#[derive(Debug, Args)]
+pub struct ExecutionArgs {
+    /// Declared simulation input. All file changes and checks still execute.
+    #[arg(long, conflicts_with = "harness")]
+    pub replay: Option<PathBuf>,
+    /// Authorize this native CLI to send the allowed product context for proposals.
+    #[arg(long, conflicts_with = "replay")]
+    pub harness: Option<String>,
+    #[arg(long, requires = "harness")]
+    pub model: Option<String>,
+    #[arg(long, default_value_t = 120)]
+    pub agent_timeout_seconds: u64,
+}
+
+#[derive(Debug, Args)]
+pub struct BattleArgs {
+    pub goal: String,
+    #[arg(long)]
+    pub project: String,
+    /// Prepare the frozen contract/worktrees without calling an agent.
+    #[arg(long, conflicts_with_all=["replay","harness"])]
+    pub prepare_only: bool,
+    #[command(flatten)]
+    pub execution: ExecutionArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct BattleRunArgs {
+    pub battle_id: String,
+    #[command(flatten)]
+    pub execution: ExecutionArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct CompareArgs {
+    pub battle_id: String,
+}
+
+#[derive(Debug, Args)]
+pub struct ExperimentsArgs {
+    #[arg(long)]
+    pub project: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct BattleStatusArgs {
+    pub battle_id: String,
+    /// Persist cancellation intent for the live controller.
+    #[arg(long)]
+    pub cancel: bool,
+}
+
+fn battle_agent(args: ExecutionArgs) -> Result<Box<dyn super::battle::BattleAgent>> {
+    if let Some(path) = args.replay {
+        let metadata = std::fs::symlink_metadata(&path)?;
+        if !metadata.is_file() || metadata.file_type().is_symlink() || metadata.len() > 1024 * 1024
+        {
+            return Err(anyhow!(
+                "Replay input must be a regular JSON file of at most 1 MiB"
+            ));
+        }
+        let plan: super::battle_model::ReplayPlan =
+            serde_json::from_slice(&std::fs::read(path)?)
+                .map_err(|_| anyhow!("Invalid replay JSON schema"))?;
+        if plan.version != 1 || plan.implementations.len() != 3 {
+            return Err(anyhow!("Replay schema v1 requires three implementations"));
+        }
+        return Ok(Box::new(super::battle::ReplayAgent(plan)));
+    }
+    if let Some(harness_id) = args.harness {
+        if args.model.as_ref().is_some_and(|model| {
+            model.len() > 256 || model.trim().is_empty() || super::redaction::contains_secret(model)
+        }) {
+            return Err(anyhow!(
+                "Model identifier is invalid or contains a possible credential"
+            ));
+        }
+        if !crate::local::harness::registry()
+            .iter()
+            .any(|harness| harness.id() == harness_id)
+        {
+            return Err(anyhow!("Unknown native harness"));
+        }
+        return Ok(Box::new(super::battle::HarnessAgent {
+            harness_id,
+            model: args.model,
+            timeout_seconds: args.agent_timeout_seconds,
+        }));
+    }
+    Err(anyhow!(
+        "Choose --replay <plan.json> or --harness <id>, or use --prepare-only"
+    ))
+}
+
+pub async fn battle(args: BattleArgs) -> Result<()> {
+    let agent = if args.prepare_only {
+        None
+    } else {
+        Some(battle_agent(args.execution)?)
+    };
+    let store = Store::open()?;
+    let battle = super::battle::prepare(&store, &args.project, &args.goal)?;
+    let battle = if let Some(agent) = agent {
+        super::battle::execute(&store, &battle.id, &*agent).await?
+    } else {
+        battle
+    };
+    print_json(&serde_json::json!({"battle":battle,"variants":store.growth_variants(&battle.id)?}))
+}
+
+pub async fn battle_run(args: BattleRunArgs) -> Result<()> {
+    let agent = battle_agent(args.execution)?;
+    let store = Store::open()?;
+    print_json(&super::battle::execute(&store, &args.battle_id, &*agent).await?)
+}
+
+pub fn compare(args: CompareArgs) -> Result<()> {
+    print_json(&super::evaluation::compare(
+        &Store::open()?,
+        &args.battle_id,
+    )?)
+}
+
+pub fn experiments(args: ExperimentsArgs) -> Result<()> {
+    let store = Store::open()?;
+    let battles = store.list_growth_battles(args.project.as_deref())?;
+    let mut records = Vec::new();
+    for battle in battles {
+        records.push(
+            serde_json::json!({"variants":store.growth_variants(&battle.id)?,"battle":battle}),
+        );
+    }
+    print_json(&records)
+}
+
+pub fn battle_status(args: BattleStatusArgs) -> Result<()> {
+    let store = Store::open()?;
+    if args.cancel {
+        store.request_growth_battle_cancel(&args.battle_id)?;
+    }
+    print_json(
+        &serde_json::json!({"battle":store.get_growth_battle(&args.battle_id)?.ok_or_else(||anyhow!("Battle not found"))?,"runs":store.sealed_growth_runs(&args.battle_id)?}),
+    )
+}
+
 pub fn init(args: InitArgs) -> Result<()> {
     let config = GrowthConfig {
         version: 1,

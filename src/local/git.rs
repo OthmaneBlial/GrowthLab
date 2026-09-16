@@ -152,7 +152,7 @@ fn long_paths() -> &'static [&'static str] {
 /// Run git with `args`, returning trimmed stdout; failures carry git's stderr.
 /// Headless: git must fail fast rather than prompt on /dev/tty (these calls
 /// run under a server, where a prompt would hang a worker forever).
-pub(super) fn git(dir: Option<&Path>, args: &[&str]) -> Result<String> {
+pub(crate) fn git(dir: Option<&Path>, args: &[&str]) -> Result<String> {
     let mut cmd = Command::new("git");
     if let Some(dir) = dir {
         cmd.current_dir(dir);
@@ -1305,6 +1305,25 @@ pub fn ensure_worktree_at(repo: &Path, dir: &Path, start_ref: &str) -> Result<Pa
 }
 
 fn ensure_worktree_from(repo: &Path, dir: PathBuf, start_ref: &str) -> Result<PathBuf> {
+    ensure_worktree_from_options(repo, dir, start_ref, false)
+}
+
+/// A battle uses fresh lab-owned paths and suppresses repository checkout hooks.
+pub fn ensure_growth_worktree_at(repo: &Path, dir: &Path, start_ref: &str) -> Result<PathBuf> {
+    if dir.exists() {
+        return Err(anyhow!(
+            "Growth Battle worktree target already exists; files were preserved"
+        ));
+    }
+    ensure_worktree_from_options(repo, dir.to_path_buf(), start_ref, true)
+}
+
+fn ensure_worktree_from_options(
+    repo: &Path,
+    dir: PathBuf,
+    start_ref: &str,
+    disable_hooks: bool,
+) -> Result<PathBuf> {
     if dir.join(".git").exists() {
         if git(Some(&dir), &["rev-parse", "--is-inside-work-tree"]).is_ok() {
             return Ok(dir);
@@ -1322,10 +1341,17 @@ fn ensure_worktree_from(repo: &Path, dir: PathBuf, start_ref: &str) -> Result<Pa
             .map_err(|e| anyhow!("Could not create {}: {}", parent.display(), e))?;
     }
     let target = dir.to_string_lossy().to_string();
-    git(
-        Some(repo),
-        &["worktree", "add", "--detach", &target, start_ref],
-    )?;
+    let disabled = dir
+        .parent()
+        .unwrap()
+        .join(format!(".disabled-hooks-{}", uuid::Uuid::new_v4()));
+    let option = format!("core.hooksPath={}", disabled.display());
+    let mut args = Vec::new();
+    if disable_hooks {
+        args.extend(["-c", option.as_str()]);
+    }
+    args.extend(["worktree", "add", "--detach", &target, start_ref]);
+    git(Some(repo), &args)?;
     Ok(dir)
 }
 

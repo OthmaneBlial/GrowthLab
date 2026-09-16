@@ -318,6 +318,13 @@ pub trait Harness: Send + Sync {
         None
     }
 
+    /// Growth implementation proposals contain untrusted product text. Read-only
+    /// filesystem tools are insufficient: these requests must have no tools.
+    /// Unknown capabilities fail closed until the adapter enforces this mode.
+    fn one_shot_has_no_tools(&self) -> bool {
+        false
+    }
+
     /// Whether `one_shot` runs on `OneShot::model`; callers caching by model
     /// should not vary the key for a harness that ignores it.
     fn one_shot_honours_model(&self) -> bool {

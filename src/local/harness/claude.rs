@@ -561,6 +561,10 @@ impl Harness for ClaudeCode {
         claude_one_shot(&find_claude()?, request).await
     }
 
+    fn one_shot_has_no_tools(&self) -> bool {
+        true
+    }
+
     fn one_shot_honours_model(&self) -> bool {
         false
     }

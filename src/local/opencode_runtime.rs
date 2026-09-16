@@ -86,6 +86,33 @@ pub(crate) async fn resolve_binary() -> Result<ResolvedBinary> {
     resolve_binary_at(super::find_opencode()?).await
 }
 
+async fn version_probe_output(cmd: &mut Command) -> std::io::Result<std::process::Output> {
+    // Linux refuses exec while any process retains a writable descriptor for
+    // the executable. Fresh CLI shims can briefly hit this after a concurrent
+    // fork. Retry only that spawn error, within the existing version deadline.
+    for attempt in 0..=10 {
+        match cmd.output().await {
+            Err(error) if text_file_busy(&error) && attempt < 10 => {
+                tokio::time::sleep(Duration::from_millis(20)).await
+            }
+            result => return result,
+        }
+    }
+    unreachable!("bounded version probe always returns")
+}
+
+fn text_file_busy(error: &std::io::Error) -> bool {
+    #[cfg(target_os = "linux")]
+    {
+        error.raw_os_error() == Some(libc::ETXTBSY)
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = error;
+        false
+    }
+}
+
 pub(crate) async fn resolve_binary_at(path: PathBuf) -> Result<ResolvedBinary> {
     let path = crate::paths::canonicalize(path)?;
     let metadata = std::fs::metadata(&path)?;
@@ -93,8 +120,8 @@ pub(crate) async fn resolve_binary_at(path: PathBuf) -> Result<ResolvedBinary> {
     let mut cmd = Command::new(&path);
     crate::local::chat::prepare_env(&mut cmd);
     probe.configure(&mut cmd);
-    cmd.arg("--version");
-    let output = tokio::time::timeout(Duration::from_secs(15), cmd.output())
+    cmd.arg("--version").kill_on_drop(true);
+    let output = tokio::time::timeout(Duration::from_secs(15), version_probe_output(&mut cmd))
         .await
         .map_err(|_| anyhow!("OpenCode version check timed out"))??;
     if !output.status.success() {
@@ -410,6 +437,38 @@ async fn wait_migration(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn version_probe_recovers_after_a_writable_script_descriptor_closes() {
+        use std::os::unix::fs::PermissionsExt;
+        let root =
+            std::env::temp_dir().join(format!("growth-opencode-busy-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&root).unwrap();
+        let script = root.join("fake-opencode");
+        std::fs::write(&script, "#!/bin/sh\necho 1.18.31\n").unwrap();
+        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let writer = std::fs::OpenOptions::new()
+            .write(true)
+            .open(&script)
+            .unwrap();
+        let mut command = Command::new(&script);
+        let error = command.output().await.unwrap_err();
+        assert_eq!(
+            error.raw_os_error(),
+            Some(libc::ETXTBSY),
+            "the fixture must reproduce the actual Linux spawn error"
+        );
+        let closer = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(50));
+            drop(writer);
+        });
+        let output = version_probe_output(&mut command).await.unwrap();
+        closer.join().unwrap();
+        assert!(output.status.success());
+        assert_eq!(String::from_utf8(output.stdout).unwrap().trim(), "1.18.31");
+        std::fs::remove_dir_all(root).unwrap();
+    }
 
     #[tokio::test]
     async fn background_database_check_does_not_wait_for_a_turn() {

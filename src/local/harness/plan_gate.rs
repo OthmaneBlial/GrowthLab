@@ -33,7 +33,17 @@ use serde_json::{json, Value};
 /// turn them into a write). Kept in lockstep with `main.rs`'s `Command` enum;
 /// `readonly_verbs_are_real_commands` guards against a rename.
 const WHOLE_VERB_READS: &[&str] = &[
-    "projects", "orgs", "runs", "logs", "compute", "discover", "paper", "skill", "version",
+    "projects",
+    "orgs",
+    "runs",
+    "logs",
+    "compute",
+    "discover",
+    "paper",
+    "skill",
+    "version",
+    "experiments",
+    "compare",
 ];
 
 /// Shell no-ops allowed as glue between read-only segments in a batch —
@@ -278,6 +288,7 @@ fn is_readonly_orx(tokens: &[&str], stage: &str) -> bool {
         "config" => matches!(subcommand(&mut rest), Some("check" | "check-path")),
         "workspace" => matches!(subcommand(&mut rest), Some("list" | "view")),
         "hypotheses" => rest.any(|token| token == "--list"),
+        "battle-status" => !rest.any(|token| token == "--cancel" || token.starts_with("--cancel=")),
         // Verbs with a write subcommand: allow only the read-only subcommand(s).
         "project" => matches!(subcommand(&mut rest), Some("view")),
         "exp" => match subcommand(&mut rest) {
