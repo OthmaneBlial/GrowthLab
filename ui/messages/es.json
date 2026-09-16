@@ -1236,5 +1236,22 @@
   "growth_settings_integrations_title": "Estado de integraciones",
   "growth_settings_integrations_body": "El registro muestra qué se puede conectar más adelante. Los proveedores planificados están inactivos hasta que los configures y autorices.",
   "growth_settings_local_source_count": "fuente local disponible",
-  "growth_settings_planned_source_count": "límites planificados"
+  "growth_settings_planned_source_count": "límites planificados",
+  "growth_battle_variant_inspection": "Inspección de variante",
+  "growth_battle_hypothesis_evidence": "Hipótesis y evidencia",
+  "growth_battle_diff_files_logs": "Diff, archivos y registros",
+  "growth_battle_static_preview": "Vista previa estática",
+  "growth_battle_your_decision": "Tu decisión",
+  "growth_battle_ready_delivery": "Lista para entrega explícita",
+  "growth_battle_eligible_review": "Candidata para revisión",
+  "growth_battle_no_eligible": "Aún no hay una candidata sellada elegible",
+  "growth_battle_selection_review": "La selección es una decisión de revisión. Los comandos correctos no demuestran aumento de conversiones.",
+  "growth_battle_candidate_selected": "Candidata seleccionada",
+  "growth_battle_select_candidate": "Seleccionar candidata",
+  "growth_battle_take_evidence": "Lleva la evidencia contigo",
+  "growth_battle_report_title": "Un informe de batalla autocontenido.",
+  "growth_battle_report_body": "Incluye comprobaciones, resúmenes criptográficos y procedencia. Los nombres, rutas, instrucciones y registros privados se ocultan por defecto.",
+  "growth_battle_download_html": "Descargar HTML",
+  "growth_battle_download_markdown": "Descargar Markdown",
+  "growth_battle_inspect_diff": "Inspeccionar diff y registros capturados →"
 }

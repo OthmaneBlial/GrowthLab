@@ -1236,5 +1236,22 @@
   "growth_settings_integrations_title": "وضعیت اتصال‌ها",
   "growth_settings_integrations_body": "ثبت منابع نشان می‌دهد بعداً چه چیزهایی قابل اتصال است. ارائه‌دهندگان برنامه‌ریزی‌شده تا زمان پیکربندی و اجازهٔ شما غیرفعال‌اند.",
   "growth_settings_local_source_count": "منبع محلی در دسترس",
-  "growth_settings_planned_source_count": "مرز برنامه‌ریزی‌شده"
+  "growth_settings_planned_source_count": "مرز برنامه‌ریزی‌شده",
+  "growth_battle_variant_inspection": "بررسی نسخه",
+  "growth_battle_hypothesis_evidence": "فرضیه و شواهد",
+  "growth_battle_diff_files_logs": "تفاوت، فایل‌ها و گزارش‌ها",
+  "growth_battle_static_preview": "پیش‌نمایش ایستا",
+  "growth_battle_your_decision": "تصمیم شما",
+  "growth_battle_ready_delivery": "آماده برای تحویل صریح",
+  "growth_battle_eligible_review": "مناسب برای بررسی شما",
+  "growth_battle_no_eligible": "هنوز نامزد مهروموم‌شده واجد شرایطی وجود ندارد",
+  "growth_battle_selection_review": "انتخاب یک تصمیم بازبینی است. موفقیت فرمان‌ها افزایش تبدیل را ثابت نمی‌کند.",
+  "growth_battle_candidate_selected": "نامزد انتخاب شد",
+  "growth_battle_select_candidate": "انتخاب نامزد",
+  "growth_battle_take_evidence": "شواهد را با خود ببرید",
+  "growth_battle_report_title": "گزارش نبرد مستقل",
+  "growth_battle_report_body": "این گزارش بررسی‌ها، خلاصه‌ها و منشأ را دارد. نام‌ها، مسیرها، درخواست‌ها و گزارش‌های خصوصی محصول به‌طور پیش‌فرض پنهان می‌شوند.",
+  "growth_battle_download_html": "دانلود HTML",
+  "growth_battle_download_markdown": "دانلود Markdown",
+  "growth_battle_inspect_diff": "بررسی تفاوت و گزارش‌های ثبت‌شده →"
 }

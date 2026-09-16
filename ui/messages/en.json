@@ -1236,5 +1236,22 @@
   "growth_settings_integrations_title": "Integration status",
   "growth_settings_integrations_body": "The source registry shows what can be connected later. Planned providers are inactive until you configure and authorize them.",
   "growth_settings_local_source_count": "local source available",
-  "growth_settings_planned_source_count": "planned boundaries"
+  "growth_settings_planned_source_count": "planned boundaries",
+  "growth_battle_variant_inspection": "Variant inspection",
+  "growth_battle_hypothesis_evidence": "Hypothesis & evidence",
+  "growth_battle_diff_files_logs": "Diff, files & logs",
+  "growth_battle_static_preview": "Static preview",
+  "growth_battle_your_decision": "Your decision",
+  "growth_battle_ready_delivery": "Ready for explicit delivery",
+  "growth_battle_eligible_review": "Eligible for user review",
+  "growth_battle_no_eligible": "No eligible sealed candidate yet",
+  "growth_battle_selection_review": "Selection is a review decision. Passing commands does not establish conversion lift.",
+  "growth_battle_candidate_selected": "Candidate selected",
+  "growth_battle_select_candidate": "Select candidate",
+  "growth_battle_take_evidence": "Take the evidence with you",
+  "growth_battle_report_title": "A self-contained battle report.",
+  "growth_battle_report_body": "Includes checks, digests and provenance. Private product names, paths, prompts and raw logs are withheld by default.",
+  "growth_battle_download_html": "Download HTML",
+  "growth_battle_download_markdown": "Download Markdown",
+  "growth_battle_inspect_diff": "Inspect diff & captured logs →"
 }

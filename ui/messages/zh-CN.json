@@ -1236,5 +1236,22 @@
   "growth_settings_integrations_title": "集成状态",
   "growth_settings_integrations_body": "来源注册表显示以后可以连接的内容。计划中的提供方在配置并授权前保持停用。",
   "growth_settings_local_source_count": "个本地来源可用",
-  "growth_settings_planned_source_count": "个计划边界"
+  "growth_settings_planned_source_count": "个计划边界",
+  "growth_battle_variant_inspection": "变体检查",
+  "growth_battle_hypothesis_evidence": "假设与证据",
+  "growth_battle_diff_files_logs": "差异、文件与日志",
+  "growth_battle_static_preview": "静态预览",
+  "growth_battle_your_decision": "你的决定",
+  "growth_battle_ready_delivery": "准备进行明确交付",
+  "growth_battle_eligible_review": "可供你审核",
+  "growth_battle_no_eligible": "暂无符合条件的已封存候选项",
+  "growth_battle_selection_review": "选择是一项审核决定。通过命令不代表转化提升。",
+  "growth_battle_candidate_selected": "已选择候选项",
+  "growth_battle_select_candidate": "选择候选项",
+  "growth_battle_take_evidence": "带走这些证据",
+  "growth_battle_report_title": "一份自包含的实验报告。",
+  "growth_battle_report_body": "包含检查、摘要和来源信息。默认隐藏产品名称、路径、提示词和原始日志。",
+  "growth_battle_download_html": "下载 HTML",
+  "growth_battle_download_markdown": "下载 Markdown",
+  "growth_battle_inspect_diff": "查看差异与捕获日志 →"
 }

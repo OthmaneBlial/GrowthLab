@@ -1236,5 +1236,22 @@
   "growth_settings_integrations_title": "एकीकरण स्थिति",
   "growth_settings_integrations_body": "स्रोत रजिस्ट्री बताती है कि आगे क्या जोड़ा जा सकता है। नियोजित प्रदाता आपके कॉन्फ़िगर और अधिकृत करने तक निष्क्रिय रहते हैं।",
   "growth_settings_local_source_count": "स्थानीय स्रोत उपलब्ध",
-  "growth_settings_planned_source_count": "नियोजित सीमाएँ"
+  "growth_settings_planned_source_count": "नियोजित सीमाएँ",
+  "growth_battle_variant_inspection": "वैरिएंट निरीक्षण",
+  "growth_battle_hypothesis_evidence": "परिकल्पना और साक्ष्य",
+  "growth_battle_diff_files_logs": "डिफ़, फ़ाइलें और लॉग",
+  "growth_battle_static_preview": "स्थिर पूर्वावलोकन",
+  "growth_battle_your_decision": "आपका निर्णय",
+  "growth_battle_ready_delivery": "स्पष्ट डिलीवरी के लिए तैयार",
+  "growth_battle_eligible_review": "आपकी समीक्षा के लिए योग्य",
+  "growth_battle_no_eligible": "अभी कोई योग्य सीलबंद उम्मीदवार नहीं",
+  "growth_battle_selection_review": "चयन समीक्षा का निर्णय है। सफल कमांड रूपांतरण बढ़ने का प्रमाण नहीं हैं।",
+  "growth_battle_candidate_selected": "उम्मीदवार चुना गया",
+  "growth_battle_select_candidate": "उम्मीदवार चुनें",
+  "growth_battle_take_evidence": "साक्ष्य साथ ले जाएँ",
+  "growth_battle_report_title": "एक स्व-निहित बैटल रिपोर्ट।",
+  "growth_battle_report_body": "इसमें जाँच, डाइजेस्ट और स्रोत शामिल हैं। निजी उत्पाद नाम, पथ, प्रॉम्प्ट और कच्चे लॉग डिफ़ॉल्ट रूप से छिपे रहते हैं।",
+  "growth_battle_download_html": "HTML डाउनलोड करें",
+  "growth_battle_download_markdown": "Markdown डाउनलोड करें",
+  "growth_battle_inspect_diff": "डिफ़ और कैप्चर किए गए लॉग देखें →"
 }

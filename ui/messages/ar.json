@@ -1236,5 +1236,22 @@
   "growth_settings_integrations_title": "حالة التكاملات",
   "growth_settings_integrations_body": "يوضح سجل المصادر ما يمكن ربطه لاحقاً. تظل المزودات المخططة غير نشطة حتى تهيئها وتسمح بها.",
   "growth_settings_local_source_count": "مصدر محلي متاح",
-  "growth_settings_planned_source_count": "حدود مخططة"
+  "growth_settings_planned_source_count": "حدود مخططة",
+  "growth_battle_variant_inspection": "فحص النسخة",
+  "growth_battle_hypothesis_evidence": "الفرضية والأدلة",
+  "growth_battle_diff_files_logs": "الفروقات والملفات والسجلات",
+  "growth_battle_static_preview": "معاينة ثابتة",
+  "growth_battle_your_decision": "قرارك",
+  "growth_battle_ready_delivery": "جاهز للتسليم الصريح",
+  "growth_battle_eligible_review": "متاح لمراجعتك",
+  "growth_battle_no_eligible": "لا يوجد مرشح مختوم مؤهل بعد",
+  "growth_battle_selection_review": "الاختيار قرار للمراجعة. نجاح الأوامر لا يثبت زيادة التحويل.",
+  "growth_battle_candidate_selected": "تم اختيار المرشح",
+  "growth_battle_select_candidate": "اختيار المرشح",
+  "growth_battle_take_evidence": "اصطحب الأدلة معك",
+  "growth_battle_report_title": "تقرير معركة مستقل",
+  "growth_battle_report_body": "يتضمن الفحوص والملخصات والمصدر. تُحجب أسماء المنتج والمسارات والمطالبات والسجلات الخام الخاصة افتراضيًا.",
+  "growth_battle_download_html": "تنزيل HTML",
+  "growth_battle_download_markdown": "تنزيل Markdown",
+  "growth_battle_inspect_diff": "فحص الفروقات والسجلات الملتقطة →"
 }
