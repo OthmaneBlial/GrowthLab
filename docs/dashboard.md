@@ -70,9 +70,11 @@ The expanded card also lists concrete next steps for every partial or missing
 dimension, so the review can turn directly into a page edit.
 
 For a quick review before creating a battle, run
-`growthlab seo-audit --html ./website/index.html`. Add `--format markdown` for a
-shareable local note. The command reads one regular UTF-8 file and makes no
-network request; see [seo-audit.md](seo-audit.md).
+`growthlab seo-audit --html ./website/index.html`, or inspect one public HTTPS
+page with `growthlab seo-audit --url https://example.com/pricing`. Add
+`--format markdown` for a shareable note. URL analysis checks `robots.txt`,
+follows no redirects, sends no credentials and makes one bounded request; see
+[seo-audit.md](seo-audit.md).
 
 When a product already has a local telemetry export, use the **Bring a local
 outcome export** panel on Home or summarize it from the terminal with

@@ -105,9 +105,11 @@ No endpoint automatically publishes, messages, commits the original product,
 pushes to it, deploys or connects outcome telemetry.
 
 For a single page outside a battle, the local CLI also exposes
-`growthlab seo-audit --html ./path/to/index.html`. It uses the same
-`seo-page-hygiene-v1` rubric and supports `--format markdown`; it reads only a
-regular UTF-8 file up to 4 MiB and makes no network request. See
+`growthlab seo-audit --html ./path/to/index.html` or
+`growthlab seo-audit --url https://example.com/path`. It uses the same
+`seo-page-hygiene-v1` rubric and supports `--format markdown`. URL analysis is
+read-only, checks same-origin `robots.txt`, follows no redirects and makes one
+bounded HTTPS request; local-file analysis remains network-free. See
 [seo-audit.md](seo-audit.md).
 
 For user-supplied outcome rows, `growthlab measure --csv ./telemetry.csv`

@@ -195,6 +195,7 @@ where
         .route("/api/growth/demo", post(create_demo))
         .route("/api/growth/capabilities", get(capabilities))
         .route("/api/growth/playbooks", get(playbooks))
+        .route("/api/growth/url-audit", post(url_audit))
         .route(
             "/api/growth/workspaces",
             get(workspaces).post(import_workspace),
@@ -335,6 +336,24 @@ async fn capabilities() -> ApiResult {
 /// Return reusable role contracts without contacting an agent or analytics provider.
 async fn playbooks() -> ApiResult {
     value(crate::growth::playbooks::catalog())
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct UrlAuditRequest {
+    url: String,
+}
+
+/// Fetch one public website page through the conservative read-only auditor.
+async fn url_audit(Json(request): Json<UrlAuditRequest>) -> ApiResult {
+    if request.url.len() > 2048 {
+        return Err(bad_request("Website URL is too long"));
+    }
+    value(
+        crate::growth::web_audit::fetch(&request.url)
+            .await
+            .map_err(domain_error)?,
+    )
 }
 
 #[derive(Deserialize)]

@@ -1117,7 +1117,7 @@ async fn dispatch(command: Command) -> error::Result<()> {
         Command::Run(args) => growth::cli::battle_run(args).await,
         Command::Experiments(args) => growth::cli::experiments(args),
         Command::Compare(args) => growth::cli::compare(args),
-        Command::SeoAudit(args) => growth::cli::seo_audit(args),
+        Command::SeoAudit(args) => growth::cli::seo_audit(args).await,
         Command::Measure(args) => growth::cli::measure(args),
         Command::BattleStatus(args) => growth::cli::battle_status(args),
         Command::Recover(args) => growth::cli::recover(args),

@@ -19,3 +19,4 @@ pub mod recovery;
 pub mod redaction;
 pub mod report;
 pub mod selection;
+pub mod web_audit;

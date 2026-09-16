@@ -813,3 +813,24 @@ async fn api_initializes_a_local_folder_only_when_requested() {
         ""
     );
 }
+
+#[tokio::test]
+async fn url_audit_refuses_non_https_input_without_network_access() {
+    let fixture = Fixture::new(false).await;
+    let response = fixture
+        .post(
+            "/url-audit",
+            Some(json!({"url":"http://example.com/"})),
+            400,
+        )
+        .await;
+    assert!(response["error"]
+        .as_str()
+        .is_some_and(|message| message.contains("HTTPS URLs only")));
+    assert!(fixture
+        .get("/workspaces")
+        .await
+        .as_array()
+        .unwrap()
+        .is_empty());
+}

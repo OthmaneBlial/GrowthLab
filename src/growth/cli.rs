@@ -160,8 +160,11 @@ pub enum SeoAuditFormat {
 #[derive(Debug, Args)]
 pub struct SeoAuditArgs {
     /// Read a regular local HTML file; no network request is made.
-    #[arg(long)]
-    pub html: PathBuf,
+    #[arg(long, conflicts_with = "url", required_unless_present = "url")]
+    pub html: Option<PathBuf>,
+    /// Fetch one public HTTPS page after checking its same-origin robots.txt.
+    #[arg(long, conflicts_with = "html", required_unless_present = "html")]
+    pub url: Option<String>,
     /// Choose machine-readable JSON or a compact Markdown review.
     #[arg(long, value_enum, default_value = "json")]
     pub format: SeoAuditFormat,
@@ -462,8 +465,18 @@ fn audit_markdown(path: &Path, rubric: &super::evaluation::SeoRubric) -> String 
     output
 }
 
-pub fn seo_audit(args: SeoAuditArgs) -> Result<()> {
-    let html = read_audit_html(&args.html)?;
+pub async fn seo_audit(args: SeoAuditArgs) -> Result<()> {
+    if let Some(url) = args.url {
+        let audit = super::web_audit::fetch(&url).await?;
+        return match args.format {
+            SeoAuditFormat::Json => print_json(&audit),
+            SeoAuditFormat::Markdown => {
+                print!("{}", super::web_audit::markdown(&audit));
+                Ok(())
+            }
+        };
+    }
+    let html = read_audit_html(args.html.as_deref().expect("clap requires --html or --url"))?;
     let rubric = super::evaluation::seo_rubric(&html);
     match args.format {
         SeoAuditFormat::Json => print_json(&serde_json::json!({
@@ -472,7 +485,10 @@ pub fn seo_audit(args: SeoAuditArgs) -> Result<()> {
             "rubric": rubric,
         })),
         SeoAuditFormat::Markdown => {
-            print!("{}", audit_markdown(&args.html, &rubric));
+            print!(
+                "{}",
+                audit_markdown(args.html.as_deref().expect("html was validated"), &rubric)
+            );
             Ok(())
         }
     }
