@@ -7,22 +7,25 @@ without contacting an analytics or agent provider.
 
 ## Current source line and binary evidence
 
-`v0.1.0-alpha.20` includes one manually validated executable archive. The
-previous alpha.19 archive remains available in its release history:
+`v0.1.0-alpha.20` includes one manually validated executable archive and one
+cross-target archive whose structure was verified locally. The previous alpha.19
+archive remains available in its release history:
 
 | Target | Asset | Evidence |
 | --- | --- | --- |
 | macOS arm64 | [`growthlab-v0.1.0-alpha.20-macos-arm64.tar.gz`](https://github.com/OthmaneBlial/GrowthLab/releases/download/v0.1.0-alpha.20/growthlab-v0.1.0-alpha.20-macos-arm64.tar.gz) | Extracted, checksum-checked, and run locally with `--no-telemetry version`; `growthlab 0.1.0-alpha.20` reported the development build channel. |
+| Linux x86_64 (musl) | [`growthlab-v0.1.0-alpha.20-linux-x86_64-musl.tar.gz`](https://github.com/OthmaneBlial/GrowthLab/releases/download/v0.1.0-alpha.20/growthlab-v0.1.0-alpha.20-linux-x86_64-musl.tar.gz) | Built from the exact alpha.20 tag with `cargo-zigbuild`; checksum, traversal/link safety, required notices and archive structure passed the offline verifier. The ELF was not run on Linux here. |
 
 The alpha.20 source line also produces a local `x86_64-unknown-linux-musl`
 archive with `cargo-zigbuild` and Zig. Its checksum, archive safety and required
 notices passed the offline verifier; the ELF binary was not run on Linux here.
 It is evidence of a reproducible cross-target package, not Linux runtime or
-installer proof, and is not attached to alpha.20.
+installer proof. It is attached to alpha.20 for inspection with that limitation.
 
-The archive is unsigned and is not notarized. It is a CLI archive rather than a
-desktop installer. Linux and Windows artifacts are not attached to this alpha,
-and their runtime behavior remains unverified on the current macOS host.
+The archives are unsigned and not notarized. They are CLI archives rather than
+desktop installers. The Linux archive is attached for inspection; Windows
+artifacts are not attached, and Linux/Windows runtime behavior remains
+unverified on the current macOS host.
 
 ## Reproduce and inspect an archive locally
 

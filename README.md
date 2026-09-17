@@ -143,7 +143,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 - Published v0.1.0-alpha.17 as a source prerelease with the continuous walkthrough
 - Published v0.1.0-alpha.18 as a source prerelease with the accessibility structure rubric
 - Published v0.1.0-alpha.19 with a validated macOS arm64 CLI archive and checksum
-- Published v0.1.0-alpha.20 with opt-in visual report captures and a validated macOS arm64 CLI archive
+- Published v0.1.0-alpha.20 with opt-in visual report captures, a validated macOS arm64 CLI archive and a structure-verified Linux musl CLI archive
 - Inspected and explicitly resumed pending selected-delivery receipts without rollback
 - Reworked the bundled demo to show intent, evidence and an explicit review choice
 - Local and SSH launchers self-register their controller PID before payload work
@@ -226,7 +226,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 | Role-grouped experiment tree | **passed** — Workspace dashboard groups persisted hypotheses by role in accessible branches; stable hypothesis IDs remain linked into prepared battle variants |
 | CLI archive packaging | **passed** — Local macOS arm64 archive build includes LICENSE, NOTICE.md, demo and six checked-in dependency notices; an offline verifier passed checksum, traversal/link checks, structure and real version/build-channel execution |
 | Localized battle/detail UI | **passed** — Chrome exercised Spanish and Arabic on a real recorded battle; inspection tabs, decision labels and report actions translated, Arabic set dir=rtl, viewport width stayed fitted and no browser warnings or errors were recorded |
-| Linux musl archive packaging | **passed** — Local x86_64-unknown-linux-musl release archive built with cargo-zigbuild and Zig; offline verifier passed SHA-256, traversal/link safety, required notices and archive structure, while runtime was honestly skipped on macOS arm64 |
+| Linux musl archive packaging | **passed** — Local x86_64-unknown-linux-musl release archive built from the exact alpha.20 tag with cargo-zigbuild and Zig; offline verifier passed SHA-256, traversal/link safety, required notices and archive structure, the asset is attached to alpha.20, and runtime was honestly skipped on macOS arm64 |
 | Measurement adapter contract | **passed** — LocalCsvAdapter implements the shared read-only request/report contract; focused Rust measurement and API tests passed and no provider request is made |
 | Editable workspace settings | **passed** — Focused API and configuration tests prove validated local writes, stale-file refusal, atomic replacement and refusal after hypotheses or active battles; UI exposes localized save/cancel controls without automatic commits or remotes |
 | Localized technical details and settings lifecycle | **passed** — Six locale catalogs cover static-preview evidence, render metadata and rubric detail labels; Chrome verified the edit control is enabled before hypotheses and disabled with an explicit Arabic lock explanation after the starter map is created |
