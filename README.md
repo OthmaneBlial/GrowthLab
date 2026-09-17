@@ -167,6 +167,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 - Typed read-only measurement adapter boundary with the local CSV implementation
 - Guarded local workspace settings edits write the validated contract atomically before hypotheses are created and never create commits or remote changes
 - Localized static-preview, evidence and rubric detail copy across all six dashboard locales, with visible settings lock policy after hypotheses or active battles
+- Localized workspace and battle action/status copy across all six dashboard locale catalogs
 
 | Validation | Current evidence |
 | --- | --- |
@@ -201,13 +202,14 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 | Measurement adapter contract | **passed** — LocalCsvAdapter implements the shared read-only request/report contract; focused Rust measurement and API tests passed and no provider request is made |
 | Editable workspace settings | **passed** — Focused API and configuration tests prove validated local writes, stale-file refusal, atomic replacement and refusal after hypotheses or active battles; UI exposes localized save/cancel controls without automatic commits or remotes |
 | Localized technical details and settings lifecycle | **passed** — Six locale catalogs cover static-preview evidence, render metadata and rubric detail labels; Chrome verified the edit control is enabled before hypotheses and disabled with an explicit Arabic lock explanation after the starter map is created |
+| Localized workspace and battle actions | **passed** — GrowthDashboard action and status labels for the experiment tree, battle execution, candidate inspection and selected delivery now use localized message keys; six catalogs define the shared keys and the 174-test UI suite passes |
 
 **Still ahead**
 
 - Provider adapters
 - Full visual regression and assistive-technology accessibility evaluation
 - Native-agent battle verification and provider-specific launcher registration
-- Remaining dashboard action and status copy localization outside the inspected detail surfaces
+- Remaining onboarding and auxiliary action/status copy localization outside the inspected battle and workspace surfaces
 - Cross-platform runtime proof and release-attached portable binaries/installers
 <!-- project-status:end -->
 
