@@ -16,6 +16,14 @@ const plain = (value) => {
 };
 for (const key of ["delivered", "pending", "validation"]) if (!Array.isArray(status[key]) || !status[key].length) throw new Error(`Missing status list: ${key}`);
 const xml = (value) => String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll('"', "&quot;");
+const htmlText = (value) => String(value)
+  .replaceAll("&", "&amp;")
+  .replaceAll("<", "&lt;")
+  .replaceAll(">", "&gt;")
+  .replaceAll('"', "&quot;")
+  .replaceAll("'", "&#39;");
+const dateLabel = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
+  .format(new Date(`${status.updated}T12:00:00Z`));
 const badge = (label, value) => {
   const left = Math.max(54, label.length * 7 + 18), right = value.length * 7 + 18;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${left + right}" height="24" role="img" aria-label="${xml(`${label}: ${value}`)}"><title>${xml(`${label}: ${value}`)}</title><rect width="${left}" height="24" fill="#202725"/><rect x="${left}" width="${right}" height="24" fill="#17634f"/><g fill="#fff" font-family="Verdana,Arial,sans-serif" font-size="11" text-anchor="middle"><text x="${left / 2}" y="16">${xml(label)}</text><text x="${left + right / 2}" y="16">${xml(value)}</text></g></svg>\n`;
@@ -56,10 +64,29 @@ for (const [name, content] of [["project-links", links.join(" · ")], ["project-
   if ([...readme.matchAll(pattern)].length !== 1) throw new Error(`Expected one README ${name} block`);
   readme = readme.replace(pattern, `<!-- ${name}:start -->\n${content}\n<!-- ${name}:end -->`);
 }
+let siteIndex = await readFile(path.join(root, "site/index.html"), "utf8");
+const replaceOnce = (source, pattern, replacement, label) => {
+  const globalPattern = new RegExp(pattern.source, pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`);
+  const matches = source.match(globalPattern);
+  if (!matches || matches.length !== 1) throw new Error(`Expected one static website ${label} block`);
+  return source.replace(pattern, replacement);
+};
+siteIndex = replaceOnce(siteIndex, /(<strong data-stage>)[^<]*(<\/strong>)/, `$1${htmlText(status.stage)}$2`, "stage");
+siteIndex = replaceOnce(siteIndex, /(<span data-milestone>)[^<]*(<\/span>)/, `$1${htmlText(status.milestone)}$2`, "milestone");
+siteIndex = replaceOnce(siteIndex, /(<span data-progress>)[^<]*(<\/span>)/, `$1${status.progressEstimate}$2`, "progress");
+siteIndex = replaceOnce(siteIndex, /(<span data-progress-bar style="width:)[^"]*(%"><\/span>)/, `$1${status.progressEstimate}$2`, "progress bar");
+siteIndex = replaceOnce(siteIndex, /(<time data-updated datetime=")[^"]*(">)[^<]*(<\/time>)/, `$1${status.updated}$2${dateLabel}$3`, "updated date");
+siteIndex = replaceOnce(siteIndex, /(<a data-source-commit href=")[^"]*(">)[^<]*(<\/a>)/, `$1https://github.com/OthmaneBlial/GrowthLab/commit/${status.validatedSourceCommit}$2${status.validatedSourceCommit.slice(0, 7)}$3`, "source commit");
+const listMarkup = (items) => items.map((item) => `<li>${htmlText(item)}</li>`).join("");
+siteIndex = replaceOnce(siteIndex, /(<ul class="status-list delivered-list" data-delivered>)[\s\S]*?(<\/ul>)/, `$1${listMarkup(status.delivered)}$2`, "delivered list");
+siteIndex = replaceOnce(siteIndex, /(<ul class="status-list pending-list" data-pending>)[\s\S]*?(<\/ul>)/, `$1${listMarkup(status.pending)}$2`, "pending list");
+const validationMarkup = status.validation.map((entry) => `<li><span>${htmlText(entry.name)}</span><strong${entry.status === "passed" ? "" : " class=\"validation-disabled\""}>${htmlText(entry.status.charAt(0).toUpperCase() + entry.status.slice(1))}</strong><p>${htmlText(entry.detail)}</p></li>`).join("");
+siteIndex = replaceOnce(siteIndex, /(<ul data-validation class="validation-list">)[\s\S]*?(<\/ul>)/, `$1${validationMarkup}$2`, "validation list");
 const outputs = new Map([
   ["README.md", readme],
   ["docs/assets/progress.svg", badge("project estimate", `about ${status.progressEstimate}%`)],
   ["docs/assets/checks.svg", badge("checks", "local only")],
+  ["site/index.html", siteIndex],
   ["site/status.json", raw],
 ]);
 for (const [source, target] of [["docs/PROGRESS.md", "PROGRESS.md"], ["docs/ROADMAP.md", "ROADMAP.md"], ["CHANGELOG.md", "CHANGELOG.md"]]) outputs.set(`site/content/${target}`, await readFile(path.join(root, source), "utf8"));
