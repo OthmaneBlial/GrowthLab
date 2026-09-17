@@ -20,19 +20,20 @@ type GrowthSettingsPanelProps = {
   activeWorkspace?: Workspace;
 };
 
-function displayMode(mode: Workspace["config"]["permissions"]["mode"]) {
-  return mode.replaceAll("_", " ");
-}
-
 export function GrowthSettingsPanel({ workspaces = [], activeWorkspace }: GrowthSettingsPanelProps) {
   const locale = useLocale();
   const [theme, setTheme] = useThemePreference();
   const sources = useQuery({ queryKey: workspaceKey("growth", "measurement-sources"), queryFn: ({ signal }) => growth.measurementSources(signal) });
   const config = activeWorkspace?.config;
   const list = (values: string[]) => values.length ? values.join(", ") : m.growth_settings_none();
+  const modeLabel = (mode: Workspace["config"]["permissions"]["mode"]) => ({
+    analyze_only: m.growth_settings_mode_analyze_only(),
+    draft: m.growth_settings_mode_draft(),
+    implementation: m.growth_settings_mode_implementation(),
+  })[mode];
 
   return <section id="growth-settings" className="growth-settings growth-panel" aria-labelledby="growth-settings-title">
-    <span className="growth-section-number">SETTINGS / LOCAL CONTROL</span>
+    <span className="growth-section-number">{m.growth_settings_section()}</span>
     <h2 id="growth-settings-title">{m.growth_settings_title()}</h2>
     <p>{m.growth_settings_intro()}</p>
     <div className="growth-settings-grid">
@@ -46,10 +47,10 @@ export function GrowthSettingsPanel({ workspaces = [], activeWorkspace }: Growth
     <div className="growth-settings-contract">
       <div className="growth-settings-contract-heading"><div><span className="growth-eyebrow">{m.growth_settings_contract_title()}</span><p>{m.growth_settings_contract_intro()}</p></div><span className="growth-settings-readonly">{m.growth_settings_read_only()}</span></div>
       {config ? <div className="growth-settings-contract-grid">
-        <dl><div><dt>{m.growth_settings_product()}</dt><dd>{config.product.name}</dd></div><div><dt>{m.growth_settings_audience()}</dt><dd>{config.product.audience}</dd></div><div><dt>{m.growth_settings_goal()}</dt><dd>{config.goal.primary}</dd></div><div><dt>{m.growth_settings_permission_mode()}</dt><dd>{displayMode(config.permissions.mode)}</dd></div></dl>
+        <dl><div><dt>{m.growth_settings_product()}</dt><dd>{config.product.name}</dd></div><div><dt>{m.growth_settings_audience()}</dt><dd>{config.product.audience}</dd></div><div><dt>{m.growth_settings_goal()}</dt><dd>{config.goal.primary}</dd></div><div><dt>{m.growth_settings_permission_mode()}</dt><dd>{modeLabel(config.permissions.mode)}</dd></div></dl>
         <dl><div><dt>{m.growth_settings_allowed_paths()}</dt><dd>{list(config.permissions.allowed_paths)}</dd></div><div><dt>{m.growth_settings_denied_paths()}</dt><dd>{list(config.permissions.denied_paths)}</dd></div><div><dt>{m.growth_settings_validation_commands()}</dt><dd>{list(config.validation.commands)}</dd></div></dl>
         <dl><div><dt>{m.growth_settings_primary_metric()}</dt><dd>{config.metrics.primary}</dd></div><div><dt>{m.growth_settings_guardrails()}</dt><dd>{list(config.metrics.guardrails)}</dd></div><div><dt>{m.growth_settings_parallelism()}</dt><dd>{config.agents.parallelism}</dd></div><div><dt>{m.growth_settings_source_snapshot()}</dt><dd><code>{activeWorkspace.sourceSnapshotCommit}</code></dd></div></dl>
-      </div> : <div className="growth-settings-workspaces"><p>{m.growth_settings_contract_empty()}</p>{workspaces.length > 0 && <ul>{workspaces.map((workspace) => <li key={workspace.projectId}><strong>{workspace.config.product.name}</strong><span>{displayMode(workspace.config.permissions.mode)} · {workspace.config.goal.primary}</span></li>)}</ul>}</div>}
+      </div> : <div className="growth-settings-workspaces"><p>{m.growth_settings_contract_empty()}</p>{workspaces.length > 0 && <ul>{workspaces.map((workspace) => <li key={workspace.projectId}><strong>{workspace.config.product.name}</strong><span>{modeLabel(workspace.config.permissions.mode)} · {workspace.config.goal.primary}</span></li>)}</ul>}</div>}
     </div>
   </section>;
 }

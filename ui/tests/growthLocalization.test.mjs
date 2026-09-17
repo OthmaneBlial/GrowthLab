@@ -42,6 +42,17 @@ const growthKeys = [
   "growth_battle_download_html",
   "growth_battle_download_markdown",
   "growth_battle_inspect_diff",
+  "growth_contract_summary",
+  "growth_contract_configured_checks",
+  "growth_contract_allowed_paths",
+  "growth_contract_denied_paths",
+  "growth_contract_none",
+  "growth_contract_protected_paths",
+  "growth_contract_validation",
+  "growth_contract_timeout",
+  "growth_contract_parallel_variants",
+  "growth_contract_baseline_commit",
+  "growth_contract_sha",
 ];
 const measurementKeys = [
   "growth_measure_title",
@@ -103,6 +114,10 @@ const settingsKeys = [
   "growth_settings_parallelism",
   "growth_settings_source_snapshot",
   "growth_settings_none",
+  "growth_settings_section",
+  "growth_settings_mode_analyze_only",
+  "growth_settings_mode_draft",
+  "growth_settings_mode_implementation",
 ];
 
 test("GrowthLab onboarding shell uses every localized growth message", async () => {
