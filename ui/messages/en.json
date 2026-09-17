@@ -1761,5 +1761,7 @@
   "growth_rubric_evidence_render_missing": "{viewport}: no local render check was archived.",
   "growth_rubric_evidence_render_check": "{viewport}: {width} × {height} PNG target; viewport coverage {coverage}; {copy} visible text characters; horizontal overflow {overflow}.",
   "growth_rubric_evidence_timing_missing": "{viewport}: no local timing check was archived.",
-  "growth_rubric_evidence_timing_check": "{viewport}: DOM ready {dom} ms; load {load} ms; first contentful paint {fcp} ms."
+  "growth_rubric_evidence_timing_check": "{viewport}: DOM ready {dom} ms; load {load} ms; first contentful paint {fcp} ms.",
+  "growth_evidence_supports_claims": "Supports",
+  "growth_evidence_challenges_claims": "Challenges"
 }

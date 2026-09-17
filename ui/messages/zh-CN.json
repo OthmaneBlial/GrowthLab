@@ -1761,5 +1761,7 @@
   "growth_rubric_evidence_render_missing": "{viewport}：未归档本地渲染检查。",
   "growth_rubric_evidence_render_check": "{viewport}：{width} × {height} PNG 目标；视口覆盖{coverage}；{copy} 个可见文本字符；水平溢出{overflow}。",
   "growth_rubric_evidence_timing_missing": "{viewport}：未归档本地计时检查。",
-  "growth_rubric_evidence_timing_check": "{viewport}：DOM 就绪 {dom} ms；加载 {load} ms；首次内容绘制 {fcp} ms。"
+  "growth_rubric_evidence_timing_check": "{viewport}：DOM 就绪 {dom} ms；加载 {load} ms；首次内容绘制 {fcp} ms。",
+  "growth_evidence_supports_claims": "支持",
+  "growth_evidence_challenges_claims": "质疑"
 }

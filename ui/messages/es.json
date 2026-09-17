@@ -1761,5 +1761,7 @@
   "growth_rubric_evidence_render_missing": "{viewport}: no se archivó una comprobación de renderizado local.",
   "growth_rubric_evidence_render_check": "{viewport}: objetivo PNG de {width} × {height}; cobertura de viewport {coverage}; {copy} caracteres visibles; desbordamiento horizontal {overflow}.",
   "growth_rubric_evidence_timing_missing": "{viewport}: no se archivó una comprobación de tiempos local.",
-  "growth_rubric_evidence_timing_check": "{viewport}: DOM listo {dom} ms; carga {load} ms; primer contenido pintado {fcp} ms."
+  "growth_rubric_evidence_timing_check": "{viewport}: DOM listo {dom} ms; carga {load} ms; primer contenido pintado {fcp} ms.",
+  "growth_evidence_supports_claims": "Apoya",
+  "growth_evidence_challenges_claims": "Cuestiona"
 }

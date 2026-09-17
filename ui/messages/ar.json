@@ -1761,5 +1761,7 @@
   "growth_rubric_evidence_render_missing": "{viewport}: لم تُؤرشف نتيجة عرض محلية.",
   "growth_rubric_evidence_render_check": "{viewport}: هدف PNG بحجم {width} × {height}؛ تغطية viewport {coverage}؛ {copy} حرف مرئي؛ التمرير الأفقي {overflow}.",
   "growth_rubric_evidence_timing_missing": "{viewport}: لم تُؤرشف نتيجة توقيت محلية.",
-  "growth_rubric_evidence_timing_check": "{viewport}: جاهزية DOM ‏{dom} ms؛ التحميل ‏{load} ms؛ أول رسم للمحتوى ‏{fcp} ms."
+  "growth_rubric_evidence_timing_check": "{viewport}: جاهزية DOM ‏{dom} ms؛ التحميل ‏{load} ms؛ أول رسم للمحتوى ‏{fcp} ms.",
+  "growth_evidence_supports_claims": "يدعم",
+  "growth_evidence_challenges_claims": "يتحدى"
 }

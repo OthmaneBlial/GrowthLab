@@ -1761,5 +1761,7 @@
   "growth_rubric_evidence_render_missing": "{viewport}: स्थानीय render जाँच संग्रहीत नहीं है।",
   "growth_rubric_evidence_render_check": "{viewport}: {width} × {height} PNG लक्ष्य; viewport कवरेज {coverage}; {copy} दृश्य टेक्स्ट वर्ण; क्षैतिज overflow {overflow}।",
   "growth_rubric_evidence_timing_missing": "{viewport}: स्थानीय timing जाँच संग्रहीत नहीं है।",
-  "growth_rubric_evidence_timing_check": "{viewport}: DOM तैयार {dom} ms; लोड {load} ms; पहला contentful paint {fcp} ms।"
+  "growth_rubric_evidence_timing_check": "{viewport}: DOM तैयार {dom} ms; लोड {load} ms; पहला contentful paint {fcp} ms।",
+  "growth_evidence_supports_claims": "समर्थन",
+  "growth_evidence_challenges_claims": "चुनौती"
 }
