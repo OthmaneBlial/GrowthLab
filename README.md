@@ -205,6 +205,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 - Versioned installer template mapping smoke prevents Windows GNU releases from selecting an unavailable MSVC asset
 - Public SEO discovery files, canonical URLs, social cards and truthful SoftwareApplication metadata are published
 - The local SEO audit scores the public home source 100/100 after the image-description fix
+- Refined the GitHub About, README and Pages copy around the SEO growth tool positioning
 - Hardened the API terminal polling smoke so it waits for the persisted terminal battle state before reading sealed runs
 
 | Validation | Current evidence |
@@ -260,6 +261,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 | Installer template mapping smoke | **passed** — scripts/test-installer-templates.py --check-shell is versioned and checks that generated shell and PowerShell templates select growthlab-x86_64-pc-windows-gnu.zip for the GNU target; shell syntax and PowerShell parsing passed without network, upload or provider access. |
 | Public SEO discovery contract | **passed** — The public home and documentation pages expose one canonical URL each, Open Graph and Twitter cards, and truthful SoftwareApplication structured data. Static robots.txt, sitemap.xml and llms.txt are present, list only the two indexable pages, and state the product's SEO focus and evidence limits without analytics or growth claims. |
 | Public SEO page self-audit | **passed** — The real GrowthLab CLI audited site/index.html locally: the explainable SEO page-hygiene rubric scored 100/100, all four images had useful alt descriptions, and no recommendation remained. The separate quality score stayed 28/30 and the accessibility structure score 100/100; both remain estimates rather than performance or WCAG certification. |
+| Public SEO positioning | **passed** — GitHub About metadata, the README opening, and the live Pages title, description and hero were verified to use consistent SEO growth tool positioning. This is messaging and discovery evidence, not ranking or conversion proof. |
 | Native harness boundary fixture | **passed** — scripts/test-growth-native-fixture.py used a disposable fake Claude CLI with no provider credentials; the current binary created three isolated worktrees, accepted valid implementation JSON, ran observed checks and sealed three UNTESTED runs while the product HEAD, files and remotes stayed unchanged. This verifies the local harness boundary, not a real provider response. |
 | Translated macOS x86_64 source suite | **passed** — The current source x86_64-apple-darwin release suite ran under Rosetta on macOS arm64: 964 passed, zero failed and two inherited ignored tests. The confinement profile now permits only the Apple Rosetta runtime directory read-only; this does not prove native Intel hardware or the separately attached alpha.20 archive beyond its version smoke. |
 | Windows MSVC build probe | **unverified** — A local cargo-zigbuild attempt stopped in ring's C build because assert.h and a Windows SDK are unavailable on the macOS host; no MSVC artifact was produced or published. |
