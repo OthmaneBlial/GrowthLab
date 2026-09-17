@@ -32,6 +32,27 @@ The archives are unsigned and not notarized. They are CLI archives rather than
 desktop installers. Linux and Windows runtime behavior remains unverified on the
 current macOS host.
 
+## Local installer generation
+
+The current alpha.20 configuration can generate the cargo-dist shell and
+PowerShell installer scripts locally, without contacting GitHub or uploading
+anything:
+
+```sh
+dist build --artifacts global --installer shell,powershell \
+  --tag v0.1.0-alpha.20 --allow-dirty
+sh -n target/distrib/growthlab-installer.sh
+pwsh -NoLogo -NoProfile -NonInteractive -Command \
+  '$p = Get-Content -Raw target/distrib/growthlab-installer.ps1; [System.Management.Automation.Language.Parser]::ParseInput($p, [ref]$null, [ref]$null) | Out-Null'
+```
+
+The 2026-09-17 local generation produced `growthlab-installer.sh` (55,250
+bytes) and `growthlab-installer.ps1` (22,419 bytes), both syntax-checked. These
+templates point at the tagged GitHub release and are kept as local build
+evidence only: the release still lacks a Windows MSVC artifact, and no installer
+is advertised as portable or runtime-validated until a matching target runner
+proves it.
+
 ## Reproduce and inspect an archive locally
 
 Build the host-target archive with all checked-in notices:
