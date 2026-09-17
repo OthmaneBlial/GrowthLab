@@ -160,6 +160,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 - Local GrowthLab settings panel persists language and theme preferences and shows provider-neutral integration state
 - Read-only settings contract overview exposes product, permissions, validation, metrics and source snapshot per local workspace
 - Workspace contract labels and permission modes follow all six locale catalogs
+- Read-only settings contract includes the product description alongside its goal and audience
 - Deterministic local CLI packaging with complete checked-in license notices and offline archive verification
 - Localized GrowthLab battle/detail inspection, decision and report labels follow all six locale catalogs
 - Local x86_64 Linux musl archive built and structure-verified with cargo-zigbuild; runtime remains unverified
