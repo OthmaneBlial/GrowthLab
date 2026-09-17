@@ -87,6 +87,22 @@ const settingsKeys = [
   "growth_settings_integrations_body",
   "growth_settings_local_source_count",
   "growth_settings_planned_source_count",
+  "growth_settings_contract_title",
+  "growth_settings_contract_intro",
+  "growth_settings_read_only",
+  "growth_settings_contract_empty",
+  "growth_settings_product",
+  "growth_settings_audience",
+  "growth_settings_goal",
+  "growth_settings_permission_mode",
+  "growth_settings_allowed_paths",
+  "growth_settings_denied_paths",
+  "growth_settings_validation_commands",
+  "growth_settings_primary_metric",
+  "growth_settings_guardrails",
+  "growth_settings_parallelism",
+  "growth_settings_source_snapshot",
+  "growth_settings_none",
 ];
 
 test("GrowthLab onboarding shell uses every localized growth message", async () => {
