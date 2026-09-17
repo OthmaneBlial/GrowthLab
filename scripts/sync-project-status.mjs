@@ -9,7 +9,7 @@ const check = process.argv.slice(2).includes("--check");
 if (process.argv.slice(2).some((arg) => arg !== "--check")) throw new Error("Usage: node scripts/sync-project-status.mjs [--check]");
 const raw = await readFile(path.join(root, "docs/status.json"), "utf8");
 const status = JSON.parse(raw);
-if (status.schemaVersion !== 1 || !Number.isInteger(status.progressEstimate) || status.progressEstimate < 0 || status.progressEstimate > 100 || !/^\d{4}-\d{2}-\d{2}$/.test(status.updated)) throw new Error("Invalid project status version, estimate or date");
+if (status.schemaVersion !== 1 || !Number.isInteger(status.progressEstimate) || status.progressEstimate < 0 || status.progressEstimate > 100 || !/^\d{4}-\d{2}-\d{2}$/.test(status.updated) || !/^[a-f0-9]{40}$/.test(status.validatedSourceCommit)) throw new Error("Invalid project status version, estimate, date or validated source commit");
 const plain = (value) => {
   if (typeof value !== "string" || !value.trim() || /[\r\n<>|]/.test(value)) throw new Error("Status text must be nonempty plain text on one line");
   return value.replaceAll("*", "\\*").replaceAll("[", "\\[").replaceAll("]", "\\]");
