@@ -142,6 +142,8 @@ export const growth = {
   demo: () => request<{projectId: string; battleId: string; accepted: boolean}>("/demo", "POST", {}),
   workspaces: (signal?: AbortSignal) => request<Workspace[]>("/workspaces", "GET", undefined, signal),
   import: (path: string, initializeGit = false) => request<Workspace>("/workspaces", "POST", { path, initializeGit }),
+  updateWorkspace: (projectId: string, config: GrowthConfig, expectedSourceSnapshotCommit: string) =>
+    request<Workspace>(`/workspaces/${id(projectId)}`, "PATCH", { config, expectedSourceSnapshotCommit }),
   capabilities: (signal?: AbortSignal) => request<Capabilities>("/capabilities", "GET", undefined, signal),
   measurementSources: (signal?: AbortSignal) => request<MeasurementSource[]>("/measurement/sources", "GET", undefined, signal),
   playbooks: (signal?: AbortSignal) => request<GrowthPlaybook[]>("/playbooks", "GET", undefined, signal),

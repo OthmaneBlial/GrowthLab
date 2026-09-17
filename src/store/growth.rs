@@ -4,6 +4,7 @@ use rusqlite::{params, Connection, OptionalExtension};
 
 use crate::error::{anyhow, Result};
 use crate::growth::{
+    config::GrowthConfig,
     model::{GrowthHypothesis, GrowthWorkspace},
     playbooks::PlaybookRun,
 };
@@ -211,6 +212,49 @@ impl Store {
                     .ok_or_else(|| anyhow!("Growth workspace disappeared"))
             })
             .collect()
+    }
+
+    /// Persist an edited workspace contract after checking that no battle or
+    /// hypothesis can observe a partially changed configuration.
+    pub fn update_growth_workspace_config(
+        &self,
+        project_id: &str,
+        config: &GrowthConfig,
+    ) -> Result<()> {
+        config.validate()?;
+        if self.get_growth_workspace(project_id)?.is_none() {
+            return Err(anyhow!("Growth workspace not found"));
+        }
+        let tx = self.begin()?;
+        let active_battle: bool = tx.query_row(
+            "SELECT EXISTS(SELECT 1 FROM growth_battles WHERE project_id=?1 AND status IN ('ready','running'))",
+            [project_id],
+            |row| row.get(0),
+        )?;
+        if active_battle {
+            return Err(anyhow!(
+                "Workspace settings cannot be edited while a Growth Battle is ready or running"
+            ));
+        }
+        let hypotheses: bool = tx.query_row(
+            "SELECT EXISTS(SELECT 1 FROM growth_hypotheses WHERE project_id=?1)",
+            [project_id],
+            |row| row.get(0),
+        )?;
+        if hypotheses {
+            return Err(anyhow!(
+                "Workspace settings cannot be edited after hypotheses are created; start a new workspace to change its brief"
+            ));
+        }
+        let changed = tx.execute(
+            "UPDATE growth_workspaces SET config_json=?1 WHERE project_id=?2",
+            params![serde_json::to_string(config)?, project_id],
+        )?;
+        if changed != 1 {
+            return Err(anyhow!("Growth workspace not found"));
+        }
+        tx.commit()?;
+        Ok(())
     }
 
     /// Insert an entire portfolio or none. These proposal records are not run

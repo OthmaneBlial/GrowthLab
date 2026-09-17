@@ -909,6 +909,87 @@ async fn api_creates_an_analysis_workspace_from_a_manual_brief() {
 }
 
 #[tokio::test]
+async fn api_edits_workspace_config_locally_before_hypotheses_and_preserves_guards() {
+    let fixture = Fixture::new(false).await;
+    let workspace = fixture
+        .post("/workspaces", Some(json!({"path":fixture.product})), 200)
+        .await;
+    let project_id = workspace["projectId"].as_str().unwrap();
+    let source_snapshot = workspace["sourceSnapshotCommit"].as_str().unwrap();
+    let mut edited_config = workspace["config"].clone();
+    edited_config["product"]["description"] = json!("A clearer local growth brief.");
+    edited_config["goal"]["primary"] = json!("Increase qualified SEO signups");
+    let updated = fixture
+        .patch(
+            &format!("/workspaces/{project_id}"),
+            json!({
+                "config": edited_config,
+                "expectedSourceSnapshotCommit": source_snapshot
+            }),
+            200,
+        )
+        .await;
+    assert_eq!(
+        updated["config"]["product"]["description"],
+        "A clearer local growth brief."
+    );
+    assert_eq!(
+        updated["config"]["goal"]["primary"],
+        "Increase qualified SEO signups"
+    );
+    assert_eq!(
+        crate::growth::config::GrowthConfig::load(&fixture.product)
+            .unwrap()
+            .product
+            .description,
+        "A clearer local growth brief."
+    );
+    assert!(
+        crate::local::git::git(Some(&fixture.product), &["status", "--porcelain"])
+            .unwrap()
+            .contains("growthlab.yaml")
+    );
+
+    let mut external = edited_config.clone();
+    external["product"]["description"] = json!("Changed outside the dashboard.");
+    let external: crate::growth::config::GrowthConfig = serde_json::from_value(external).unwrap();
+    external.replace_existing(&fixture.product).unwrap();
+    let refused = fixture
+        .patch(
+            &format!("/workspaces/{project_id}"),
+            json!({
+                "config": updated["config"],
+                "expectedSourceSnapshotCommit": source_snapshot
+            }),
+            400,
+        )
+        .await;
+    assert!(refused["error"]
+        .as_str()
+        .unwrap()
+        .contains("changed outside GrowthLab"));
+    edited_config["product"]["description"] = json!("A clearer local growth brief.");
+    let restored: crate::growth::config::GrowthConfig =
+        serde_json::from_value(edited_config).unwrap();
+    restored.replace_existing(&fixture.product).unwrap();
+
+    fixture
+        .post(&format!("/workspaces/{project_id}/hypotheses"), None, 200)
+        .await;
+    let blocked = fixture
+        .patch(
+            &format!("/workspaces/{project_id}"),
+            json!({
+                "config": updated["config"],
+                "expectedSourceSnapshotCommit": source_snapshot
+            }),
+            400,
+        )
+        .await;
+    assert!(blocked["error"].as_str().unwrap().contains("hypotheses"));
+}
+
+#[tokio::test]
 async fn repository_audit_rejects_non_github_input_without_network_access() {
     let fixture = Fixture::new(false).await;
     let response = fixture

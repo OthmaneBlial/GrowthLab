@@ -138,38 +138,58 @@ impl GrowthConfig {
 
     pub fn write_new(&self, root: &Path) -> Result<()> {
         self.validate()?;
+        let value = self.serialized()?;
+        let temporary = write_temporary(root, &value)?;
+        let result = std::fs::hard_link(&temporary, root.join(CONFIG_FILE)).map_err(|error| {
+            anyhow!("Cannot create growthlab.yaml: {error}. Existing configuration is never overwritten.")
+        });
+        let cleanup = std::fs::remove_file(&temporary);
+        result?;
+        cleanup?;
+        Ok(())
+    }
+
+    /// Replace an existing reviewed configuration atomically. The target must
+    /// be a regular file; symlinked configuration paths are rejected.
+    pub fn replace_existing(&self, root: &Path) -> Result<()> {
+        self.validate()?;
+        let path = root.join(CONFIG_FILE);
+        let metadata = std::fs::symlink_metadata(&path)?;
+        if !metadata.is_file() || metadata.file_type().is_symlink() {
+            return Err(anyhow!("growthlab.yaml must be a regular file"));
+        }
+        let temporary = write_temporary(root, &self.serialized()?)?;
+        let result = std::fs::rename(&temporary, &path)
+            .map_err(|error| anyhow!("Cannot replace growthlab.yaml atomically: {error}"));
+        if result.is_err() {
+            let _ = std::fs::remove_file(&temporary);
+        }
+        result
+    }
+
+    pub(crate) fn replace_existing_bytes(root: &Path, value: &[u8]) -> Result<()> {
+        let path = root.join(CONFIG_FILE);
+        let metadata = std::fs::symlink_metadata(&path)?;
+        if !metadata.is_file() || metadata.file_type().is_symlink() {
+            return Err(anyhow!("growthlab.yaml must be a regular file"));
+        }
+        let temporary = write_temporary(root, value)?;
+        let result = std::fs::rename(&temporary, &path)
+            .map_err(|error| anyhow!("Cannot restore growthlab.yaml atomically: {error}"));
+        if result.is_err() {
+            let _ = std::fs::remove_file(&temporary);
+        }
+        result
+    }
+
+    fn serialized(&self) -> Result<Vec<u8>> {
         let value = serde_yaml_ng::to_string(self)?;
         if value.len() as u64 > MAX_CONFIG_BYTES {
             return Err(anyhow!(
                 "Serialized growthlab.yaml exceeds the 64 KiB limit"
             ));
         }
-        let temporary = root.join(format!(".growthlab-config-{}.tmp", uuid::Uuid::new_v4()));
-        let result = (|| -> Result<()> {
-            let mut options = std::fs::OpenOptions::new();
-            options.write(true).create_new(true);
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::OpenOptionsExt;
-                options.mode(0o600);
-            }
-            let mut file = options.open(&temporary)?;
-            file.write_all(value.as_bytes())?;
-            file.sync_all()?;
-            // Same-directory hard link atomically installs a complete file and
-            // refuses an existing target, including an existing symlink.
-            std::fs::hard_link(&temporary, root.join(CONFIG_FILE))
-                .map_err(|error| anyhow!("Cannot create growthlab.yaml: {error}. Existing configuration is never overwritten."))?;
-            Ok(())
-        })();
-        let cleanup = std::fs::remove_file(&temporary);
-        match result {
-            Err(error) => Err(error),
-            Ok(()) => {
-                cleanup?;
-                Ok(())
-            }
-        }
+        Ok(value.into_bytes())
     }
 
     pub fn validate(&self) -> Result<()> {
@@ -287,6 +307,28 @@ impl GrowthConfig {
         }
         Ok(())
     }
+}
+
+fn write_temporary(root: &Path, value: &[u8]) -> Result<std::path::PathBuf> {
+    let temporary = root.join(format!(".growthlab-config-{}.tmp", uuid::Uuid::new_v4()));
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let result = (|| -> Result<()> {
+        let mut file = options.open(&temporary)?;
+        file.write_all(value)?;
+        file.sync_all()?;
+        Ok(())
+    })();
+    if let Err(error) = result {
+        let _ = std::fs::remove_file(&temporary);
+        return Err(error);
+    }
+    Ok(temporary)
 }
 
 fn under(path: &str, prefix: &str) -> bool {
@@ -485,6 +527,27 @@ mod tests {
             config.permissions.mode = mode;
             assert!(config.check_write(&dir, "website/index.html").is_err());
         }
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn replaces_existing_config_atomically_and_rejects_symlinks() {
+        let dir =
+            std::env::temp_dir().join(format!("growthlab-config-replace-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let original = fixture();
+        original.write_new(&dir).unwrap();
+        let mut updated = original.clone();
+        updated.product.description = "Updated locally".into();
+        updated.replace_existing(&dir).unwrap();
+        assert_eq!(GrowthConfig::load(&dir).unwrap(), updated);
+        let target = dir.join(CONFIG_FILE);
+        let backup = dir.join("growthlab.yaml.backup");
+        std::fs::rename(&target, &backup).unwrap();
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(&backup, &target).unwrap();
+        #[cfg(unix)]
+        assert!(updated.replace_existing(&dir).is_err());
         std::fs::remove_dir_all(dir).unwrap();
     }
 

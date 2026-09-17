@@ -845,6 +845,46 @@ pub fn import_with_options(
     Ok(workspace)
 }
 
+/// Apply a validated workspace contract to the local product configuration.
+/// The caller supplies the snapshot it reviewed so an out-of-band edit cannot
+/// be silently overwritten. The product file is left for the user to review
+/// and commit; no remote or automatic commit is created.
+pub fn update_workspace_config(
+    store: &Store,
+    project_id: &str,
+    config: &GrowthConfig,
+    expected_source_snapshot_commit: &str,
+) -> Result<GrowthWorkspace> {
+    config.validate()?;
+    let workspace = store
+        .get_growth_workspace(project_id)?
+        .ok_or_else(|| anyhow!("Growth workspace not found"))?;
+    if workspace.source_snapshot_commit != expected_source_snapshot_commit {
+        return Err(anyhow!(
+            "Workspace source snapshot changed; reload the contract before editing"
+        ));
+    }
+    let project = store
+        .get_local_project(project_id)?
+        .ok_or_else(|| anyhow!("Growth workspace product is unavailable"))?;
+    let root = crate::paths::canonicalize(&project.repo_path)?;
+    let on_disk = GrowthConfig::load(&root)?;
+    if on_disk != workspace.config {
+        return Err(anyhow!(
+            "growthlab.yaml changed outside GrowthLab; review or re-import it before editing"
+        ));
+    }
+    let original = std::fs::read(root.join(CONFIG_FILE))?;
+    config.replace_existing(&root)?;
+    if let Err(error) = store.update_growth_workspace_config(project_id, config) {
+        let _ = GrowthConfig::replace_existing_bytes(&root, &original);
+        return Err(error);
+    }
+    store
+        .get_growth_workspace(project_id)?
+        .ok_or_else(|| anyhow!("Growth workspace disappeared after update"))
+}
+
 /// Clone a public GitHub repository into a new local folder and register it as
 /// a GrowthLab workspace. A checkout that already carries `growthlab.yaml` is
 /// imported as-is; otherwise the supplied brief is written and committed only

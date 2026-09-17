@@ -204,7 +204,10 @@ where
             "/api/growth/workspaces",
             get(workspaces).post(import_workspace),
         )
-        .route("/api/growth/workspaces/{id}", get(workspace))
+        .route(
+            "/api/growth/workspaces/{id}",
+            get(workspace).patch(update_workspace_config),
+        )
         .route(
             "/api/growth/workspaces/{id}/hypotheses",
             get(hypotheses).post(create_hypotheses),
@@ -592,6 +595,35 @@ async fn workspace(State(state): State<GrowthState>, Path(id): Path<String>) -> 
             store
                 .get_growth_workspace(&id)?
                 .ok_or_else(|| not_found("Growth workspace"))?,
+        )
+    })
+    .await
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct WorkspaceConfigUpdateRequest {
+    config: crate::growth::config::GrowthConfig,
+    expected_source_snapshot_commit: String,
+}
+
+async fn update_workspace_config(
+    State(state): State<GrowthState>,
+    Path(id): Path<String>,
+    Json(request): Json<WorkspaceConfigUpdateRequest>,
+) -> ApiResult {
+    if request.expected_source_snapshot_commit.len() > 64 {
+        return Err(bad_request("Source snapshot commit is too long"));
+    }
+    with_store(state, Some(id.clone()), move |store| {
+        value(
+            cli::update_workspace_config(
+                store,
+                &id,
+                &request.config,
+                &request.expected_source_snapshot_commit,
+            )
+            .map_err(domain_error)?,
         )
     })
     .await

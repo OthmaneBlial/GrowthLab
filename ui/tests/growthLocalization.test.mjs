@@ -119,6 +119,12 @@ const settingsKeys = [
   "growth_settings_mode_analyze_only",
   "growth_settings_mode_draft",
   "growth_settings_mode_implementation",
+  "growth_settings_edit",
+  "growth_settings_edit_notice",
+  "growth_settings_save",
+  "growth_settings_saving",
+  "growth_settings_cancel",
+  "growth_settings_saved",
 ];
 
 test("GrowthLab onboarding shell uses every localized growth message", async () => {
