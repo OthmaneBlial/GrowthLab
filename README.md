@@ -191,6 +191,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 - Localized rubric labels and dimension names across all six dashboard locale catalogs
 - Localized rubric calculations, recommendations and limitations across all six dashboard locale catalogs
 - Corrected dashboard heading hierarchy and verified live accessible names, IDs, image alternatives and overflow
+- Explicit opt-in self-contained HTML and Markdown reports embed verified desktop and phone captures
 
 | Validation | Current evidence |
 | --- | --- |
@@ -231,6 +232,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 | Localized playbook content | **passed** — The ten role playbooks now map titles, focus, summaries, questions, outputs, guardrails and saved-run follow-up text through locale catalogs; i18n, style, type, build and 174 UI tests pass, and Chrome verified Spanish playbook content |
 | Localized rubric labels | **passed** — Five SEO, quality, accessibility, static-render and browser-timing rubric labels, dimensions and static guidance now resolve through all six locale catalogs; i18n, style, type, production build and 174 UI tests pass, and Chrome verified Spanish battle and public-URL audit guidance. |
 | Live dashboard accessibility structure smoke | **passed** — Chrome AX and DOM inspection on a recorded battle found 23 named interactive controls, one h1 with no skipped heading level, no duplicate IDs, no images missing alt text and no horizontal overflow; this remains a local structure smoke, not WCAG or assistive-technology certification. |
+| Visual report disclosure | **passed** — CLI --include-visuals and API includeVisuals=true explicitly embed verified archived desktop/phone PNGs; default reports omit captures, Rust report tests cover opt-in encoding and the 4 MiB bound, and the real bundled demo still passes without provider requests. Embedded captures remain render artifacts, not visual-regression, accessibility, performance or growth results. |
 
 **Still ahead**
 
