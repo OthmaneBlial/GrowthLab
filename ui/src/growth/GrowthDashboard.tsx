@@ -84,8 +84,32 @@ function HypothesisEvidence({ hypothesis }: { hypothesis: Hypothesis }) {
     <div><span className="growth-eyebrow">{m.growth_evidence_skeptic_notes()}</span><ul>{hypothesis.risks.map((risk) => <li key={risk}>{risk}</li>)}</ul></div>
   </div>;
 }
+const GROWTH_RUBRIC_LABEL_KEYS: Record<string, string> = {
+  "seo-page-hygiene-v1": "growth_rubric_seo_label",
+  "page-quality-hints-v1": "growth_rubric_quality_label",
+  "accessibility-structure-v1": "growth_rubric_accessibility_label",
+  "static-render-hints-v1": "growth_rubric_render_label",
+  "browser-timing-hints-v1": "growth_rubric_performance_label",
+};
+function localizedRubric(rubric: PageQualityRubric | RenderRubric | PerformanceRubric | AccessibilityRubric) {
+  const catalog = m as unknown as Record<string, unknown>;
+  const read = (key: string, fallback: string) => {
+    const message = catalog[key];
+    return typeof message === "function" ? (message as () => string)() : fallback;
+  };
+  return {
+    ...rubric,
+    label: read(GROWTH_RUBRIC_LABEL_KEYS[rubric.id] ?? "", rubric.label),
+    dimensions: rubric.dimensions.map((dimension) => ({
+      ...dimension,
+      label: read(`growth_rubric_dimension_${dimension.key.replaceAll("-", "_")}`, dimension.label),
+    })),
+  };
+}
 function QualityRubricDetails({ rubric }: { rubric: PageQualityRubric | RenderRubric | PerformanceRubric | AccessibilityRubric }) {
-  return <details className="growth-seo-rubric growth-quality-rubric"><summary><span>{rubric.label}</span><strong>{rubric.score} / {rubric.maxScore} · {rubric.provenance}</strong></summary><p className="growth-muted">{rubric.calculation}</p><div className="growth-seo-dimensions">{rubric.dimensions.map((dimension) => <article className={`growth-seo-dimension growth-seo-dimension-${dimension.status}`} key={dimension.key}><div className="growth-line"><strong>{dimension.label}</strong><span>{dimension.score} / {dimension.maxScore}</span></div>{dimension.evidence.map((evidence) => <p key={evidence}>{evidence}</p>)}</article>)}</div><div className="growth-seo-recommendations"><strong>{m.growth_rubric_suggested_steps()}</strong><ul>{rubric.recommendations.length ? rubric.recommendations.map((recommendation) => <li key={recommendation}>{recommendation}</li>) : <li>{m.growth_rubric_no_gaps()}</li>}</ul></div><ul className="growth-seo-limitations">{rubric.limitations.map((limitation) => <li key={limitation}>{limitation}</li>)}</ul></details>;
+  const copy = localizedRubric(rubric);
+  const noGaps = rubric.id === "seo-page-hygiene-v1" ? m.growth_rubric_no_structural_gaps() : m.growth_rubric_no_gaps();
+  return <details className="growth-seo-rubric growth-quality-rubric"><summary><span>{copy.label}</span><strong>{copy.score} / {copy.maxScore} · {copy.provenance}</strong></summary><p className="growth-muted">{copy.calculation}</p><div className="growth-seo-dimensions">{copy.dimensions.map((dimension) => <article className={`growth-seo-dimension growth-seo-dimension-${dimension.status}`} key={dimension.key}><div className="growth-line"><strong>{dimension.label}</strong><span>{dimension.score} / {dimension.maxScore}</span></div>{dimension.evidence.map((evidence) => <p key={evidence}>{evidence}</p>)}</article>)}</div><div className="growth-seo-recommendations"><strong>{m.growth_rubric_suggested_steps()}</strong><ul>{copy.recommendations.length ? copy.recommendations.map((recommendation) => <li key={recommendation}>{recommendation}</li>) : <li>{noGaps}</li>}</ul></div><ul className="growth-seo-limitations">{copy.limitations.map((limitation) => <li key={limitation}>{limitation}</li>)}</ul></details>;
 }
 
 function hypothesisDraft(hypothesis: Hypothesis): HypothesisUpdate {
@@ -380,7 +404,7 @@ export function GrowthDashboard({ battleId, projectId }: { battleId?: string; pr
                 <button className="growth-variant-title" onClick={() => {setFocused(item.id); setTab("evidence");}} aria-pressed={variant?.id === item.id}><h2>{hypothesis.title}</h2><span aria-hidden="true">↗</span></button><p>{hypothesis.hypothesis}</p>{row?.hypothesisId && <p className="growth-muted growth-lineage">{m.growth_hypothesis_id()}: <code>{row.hypothesisId}</code></p>}
                 <div className="growth-check-fraction"><span>{m.growth_configured_checks()}</span><strong>{captured?.run.validations.length ? `${captured.run.validations.filter((check) => check.status === "done" && check.exitCode === 0).length} / ${config.validation.commands.length}` : "—"}</strong></div>
                 <details className="growth-checks"><summary>{m.growth_inspect_checks_calculation()}</summary><p>{comparison.data?.calculation ?? m.growth_check_calculation_fallback()}</p>{captured?.run.validations.map((check) => <div className="growth-check" key={check.runId}><code>{check.command}</code><div className="growth-line"><strong>{check.status} · {m.growth_exit()} {check.exitCode ?? m.growth_unavailable()}</strong><Mark value={check.provenance} /></div><p>{check.terminationReason}</p><p className="growth-muted">{check.limitation}</p><dl><Digest label={m.growth_source_sha()} value={check.sourceDigest} /><Digest label={m.growth_contract_isolation()} value={check.confinement?.backend} /><Digest label={m.growth_contract_policy_sha()} value={check.confinement?.policyDigest} /></dl></div>)}{!captured?.run.validations.length && <p>{m.growth_no_completed_checks()}</p>}{captured?.run.activeValidation && <p className="growth-notice">{m.growth_command_registered({ index: captured.run.activeValidation.commandIndex + 1 })}</p>}</details>
-                {row?.rubric && <details className="growth-seo-rubric"><summary><span>{row.rubric.label}</span><strong>{row.rubric.score} / {row.rubric.maxScore} · {row.rubric.provenance}</strong></summary><p className="growth-muted">{row.rubric.calculation}</p><div className="growth-seo-dimensions">{row.rubric.dimensions.map((dimension) => <article className={`growth-seo-dimension growth-seo-dimension-${dimension.status}`} key={dimension.key}><div className="growth-line"><strong>{dimension.label}</strong><span>{dimension.score} / {dimension.maxScore}</span></div>{dimension.evidence.map((evidence) => <p key={evidence}>{evidence}</p>)}</article>)}</div><div className="growth-seo-recommendations"><strong>{m.growth_rubric_suggested_steps()}</strong><ul>{row.rubric.recommendations.length ? row.rubric.recommendations.map((recommendation) => <li key={recommendation}>{recommendation}</li>) : <li>{m.growth_rubric_no_structural_gaps()}</li>}</ul></div><ul className="growth-seo-limitations">{row.rubric.limitations.map((limitation) => <li key={limitation}>{limitation}</li>)}</ul></details>}
+                {row?.rubric && <QualityRubricDetails rubric={row.rubric} />}
                 {row?.quality && <QualityRubricDetails rubric={row.quality} />}
                 {row?.accessibility && <QualityRubricDetails rubric={row.accessibility} />}
                 {row?.render && <QualityRubricDetails rubric={row.render} />}

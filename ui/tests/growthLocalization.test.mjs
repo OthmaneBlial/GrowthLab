@@ -393,6 +393,40 @@ const growthPlaybookCatalogKeys = [
   "growth_playbook_skeptic_guardrail_1",
   "growth_playbook_skeptic_guardrail_2",
 ];
+const growthRubricCatalogKeys = [
+  "growth_rubric_suggested_steps",
+  "growth_rubric_no_gaps",
+  "growth_rubric_no_structural_gaps",
+  "growth_rubric_seo_label",
+  "growth_rubric_quality_label",
+  "growth_rubric_accessibility_label",
+  "growth_rubric_render_label",
+  "growth_rubric_performance_label",
+  "growth_rubric_dimension_title",
+  "growth_rubric_dimension_description",
+  "growth_rubric_dimension_headings",
+  "growth_rubric_dimension_language",
+  "growth_rubric_dimension_content",
+  "growth_rubric_dimension_canonical",
+  "growth_rubric_dimension_links",
+  "growth_rubric_dimension_media",
+  "growth_rubric_dimension_viewport",
+  "growth_rubric_dimension_controls",
+  "growth_rubric_dimension_forms",
+  "growth_rubric_dimension_loading",
+  "growth_rubric_dimension_claims",
+  "growth_rubric_dimension_landmarks",
+  "growth_rubric_dimension_images",
+  "growth_rubric_dimension_viewport_coverage",
+  "growth_rubric_dimension_horizontal_overflow",
+  "growth_rubric_dimension_visible_copy",
+  "growth_rubric_dimension_capture_integrity",
+  "growth_rubric_dimension_first_contentful_paint",
+  "growth_rubric_dimension_dom_content_loaded",
+  "growth_rubric_dimension_load_complete",
+  "growth_rubric_dimension_timing_integrity",
+];
+
 
 
 
@@ -513,6 +547,7 @@ test("GrowthLab onboarding shell uses every localized growth message", async () 
   const settings = JSON.parse(await readFile(new URL("project.inlang/settings.json", uiRoot), "utf8"));
   for (const key of [...growthKeys, ...growthAuxiliaryKeys, ...growthDetailKeys]) {
     assert.match(source, /localizedPlaybook|growth_playbook_/, "GrowthDashboard should map dynamic playbook copy");
+    assert.match(source, /localizedRubric|growth_rubric_/, "GrowthDashboard should map dynamic rubric copy");
     assert.match(source, new RegExp(key), `${key} should be rendered by GrowthDashboard`);
   }
   for (const key of staticPreviewKeys) {
@@ -526,7 +561,7 @@ test("GrowthLab onboarding shell uses every localized growth message", async () 
   }
   for (const locale of settings.locales) {
     const catalog = JSON.parse(await readFile(new URL(`messages/${locale}.json`, uiRoot), "utf8"));
-    for (const key of [...growthKeys, ...growthAuxiliaryKeys, ...growthDetailKeys, ...growthPlaybookCatalogKeys, ...staticPreviewKeys, ...measurementKeys, ...settingsKeys]) {
+    for (const key of [...growthKeys, ...growthAuxiliaryKeys, ...growthDetailKeys, ...growthPlaybookCatalogKeys, ...growthRubricCatalogKeys, ...staticPreviewKeys, ...measurementKeys, ...settingsKeys]) {
       assert.equal(typeof catalog[key], "string", `${locale} should define ${key}`);
       assert.ok(catalog[key].trim(), `${locale} should not leave ${key} empty`);
     }

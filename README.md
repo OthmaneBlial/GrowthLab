@@ -171,6 +171,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 - Localized dashboard onboarding, audit and auxiliary action/status copy across all six dashboard locale catalogs
 - Localized role labels, editor metadata and execution option copy across all six dashboard locale catalogs
 - Structured localized playbook titles, questions, outputs and guardrails across all six dashboard locale catalogs
+- Localized rubric labels and dimension names across all six dashboard locale catalogs
 
 | Validation | Current evidence |
 | --- | --- |
@@ -209,13 +210,14 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 | Localized auxiliary dashboard copy | **passed** — The six locale catalogs now cover dashboard busy states, home onboarding, public page and repository audit controls, playbook controls and execution status feedback; i18n, style, type, build and 174 UI tests pass, and Chrome verified the Spanish home flow with no browser warnings or errors |
 | Localized role and metadata copy | **passed** — Role names, hypothesis editor labels, execution choices, check metadata and delivery notices now use the six locale catalogs; i18n, style, type, build and 174 UI tests pass, and Chrome verified Spanish role labels and footer copy |
 | Localized playbook content | **passed** — The ten role playbooks now map titles, focus, summaries, questions, outputs, guardrails and saved-run follow-up text through locale catalogs; i18n, style, type, build and 174 UI tests pass, and Chrome verified Spanish playbook content |
+| Localized rubric labels | **passed** — Five SEO, quality, accessibility, static-render and browser-timing rubric labels plus their dimensions now resolve through all six locale catalogs; i18n, style, type, production build and 174 UI tests pass. |
 
 **Still ahead**
 
 - Provider adapters
 - Full visual regression and assistive-technology accessibility evaluation
 - Native-agent battle verification and provider-specific launcher registration
-- Dynamic SEO/audit result dimensions and user-generated run content remain source-language until structured mapping is added
+- Dynamic rubric evidence, calculations, recommendations, limitations and user-generated run content remain source-language until structured mapping is added
 - Cross-platform runtime proof and release-attached portable binaries/installers
 <!-- project-status:end -->
 
