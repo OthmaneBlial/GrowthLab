@@ -62,17 +62,36 @@ with tempfile.TemporaryDirectory(prefix="growthlab-archive-") as temporary:
     if len(roots) != 1:
         raise SystemExit("archive must contain exactly one top-level directory")
     root = extraction / next(iter(roots))
-    required = [root / "LICENSE", root / "NOTICE.md", root / "README.md", root / "docs" / "demo.md", root / "docs" / "distribution.md"]
+    required = [root / "LICENSE", root / "NOTICE.md", root / "README.md"]
+    # The source-first archive preserves docs/ while cargo-dist flattens the
+    # explicitly included guides at the package root.
+    demo_doc = root / "docs" / "demo.md" if (root / "docs" / "demo.md").is_file() else root / "demo.md"
+    distribution_doc = root / "docs" / "distribution.md" if (root / "docs" / "distribution.md").is_file() else root / "distribution.md"
+    required.extend([demo_doc, distribution_doc])
     required.extend(sorted((root / "licenses").glob("*")))
     missing = [str(path.relative_to(root)) for path in required if not path.is_file()]
     if missing:
         raise SystemExit("missing distribution files: " + ", ".join(missing))
-    binaries = list((root / "bin").glob("growthlab*"))
-    binaries = [path for path in binaries if path.is_file() and not path.is_symlink()]
-    if len(binaries) != 1:
-        raise SystemExit("archive must contain exactly one bin/growthlab executable")
-    binary = binaries[0]
-    print(f"contents: passed ({len(names)} entries, {len(list((root / 'licenses').glob('*')))} notices)")
+    # The source-first packager keeps the executable under bin/, while
+    # cargo-dist archives place both declared binaries at the archive root.
+    # Accept both layouts so the same offline verifier covers the historical
+    # versioned assets and the installer-compatible cargo-dist assets.
+    bin_dir = root / "bin"
+    if bin_dir.is_dir():
+        binaries = [path for path in bin_dir.glob("growthlab*") if path.is_file() and not path.is_symlink()]
+        if len(binaries) != 1:
+            raise SystemExit("archive must contain exactly one bin/growthlab executable")
+        binary = binaries[0]
+        layout = "bin"
+    else:
+        suffix = ".exe" if archive.name.endswith(".zip") else ""
+        expected_binaries = [root / f"growthlab{suffix}", root / f"orx{suffix}"]
+        missing_binaries = [str(path.relative_to(root)) for path in expected_binaries if not path.is_file() or path.is_symlink()]
+        if missing_binaries:
+            raise SystemExit("cargo-dist archive is missing executable(s): " + ", ".join(missing_binaries))
+        binary = expected_binaries[0]
+        layout = "root"
+    print(f"contents: passed ({len(names)} entries, {len(list((root / 'licenses').glob('*')))} notices, {layout} executable layout)")
 
     archive_name = archive.name
     host = platform.system().lower()

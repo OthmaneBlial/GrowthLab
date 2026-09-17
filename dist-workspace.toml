@@ -13,6 +13,10 @@ github-build-setup = "../build-setup.yml"
 global-artifacts-jobs = ["./verify-build-channel", "./telemetry-contract", "./ci"]
 # The installers to generate for each app
 installers = ["shell", "powershell"]
+# Keep the installer archives aligned with the release assets while carrying
+# the same attribution and dependency notices as the source-first packages.
+unix-archive = ".tar.gz"
+include = ["NOTICE.md", "docs/demo.md", "docs/distribution.md", "licenses/"]
 # Target platforms to build apps for (Rust target-triple syntax). Keep MSVC out
 # until a Windows SDK runner can build and validate that artifact; the GNU
 # archive is the currently reproducible Windows target.

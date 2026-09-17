@@ -21,6 +21,28 @@ DEFAULT_REPOSITORY = "OthmaneBlial/GrowthLab"
 DEFAULT_TAG = "v0.1.0-alpha.20"
 MAX_DOWNLOAD_BYTES = 64 * 1024 * 1024
 ASSET_PAIRS = (
+    # cargo-dist names are the assets selected by the published installers.
+    (
+        "growthlab-aarch64-apple-darwin.tar.gz",
+        "growthlab-aarch64-apple-darwin.tar.gz.sha256",
+    ),
+    (
+        "growthlab-x86_64-apple-darwin.tar.gz",
+        "growthlab-x86_64-apple-darwin.tar.gz.sha256",
+    ),
+    (
+        "growthlab-aarch64-unknown-linux-musl.tar.gz",
+        "growthlab-aarch64-unknown-linux-musl.tar.gz.sha256",
+    ),
+    (
+        "growthlab-x86_64-unknown-linux-musl.tar.gz",
+        "growthlab-x86_64-unknown-linux-musl.tar.gz.sha256",
+    ),
+    (
+        "growthlab-x86_64-pc-windows-gnu.zip",
+        "growthlab-x86_64-pc-windows-gnu.zip.sha256",
+    ),
+    # Versioned source-first assets remain part of the release history.
     (
         "growthlab-v0.1.0-alpha.20-macos-arm64.tar.gz",
         "growthlab-v0.1.0-alpha.20-macos-arm64.tar.gz.sha256",
@@ -90,7 +112,8 @@ def main():
                     f"GitHub digest mismatch for {archive_name}: {archive_digest} != {github_digest}"
                 )
             fields = checksum_file.decode("utf-8").split()
-            if len(fields) < 2 or fields[1] != archive_name or fields[0].lower() != archive_digest.lower():
+            sidecar_name = fields[1].lstrip("*") if len(fields) >= 2 else ""
+            if len(fields) < 2 or sidecar_name != archive_name or fields[0].lower() != archive_digest.lower():
                 raise RuntimeError(f"Checksum sidecar mismatch for {archive_name}")
             archive_path = root / archive_name
             archive_path.write_bytes(archive)

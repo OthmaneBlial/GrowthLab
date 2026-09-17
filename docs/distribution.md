@@ -9,7 +9,9 @@ without contacting an analytics or agent provider.
 
 `v0.1.0-alpha.20` includes one manually validated executable archive and four
 cross-target archives whose structure was verified locally. The previous alpha.19
-archive remains available in its release history:
+archive remains available in its release history. The release also includes a
+cargo-dist-compatible name for each target so the published installers can
+select the same bytes directly:
 
 | Target | Asset | Evidence |
 | --- | --- | --- |
@@ -27,6 +29,16 @@ was run on its target operating system here. They are evidence of reproducible
 cross-target packages, not runtime or installer proof. The exact-tag Linux,
 Windows GNU, macOS x86_64 and Linux arm64 archives are attached to alpha.20;
 the current-main packages remain separate reproducibility checks.
+
+The installer-compatible assets use these unversioned cargo-dist names:
+
+| Target | Installer asset | Local/public evidence |
+| --- | --- | --- |
+| macOS arm64 | [`growthlab-aarch64-apple-darwin.tar.gz`](https://github.com/OthmaneBlial/GrowthLab/releases/download/v0.1.0-alpha.20/growthlab-aarch64-apple-darwin.tar.gz) | Root-layout archive, checksum and six notices passed locally and through the public read-only verifier; shell install smoke passed on macOS arm64. |
+| macOS x86_64 | [`growthlab-x86_64-apple-darwin.tar.gz`](https://github.com/OthmaneBlial/GrowthLab/releases/download/v0.1.0-alpha.20/growthlab-x86_64-apple-darwin.tar.gz) | Root-layout archive, checksum and six notices passed locally; target runtime remains unverified here. |
+| Linux arm64 (musl) | [`growthlab-aarch64-unknown-linux-musl.tar.gz`](https://github.com/OthmaneBlial/GrowthLab/releases/download/v0.1.0-alpha.20/growthlab-aarch64-unknown-linux-musl.tar.gz) | Root-layout archive, checksum and six notices passed locally; target runtime remains unverified here. |
+| Linux x86_64 (musl) | [`growthlab-x86_64-unknown-linux-musl.tar.gz`](https://github.com/OthmaneBlial/GrowthLab/releases/download/v0.1.0-alpha.20/growthlab-x86_64-unknown-linux-musl.tar.gz) | Root-layout archive, checksum and six notices passed locally; target runtime remains unverified here. |
+| Windows x86_64 (GNU) | [`growthlab-x86_64-pc-windows-gnu.zip`](https://github.com/OthmaneBlial/GrowthLab/releases/download/v0.1.0-alpha.20/growthlab-x86_64-pc-windows-gnu.zip) | Root-layout archive, checksum and six notices passed locally; target runtime remains unverified here. |
 
 The archives are unsigned and not notarized. They are CLI archives rather than
 desktop installers. Linux and Windows runtime behavior remains unverified on the
@@ -51,14 +63,14 @@ The 2026-09-17 local generation produced `growthlab-installer.sh` and
 `growthlab-installer.ps1`, both syntax-checked. The target matrix includes the
 published Windows GNU archive, so the PowerShell template selects the GNU
 asset while MSVC remains intentionally absent until a Windows SDK runner can
-build and validate it. The shell installer was also run end to end against a local HTTP server serving the
-`aarch64-apple-darwin` archive (SHA-256
-`0e5e0a0275f24b794938af9862efb1868d32e327e0bde8ab6d534226e3f672d4`): it
-verified the sidecar, installed both `growthlab` and `orx` into an isolated
-prefix, and reported version `0.1.0-alpha.20` without editing the test profile.
-The templates still remain local evidence only: the release lacks a Windows
-MSVC artifact, and no installer is advertised as portable or runtime-validated
-until each matching target runner proves it.
+build and validate it. The scripts are attached to the public alpha.20
+release. The shell installer was run end to end against a disposable HTTP
+server serving the macOS arm64 archive: the archive and adjacent sidecar were
+matched before the smoke, the installer fetched and unpacked both `growthlab`
+and `orx` into an isolated prefix, and both reported version `0.1.0-alpha.20`
+without editing the test profile. The generated installer does not advertise
+portable or runtime-validated support for targets that have not run on their
+matching OS.
 
 ## Reproduce and inspect an archive locally
 
@@ -83,8 +95,9 @@ explicit read-only network check:
 python3 scripts/test-release-assets.py
 ```
 
-It compares GitHub's asset digests with downloaded bytes, validates all five
-checksum sidecars and runs the local archive safety/notices verifier. It does
+It compares GitHub's asset digests with downloaded bytes, validates all ten
+archive/checksum pairs (the five installer-compatible names and five historical
+versioned names), and runs the local archive safety/notices verifier. It does
 not contact an analytics or agent provider and does not turn a skipped Linux
 runtime into a support claim.
 
@@ -97,17 +110,18 @@ included in the current cargo-dist matrix until its runner is available:
 
 | Target | Packaging shape | Current state |
 | --- | --- | --- |
-| `aarch64-apple-darwin` | `.tar.xz` or local `.tar.gz` | **Observed** on macOS arm64 for alpha.20 |
-| `x86_64-apple-darwin` | `.tar.xz` or local `.tar.gz` | **Built and structure-verified locally**; version command passed under Rosetta on arm64, native x86_64 runtime proof pending |
-| `x86_64-unknown-linux-musl` | `.tar.xz` | **Built and structure-verified locally**; runtime proof pending |
-| `aarch64-unknown-linux-musl` | `.tar.xz` or local `.tar.gz` | **Built and structure-verified locally**; exact alpha.20 archive attached, runtime proof pending |
+| `aarch64-apple-darwin` | `.tar.gz` | **Observed** on macOS arm64 for alpha.20; cargo-dist installer asset attached |
+| `x86_64-apple-darwin` | `.tar.gz` | **Built and structure-verified locally**; version command passed under Rosetta on arm64, native x86_64 runtime proof pending |
+| `x86_64-unknown-linux-musl` | `.tar.gz` | **Built and structure-verified locally**; runtime proof pending |
+| `aarch64-unknown-linux-musl` | `.tar.gz` | **Built and structure-verified locally**; runtime proof pending |
 | `x86_64-pc-windows-gnu` | `.zip` | **Built and structure-verified locally**; exact alpha.20 archive attached, runtime proof pending |
 | `x86_64-pc-windows-msvc` | `.zip` / PowerShell installer | Build and runtime proof pending |
 
-The cargo-dist configuration preserves the intended portable target matrix and
+The cargo-dist configuration preserves the intended target matrix and
 shell/PowerShell installer formats. GitHub Actions remains disabled for this
-repository, so those artifacts are not presented as built until a local or
-explicitly authorized platform runner supplies the evidence.
+repository, so the attached artifacts were built and checked locally; no
+platform runtime is presented as verified until a matching runner supplies the
+evidence.
 
 For cross-builds on macOS, install the matching Rust target. Linux musl and
 Windows GNU use Zig through `cargo-zigbuild`; macOS Intel uses Cargo's Apple
