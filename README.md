@@ -209,11 +209,11 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 - Documented a manual VoiceOver and Safari accessibility handoff beside the reproducible Chromium smoke
 - Hardened the API terminal polling smoke so it waits for the persisted terminal battle state before reading sealed runs
 - Published cargo-dist-compatible alpha.20 archive names and shell/PowerShell installers with public checksum verification
-- Hypothesis evidence validation requires complete provenance metadata, including confidence rationale and at least one linked claim, and rejects credential-shaped text before persistence
+- Hypothesis evidence validation requires complete, bounded provenance metadata, including confidence rationale and at least one linked claim, and rejects credential-shaped text before persistence
 
 | Validation | Current evidence |
 | --- | --- |
-| Rust tests | **passed** — Targeted evidence-model suite: 7 tests per binary; 7 passed with zero failures. The preceding full serial suite on the parent source passed 970 tests per binary (968 passed, two inherited ignored); this change adds claim-link validation coverage. |
+| Rust tests | **passed** — Targeted evidence-model suite: 8 tests per binary; 8 passed with zero failures. The preceding full serial suite on the parent source passed 970 tests per binary (968 passed, two inherited ignored); this change adds bounded metadata and claim-link validation coverage. |
 | UI tests | **passed** — 174 tests; zero failures or skips |
 | Local quality checks | **passed** — Formatting, Clippy, UI types, styles and builds; full serial Rust suite passed |
 | Actual demo and browser flow | **passed** — Real CLI/HTTP execution, desktop/phone captures, observed local Chromium render checks and static-render rubric, verified PNG endpoint checks, SEO and accessibility rubric records, page-quality hints and standalone local audit on owned fixtures |
