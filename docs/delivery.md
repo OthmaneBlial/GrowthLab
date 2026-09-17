@@ -112,9 +112,14 @@ atomic create-only file writer as patches. Tampered run evidence refuses report
 generation. Reports are summaries, not a substitute for the private source,
 configuration, prompts and logs needed to reproduce the product run.
 
-Screenshots have not yet been captured in the CLI attempts; reports state that
-limit instead of inventing render evidence. The bundled visual demo and dashboard
-will supply real render artifacts in a later milestone.
+When a sealed run contains verified static-preview captures, pass
+`--include-visuals` to embed the archived desktop and phone PNGs in the HTML or
+Markdown report. The default remains capture-free. Embedded images carry their
+dimensions and SHA-256 digest and are render artifacts, not accessibility,
+performance, visual-regression or growth results. The screenshot-required
+bundled demo smoke (`GROWTHLAB_REQUIRE_SCREENSHOT=1 python3
+scripts/test-growth-demo.py`) verifies both viewport captures and their read-only
+endpoints without contacting a provider.
 
 The report itself has been inspected in Chrome at desktop and phone sizes:
 
