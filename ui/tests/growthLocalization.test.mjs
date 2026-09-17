@@ -588,6 +588,10 @@ test("GrowthLab onboarding shell uses every localized growth message", async () 
   const measurementSource = await readFile(new URL("src/growth/MeasurementPanel.tsx", uiRoot), "utf8");
   const settingsSource = await readFile(new URL("src/growth/GrowthSettingsPanel.tsx", uiRoot), "utf8");
   const settings = JSON.parse(await readFile(new URL("project.inlang/settings.json", uiRoot), "utf8"));
+  assert.match(source, /GROWTH_RUBRIC_CALCULATION_KEYS/);
+  assert.match(source, /GROWTH_RUBRIC_RECOMMENDATION_KEYS/);
+  assert.match(source, /GROWTH_RUBRIC_LIMITATION_KEYS/);
+  assert.match(source, /websiteRubric/);
   for (const key of [...growthKeys, ...growthAuxiliaryKeys, ...growthDetailKeys]) {
     assert.match(source, /localizedPlaybook|growth_playbook_/, "GrowthDashboard should map dynamic playbook copy");
     assert.match(source, /localizedRubric|growth_rubric_/, "GrowthDashboard should map dynamic rubric copy");
