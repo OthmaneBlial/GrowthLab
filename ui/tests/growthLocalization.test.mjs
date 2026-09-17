@@ -274,6 +274,8 @@ const growthDetailKeys = [
   "growth_label_success_threshold_optional",
   "growth_label_guardrail_metrics",
   "growth_label_risks",
+  "growth_evidence_supports_claims",
+  "growth_evidence_challenges_claims",
   "growth_confidence",
   "growth_replay_option",
   "growth_native_option",
