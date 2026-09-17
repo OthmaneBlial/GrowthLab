@@ -1763,5 +1763,6 @@
   "growth_rubric_evidence_timing_missing": "{viewport}: स्थानीय timing जाँच संग्रहीत नहीं है।",
   "growth_rubric_evidence_timing_check": "{viewport}: DOM तैयार {dom} ms; लोड {load} ms; पहला contentful paint {fcp} ms।",
   "growth_evidence_supports_claims": "समर्थन",
-  "growth_evidence_challenges_claims": "चुनौती"
+  "growth_evidence_challenges_claims": "चुनौती",
+  "growth_evidence_type": "साक्ष्य प्रकार"
 }

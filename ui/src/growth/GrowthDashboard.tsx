@@ -79,6 +79,8 @@ function HypothesisEvidence({ hypothesis }: { hypothesis: Hypothesis }) {
       <div className="growth-line"><strong>{evidence.title}</strong><Mark value={evidence.provenance} /></div>
       <p>{evidence.observation}</p><code>{evidence.source}</code>
       <p className="growth-muted">{evidence.publisher} · {new Date(evidence.retrievedAt).toLocaleDateString()}</p>
+      <p className="growth-muted growth-evidence-meta"><span>{m.growth_evidence_type()}: {evidence.evidenceType}</span> · <span>{m.growth_confidence()}: {evidence.confidence.label}</span></p>
+      <p className="growth-muted">{evidence.confidence.rationale}</p>
       {!!evidence.supportsClaims.length && <div className="growth-evidence-claims"><span className="growth-eyebrow">{m.growth_evidence_supports_claims()}</span><ul>{evidence.supportsClaims.map((claim, index) => <li key={`${evidence.id}-supports-${index}`}>{claim}</li>)}</ul></div>}
       {!!evidence.challengesClaims.length && <div className="growth-evidence-claims"><span className="growth-eyebrow">{m.growth_evidence_challenges_claims()}</span><ul>{evidence.challengesClaims.map((claim, index) => <li key={`${evidence.id}-challenges-${index}`}>{claim}</li>)}</ul></div>}
       <p className="growth-muted">{evidence.limitations}</p>

@@ -1763,5 +1763,6 @@
   "growth_rubric_evidence_timing_missing": "{viewport}: بررسی زمان‌بندی محلی بایگانی نشده است.",
   "growth_rubric_evidence_timing_check": "{viewport}: آماده‌شدن DOM برابر {dom} ms؛ بارگذاری {load} ms؛ اولین ترسیم محتوا {fcp} ms.",
   "growth_evidence_supports_claims": "پشتیبانی می‌کند",
-  "growth_evidence_challenges_claims": "به چالش می‌کشد"
+  "growth_evidence_challenges_claims": "به چالش می‌کشد",
+  "growth_evidence_type": "نوع شواهد"
 }
