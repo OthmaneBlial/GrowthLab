@@ -135,6 +135,7 @@ impl EvidenceRecord {
             self.observation.as_str(),
             self.evidence_type.as_str(),
             self.limitations.as_str(),
+            self.confidence.rationale.as_str(),
             self.publisher.as_deref().unwrap_or_default(),
         ] {
             if super::redaction::contains_secret(value) {
@@ -303,6 +304,23 @@ mod tests {
         };
         let mut hypothesis = starter_hypotheses(&workspace).remove(0);
         hypothesis.evidence[0].observation = "API_KEY=fixture-private-value".into();
+        let error = hypothesis.validate().unwrap_err().to_string();
+        assert!(
+            error.contains("possible credential"),
+            "unexpected error: {error}"
+        );
+    }
+
+    #[test]
+    fn hypothesis_validation_rejects_credential_shaped_confidence_rationale() {
+        let workspace = GrowthWorkspace {
+            project_id: "p".into(),
+            config: super::super::config::fixture(),
+            source_snapshot_commit: "a".repeat(40),
+            created_at: 1,
+        };
+        let mut hypothesis = starter_hypotheses(&workspace).remove(0);
+        hypothesis.evidence[0].confidence.rationale = "token=fixture-private-value".into();
         let error = hypothesis.validate().unwrap_err().to_string();
         assert!(
             error.contains("possible credential"),
