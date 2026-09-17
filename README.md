@@ -199,6 +199,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 - Bundled demo accessibility-tree and keyboard smoke verifies named controls, headings, labels, focus stops and overflow with no provider invocation
 - Public alpha.20 release assets have a read-only verifier for GitHub digests, checksum sidecars and archive safety
 - Translated macOS x86_64 release suite now passes 964 tests with two inherited ignored tests under Rosetta after allowing the system Rosetta runtime read-only in the confinement profile
+- Deterministic native-harness fixture runs three local Claude proposal adapters with no provider credentials; sealed runs remain UNTESTED
 
 | Validation | Current evidence |
 | --- | --- |
@@ -248,13 +249,14 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 | Bundled accessibility-tree and keyboard smoke | **passed** — A real recorded bundled battle rendered in local Chromium; 19 DOM and AX interactive controls were named, one h1 had no skipped level, IDs/images/forms and overflow passed, and 30 Tab events reached visible focus stops without invoking a provider. The optional --output JSON handoff records all role/name pairs and providerInvoked=false. This remains a local structure and keyboard smoke, not screen-reader, cross-browser or WCAG evidence. |
 | Windows GNU package smoke | **passed** — The current source built x86_64-pc-windows-gnu with cargo-zigbuild and Zig; current-main packaging produced SHA-256 745d90bb9d51d70c535abd0e600421a95c39d81ac3bf0bc39834b3eff3d2eba7 and the offline archive verifier passed checksum, traversal/link and notice checks. The exact alpha.20 tag ZIP is attached to the public release; Windows runtime, MSVC packaging and signing remain unverified. |
 | Public release asset verification | **passed** — The read-only scripts/test-release-assets.py check downloads all five alpha.20 archive/checksum pairs, matches GitHub asset digests and sidecars, and passes archive safety/notices verification; macOS arm64 runtime passes locally, macOS x86_64 passes under Rosetta, and Linux and Windows runtimes are skipped on the macOS host. |
+| Native harness boundary fixture | **passed** — scripts/test-growth-native-fixture.py used a disposable fake Claude CLI with no provider credentials; the current binary created three isolated worktrees, accepted valid implementation JSON, ran observed checks and sealed three UNTESTED runs while the product HEAD, files and remotes stayed unchanged. This verifies the local harness boundary, not a real provider response. |
 | Translated macOS x86_64 source suite | **passed** — The current source x86_64-apple-darwin release suite ran under Rosetta on macOS arm64: 964 passed, zero failed and two inherited ignored tests. The confinement profile now permits only the Apple Rosetta runtime directory read-only; this does not prove native Intel hardware or the separately attached alpha.20 archive beyond its version smoke. |
 
 **Still ahead**
 
 - Provider adapters
 - Full visual regression and assistive-technology accessibility evaluation
-- Native-agent battle verification and provider-specific launcher registration
+- Real native-agent battle verification and provider-specific launcher registration
 - Unrecognized or future rubric evidence and user-generated run content remain source-language until an explicit mapping is added
 - Cross-platform runtime proof, MSVC support and portable installers
 <!-- project-status:end -->
