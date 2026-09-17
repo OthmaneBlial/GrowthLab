@@ -105,6 +105,48 @@ pub struct EvidenceRecord {
     pub limitations: String,
 }
 
+impl EvidenceRecord {
+    /// Validate the minimum provenance needed to make an evidence record
+    /// inspectable. Evidence is user or external input, so credential-shaped
+    /// text is refused before it can be persisted in a hypothesis/archive.
+    pub fn validate(&self) -> Result<()> {
+        if self.id.trim().is_empty()
+            || self.title.trim().is_empty()
+            || self.source.trim().is_empty()
+            || self.observation.trim().is_empty()
+            || self.evidence_type.trim().is_empty()
+            || self.limitations.trim().is_empty()
+            || self.confidence.rationale.trim().is_empty()
+            || self
+                .publisher
+                .as_deref()
+                .is_some_and(|value| value.trim().is_empty())
+        {
+            return Err(anyhow!(
+                "Evidence requires an id, source, observation, type, limitations and confidence rationale"
+            ));
+        }
+        if self.retrieved_at <= 0 {
+            return Err(anyhow!("Evidence retrieval time must be positive"));
+        }
+        for value in [
+            self.title.as_str(),
+            self.source.as_str(),
+            self.observation.as_str(),
+            self.evidence_type.as_str(),
+            self.limitations.as_str(),
+            self.publisher.as_deref().unwrap_or_default(),
+        ] {
+            if super::redaction::contains_secret(value) {
+                return Err(anyhow!(
+                    "Evidence contains a possible credential; redact it before recording the source"
+                ));
+            }
+        }
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct GrowthHypothesis {
@@ -151,6 +193,9 @@ impl GrowthHypothesis {
             ));
         }
         validate_commit(&self.source_snapshot_commit)?;
+        for evidence in &self.evidence {
+            evidence.validate()?;
+        }
         if self.provenance == Provenance::Untested && self.decision == Decision::Ship {
             return Err(anyhow!("An untested hypothesis cannot be marked ship"));
         }
@@ -228,6 +273,40 @@ mod tests {
         assert_eq!(
             serde_json::to_string(&Provenance::Estimated).unwrap(),
             "\"ESTIMATED\""
+        );
+    }
+
+    #[test]
+    fn hypothesis_validation_rejects_incomplete_evidence() {
+        let workspace = GrowthWorkspace {
+            project_id: "p".into(),
+            config: super::super::config::fixture(),
+            source_snapshot_commit: "a".repeat(40),
+            created_at: 1,
+        };
+        let mut hypothesis = starter_hypotheses(&workspace).remove(0);
+        hypothesis.evidence[0].observation.clear();
+        let error = hypothesis.validate().unwrap_err().to_string();
+        assert!(
+            error.contains("Evidence requires"),
+            "unexpected error: {error}"
+        );
+    }
+
+    #[test]
+    fn hypothesis_validation_rejects_credential_shaped_evidence() {
+        let workspace = GrowthWorkspace {
+            project_id: "p".into(),
+            config: super::super::config::fixture(),
+            source_snapshot_commit: "a".repeat(40),
+            created_at: 1,
+        };
+        let mut hypothesis = starter_hypotheses(&workspace).remove(0);
+        hypothesis.evidence[0].observation = "API_KEY=fixture-private-value".into();
+        let error = hypothesis.validate().unwrap_err().to_string();
+        assert!(
+            error.contains("possible credential"),
+            "unexpected error: {error}"
         );
     }
 }
