@@ -57,6 +57,7 @@
     "Deterministic local CLI packaging with complete checked-in license notices and offline archive verification",
     "Localized GrowthLab battle/detail inspection, decision and report labels follow all six locale catalogs",
     "Local x86_64 Linux musl archive built and structure-verified with cargo-zigbuild; runtime remains unverified",
+    "Local x86_64 Windows GNU ZIP packaging is deterministic and structure-verified; runtime and release attachment remain unverified",
     "Typed read-only measurement adapter boundary with the local CSV implementation",
     "Guarded local workspace settings edits write the validated contract atomically before hypotheses are created and never create commits or remote changes",
     "Localized static-preview, evidence and rubric detail copy across all six dashboard locales, with visible settings lock policy after hypotheses or active battles",
@@ -283,6 +284,11 @@
       "name": "Bundled accessibility-tree and keyboard smoke",
       "status": "passed",
       "detail": "A real recorded bundled battle rendered in local Chromium; 19 DOM and AX interactive controls were named, one h1 had no skipped level, IDs/images/forms and overflow passed, and 30 Tab events reached visible focus stops without invoking a provider. The optional --output JSON handoff records all role/name pairs and providerInvoked=false. This remains a local structure and keyboard smoke, not screen-reader, cross-browser or WCAG evidence."
+    },
+    {
+      "name": "Windows GNU package smoke",
+      "status": "passed",
+      "detail": "The current source built x86_64-pc-windows-gnu with cargo-zigbuild and Zig; two independent ZIP packages matched by SHA-256 and the offline archive verifier passed checksum, traversal/link and notice checks. Windows runtime, MSVC packaging, signing and release attachment remain unverified."
     },
     {
       "name": "Public release asset verification",

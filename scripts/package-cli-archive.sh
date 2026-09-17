@@ -56,12 +56,14 @@ if [[ -z "$TARGET" ]]; then
   TARGET="$(rustc -vV | sed -n 's/^host: //p')"
 fi
 
+ARCHIVE_EXT="tar.gz"
 case "$TARGET" in
   aarch64-apple-darwin) PLATFORM="macos-arm64"; BIN_NAME="growthlab" ;;
   x86_64-apple-darwin) PLATFORM="macos-x86_64"; BIN_NAME="growthlab" ;;
   x86_64-unknown-linux-musl) PLATFORM="linux-x86_64-musl"; BIN_NAME="growthlab" ;;
   aarch64-unknown-linux-musl) PLATFORM="linux-arm64-musl"; BIN_NAME="growthlab" ;;
-  x86_64-pc-windows-msvc) PLATFORM="windows-x86_64"; BIN_NAME="growthlab.exe" ;;
+  x86_64-pc-windows-msvc) PLATFORM="windows-x86_64"; BIN_NAME="growthlab.exe"; ARCHIVE_EXT="zip" ;;
+  x86_64-pc-windows-gnu) PLATFORM="windows-x86_64-gnu"; BIN_NAME="growthlab.exe"; ARCHIVE_EXT="zip" ;;
   *)
     echo "Unsupported packaging target '$TARGET'. Use one of the documented release targets." >&2
     exit 2
@@ -78,10 +80,10 @@ fi
 if [[ "$SKIP_BUILD" != 1 ]]; then
   if [[ "$TARGET" == "$HOST_TARGET" ]]; then
     cargo build --release --locked --bin growthlab
-  elif [[ "$TARGET" == *-unknown-linux-musl && -n "$(command -v cargo-zigbuild 2>/dev/null || true)" ]]; then
+  elif [[ ( "$TARGET" == *-unknown-linux-musl || "$TARGET" == x86_64-pc-windows-gnu ) && -n "$(command -v cargo-zigbuild 2>/dev/null || true)" ]]; then
     # cargo-zigbuild supplies a reproducible Zig linker for cross-target musl
-    # builds. Keep plain Cargo as the fallback so hosts without Zig get the
-    # native toolchain error instead of a hidden dependency installation.
+    # and Windows GNU builds. Keep plain Cargo as the fallback so hosts without
+    # Zig get the native toolchain error instead of a hidden dependency install.
     cargo zigbuild --release --locked --target "$TARGET" --bin growthlab
   else
     cargo build --release --locked --target "$TARGET" --bin growthlab
@@ -94,7 +96,7 @@ fi
 }
 
 mkdir -p "$OUTPUT_DIR"
-ARCHIVE="$OUTPUT_DIR/growthlab-v${VERSION}-${PLATFORM}.tar.gz"
+ARCHIVE="$OUTPUT_DIR/growthlab-v${VERSION}-${PLATFORM}.${ARCHIVE_EXT}"
 python3 - "$ROOT" "$BINARY" "$ARCHIVE" "$VERSION" "$PLATFORM" <<'PY'
 from __future__ import annotations
 
@@ -102,6 +104,7 @@ import gzip
 import pathlib
 import sys
 import tarfile
+import zipfile
 
 root, binary, archive, version, platform = map(pathlib.Path, sys.argv[1:])
 archive.parent.mkdir(parents=True, exist_ok=True)
@@ -119,17 +122,26 @@ for source, _ in files:
     if not source.is_file() or source.is_symlink():
         raise SystemExit(f"required distribution file is missing or symlinked: {source}")
 
-with archive.open("wb") as output:
-    with gzip.GzipFile(fileobj=output, mode="wb", mtime=0) as compressed:
-        with tarfile.open(fileobj=compressed, mode="w") as bundle:
-            for source, relative in files:
-                info = bundle.gettarinfo(str(source), arcname=f"{root_name}/{relative}")
-                info.mtime = 0
-                info.uid = info.gid = 0
-                info.uname = info.gname = ""
-                info.mode = 0o755 if relative.startswith("bin/") else 0o644
-                with source.open("rb") as stream:
-                    bundle.addfile(info, stream)
+if archive.suffix == ".zip":
+    with zipfile.ZipFile(archive, mode="w", compression=zipfile.ZIP_DEFLATED) as bundle:
+        for source, relative in files:
+            info = zipfile.ZipInfo(f"{root_name}/{relative}")
+            info.date_time = (1980, 1, 1, 0, 0, 0)
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = 0o755 << 16 if relative.startswith("bin/") else 0o644 << 16
+            bundle.writestr(info, source.read_bytes())
+else:
+    with archive.open("wb") as output:
+        with gzip.GzipFile(fileobj=output, mode="wb", mtime=0) as compressed:
+            with tarfile.open(fileobj=compressed, mode="w") as bundle:
+                for source, relative in files:
+                    info = bundle.gettarinfo(str(source), arcname=f"{root_name}/{relative}")
+                    info.mtime = 0
+                    info.uid = info.gid = 0
+                    info.uname = info.gname = ""
+                    info.mode = 0o755 if relative.startswith("bin/") else 0o644
+                    with source.open("rb") as stream:
+                        bundle.addfile(info, stream)
 PY
 
 CHECKSUM="$ARCHIVE.sha256"

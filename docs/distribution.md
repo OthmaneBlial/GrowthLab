@@ -16,16 +16,16 @@ archive remains available in its release history:
 | macOS arm64 | [`growthlab-v0.1.0-alpha.20-macos-arm64.tar.gz`](https://github.com/OthmaneBlial/GrowthLab/releases/download/v0.1.0-alpha.20/growthlab-v0.1.0-alpha.20-macos-arm64.tar.gz) | Extracted, checksum-checked, and run locally with `--no-telemetry version`; `growthlab 0.1.0-alpha.20` reported the development build channel. |
 | Linux x86_64 (musl) | [`growthlab-v0.1.0-alpha.20-linux-x86_64-musl.tar.gz`](https://github.com/OthmaneBlial/GrowthLab/releases/download/v0.1.0-alpha.20/growthlab-v0.1.0-alpha.20-linux-x86_64-musl.tar.gz) | Built from the exact alpha.20 tag with `cargo-zigbuild`; checksum, traversal/link safety, required notices and archive structure passed the offline verifier. The ELF was not run on Linux here. |
 
-The alpha.20 source line also produces a local `x86_64-unknown-linux-musl`
-archive with `cargo-zigbuild` and Zig. Its checksum, archive safety and required
-notices passed the offline verifier; the ELF binary was not run on Linux here.
-It is evidence of a reproducible cross-target package, not Linux runtime or
-installer proof. It is attached to alpha.20 for inspection with that limitation.
+The alpha.20 source line also produces local `x86_64-unknown-linux-musl` and
+`x86_64-pc-windows-gnu` packages with `cargo-zigbuild` and Zig. Their checksums,
+archive safety and required notices passed the offline verifier; neither binary
+was run on its target operating system here. They are evidence of reproducible
+cross-target packages, not runtime or installer proof. The Linux archive is
+attached to alpha.20; the Windows package remains a local structure check.
 
 The archives are unsigned and not notarized. They are CLI archives rather than
-desktop installers. The Linux archive is attached for inspection; Windows
-artifacts are not attached, and Linux/Windows runtime behavior remains
-unverified on the current macOS host.
+desktop installers. Linux and Windows runtime behavior remains unverified on the
+current macOS host.
 
 ## Reproduce and inspect an archive locally
 
@@ -66,6 +66,7 @@ validated only after its binary has been built and run on that platform:
 | `x86_64-apple-darwin` | `.tar.xz` | Build and runtime proof pending |
 | `x86_64-unknown-linux-musl` | `.tar.xz` | **Built and structure-verified locally**; runtime proof pending |
 | `aarch64-unknown-linux-musl` | `.tar.xz` | Build and runtime proof pending |
+| `x86_64-pc-windows-gnu` | `.zip` | **Built and structure-verified locally**; runtime and release attachment pending |
 | `x86_64-pc-windows-msvc` | `.zip` / PowerShell installer | Build and runtime proof pending |
 
 The cargo-dist configuration preserves the intended portable target matrix and
@@ -73,14 +74,20 @@ shell/PowerShell installer formats. GitHub Actions remains disabled for this
 repository, so those artifacts are not presented as built until a local or
 explicitly authorized platform runner supplies the evidence.
 
-For a Linux musl cross-build on macOS, install a Rust target, Zig and
-`cargo-zigbuild`, then run:
+For Linux musl or Windows GNU cross-builds on macOS, install a Rust target, Zig
+and `cargo-zigbuild`, then run the matching command:
 
 ```sh
 rustup target add x86_64-unknown-linux-musl
 cargo install cargo-zigbuild --locked
 scripts/package-cli-archive.sh --target x86_64-unknown-linux-musl
 scripts/verify-release-archive.sh dist/archives/growthlab-v0.1.0-alpha.20-linux-x86_64-musl.tar.gz
+```
+
+```sh
+rustup target add x86_64-pc-windows-gnu
+scripts/package-cli-archive.sh --target x86_64-pc-windows-gnu
+scripts/verify-release-archive.sh dist/archives/growthlab-v0.1.0-alpha.20-windows-x86_64-gnu.zip
 ```
 
 ## Notices and trust boundary
