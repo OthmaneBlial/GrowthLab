@@ -144,6 +144,17 @@ impl EvidenceRecord {
                 ));
             }
         }
+        for claim in self
+            .supports_claims
+            .iter()
+            .chain(self.challenges_claims.iter())
+        {
+            if super::redaction::contains_secret(claim) {
+                return Err(anyhow!(
+                    "Evidence contains a possible credential; redact it before recording the source"
+                ));
+            }
+        }
         Ok(())
     }
 }
@@ -321,6 +332,23 @@ mod tests {
         };
         let mut hypothesis = starter_hypotheses(&workspace).remove(0);
         hypothesis.evidence[0].confidence.rationale = "token=fixture-private-value".into();
+        let error = hypothesis.validate().unwrap_err().to_string();
+        assert!(
+            error.contains("possible credential"),
+            "unexpected error: {error}"
+        );
+    }
+
+    #[test]
+    fn hypothesis_validation_rejects_credential_shaped_claims() {
+        let workspace = GrowthWorkspace {
+            project_id: "p".into(),
+            config: super::super::config::fixture(),
+            source_snapshot_commit: "a".repeat(40),
+            created_at: 1,
+        };
+        let mut hypothesis = starter_hypotheses(&workspace).remove(0);
+        hypothesis.evidence[0].supports_claims = vec!["password=fixture-private-value".into()];
         let error = hypothesis.validate().unwrap_err().to_string();
         assert!(
             error.contains("possible credential"),
