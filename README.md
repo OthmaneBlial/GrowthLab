@@ -202,7 +202,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 | Measurement adapter contract | **passed** — LocalCsvAdapter implements the shared read-only request/report contract; focused Rust measurement and API tests passed and no provider request is made |
 | Editable workspace settings | **passed** — Focused API and configuration tests prove validated local writes, stale-file refusal, atomic replacement and refusal after hypotheses or active battles; UI exposes localized save/cancel controls without automatic commits or remotes |
 | Localized technical details and settings lifecycle | **passed** — Six locale catalogs cover static-preview evidence, render metadata and rubric detail labels; Chrome verified the edit control is enabled before hypotheses and disabled with an explicit Arabic lock explanation after the starter map is created |
-| Localized workspace and battle actions | **passed** — GrowthDashboard action and status labels for the experiment tree, battle execution, candidate inspection and selected delivery now use localized message keys; six catalogs define the shared keys and the 174-test UI suite passes |
+| Localized workspace and battle actions | **passed** — GrowthDashboard action and status labels for the experiment tree, battle execution, candidate inspection and selected delivery now use localized message keys; six catalogs define the shared keys, Chrome verified Spanish and Arabic controls, and the 174-test UI suite passes |
 
 **Still ahead**
 
