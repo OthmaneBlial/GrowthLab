@@ -211,11 +211,12 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 - Published cargo-dist-compatible alpha.20 archive names and shell/PowerShell installers with public checksum verification
 - Hypothesis evidence validation requires complete, bounded provenance metadata, including confidence rationale and at least one linked claim, and rejects credential-shaped text before persistence
 - Evidence persistence rejects unlinked claims before inserting any hypothesis portfolio row
+- Growth Battle score details show the evaluator alongside calculation, evidence, limits and provenance
 
 | Validation | Current evidence |
 | --- | --- |
 | Rust tests | **passed** — Targeted evidence-model and storage suites: 8 tests per binary in each suite; all passed with zero failures. The preceding full serial suite on the parent source passed 970 tests per binary (968 passed, two inherited ignored); current checks cover bounded metadata, credential redaction, claim links and atomic persistence refusal. |
-| UI tests | **passed** — 174 tests; zero failures or skips |
+| UI tests | **passed** — 174 tests; zero failures or skips. Growth Battle rubric details now expose the API evaluator together with the transparent calculation, evidence dimensions, recommendations, limitations and provenance. |
 | Local quality checks | **passed** — Formatting, Clippy, UI types, styles and builds; full serial Rust suite passed |
 | Actual demo and browser flow | **passed** — Real CLI/HTTP execution, desktop/phone captures, observed local Chromium render checks and static-render rubric, verified PNG endpoint checks, SEO and accessibility rubric records, page-quality hints and standalone local audit on owned fixtures |
 | Accessibility structure rubric | **passed** — Deterministic archived-HTML checks cover language, landmarks, heading hierarchy, image alternatives, named controls and form labels; provenance stays ESTIMATED and does not claim WCAG or assistive-technology conformance |
