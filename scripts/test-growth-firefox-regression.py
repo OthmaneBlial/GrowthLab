@@ -37,6 +37,7 @@ VIEWPORTS = {
     "desktop": (1280, 900),
     "phone": (390, 844),
 }
+EXPECTED_FIREFOX_VERSION = "139.0.4"
 
 # Filled by the first intentional --update-baselines run. Keeping the browser
 # digest in the output makes a renderer change reviewable without pretending
@@ -305,6 +306,12 @@ def main():
             raise RuntimeError("Firefox did not expose WebDriver BiDi")
         bidi = BiDi(f"ws://127.0.0.1:{port}/session")
         capabilities = bidi.command("session.new", {"capabilities": {}})["capabilities"]
+        browser_version = capabilities.get("browserVersion")
+        if browser_version != EXPECTED_FIREFOX_VERSION and not args.update_baselines:
+            raise RuntimeError(
+                f"Firefox {EXPECTED_FIREFOX_VERSION} is required for the pinned baselines; "
+                f"found {browser_version!r}. Review and regenerate with --update-baselines."
+            )
         tree = bidi.command("browsingContext.getTree")
         context = tree["contexts"][0]["context"]
 
@@ -388,7 +395,7 @@ def main():
                     raise AssertionError(f"Firefox visual regression in {name}: got {digest}, expected {expected}")
         if marker.exists():
             raise AssertionError("The bundled Firefox smoke unexpectedly invoked a provider CLI.")
-        print(json.dumps({"browser": "Firefox", "version": capabilities.get("browserVersion"), "baselines": observed, "updated": args.update_baselines}))
+        print(json.dumps({"browser": "Firefox", "version": browser_version, "baselines": observed, "updated": args.update_baselines}))
     finally:
         if bidi:
             bidi.close()
