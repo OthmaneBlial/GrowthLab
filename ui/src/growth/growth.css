@@ -161,7 +161,7 @@
 .growth-contract { border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding:17px 0; font-size:0.75rem; }
 .growth-contract summary>span { float:right; color:var(--subtext); }
 .growth-contract-grid { display:grid; grid-template-columns:1fr 1.3fr 1fr; gap:25px; padding-top:8px; }
-.growth-contract h3 { font-size:0.6875rem; font-weight:600; margin-bottom:7px; }
+.growth-contract h2 { font-size:0.6875rem; font-weight:600; margin-bottom:7px; }
 .growth-contract p { margin-bottom:13px; color:var(--subtext); overflow-wrap:anywhere; }
 .growth-command { display:block; padding:10px; background:var(--surface); margin-bottom:10px; }
 .growth-digest { margin:0 0 10px; }
