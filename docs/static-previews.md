@@ -67,6 +67,16 @@ fixture update and review; this smoke does not establish cross-browser
 equivalence, visual parity for arbitrary products or assistive-technology
 conformance.
 
+The bundled demo also has a local accessibility-tree and keyboard smoke at
+`scripts/test-growth-accessibility.py`. It opens the real recorded battle in
+the locally installed Chromium browser, checks named DOM and accessibility-tree
+controls, heading structure, IDs, image alternatives, form labels and
+horizontal overflow, then advances focus through thirty Tab events. Provider
+probe executables fail the run if replay attempts to invoke an external agent.
+This is a reproducible structure and keyboard signal for the bundled fixture;
+it does not test a screen reader, every browser, touch input, or WCAG
+conformance.
+
 When navigation timing entries are present, comparisons also expose the
 separate `browser-timing-hints-v1` rubric. It summarizes DOM content loaded,
 load complete, a first-paint hint and timing metadata integrity for desktop and
