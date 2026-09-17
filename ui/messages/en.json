@@ -1242,6 +1242,7 @@
   "growth_settings_read_only": "Read only",
   "growth_settings_contract_empty": "Select a product workspace to inspect its frozen contract. Local workspaces are listed here.",
   "growth_settings_product": "Product",
+  "growth_settings_description": "Description",
   "growth_settings_audience": "Audience",
   "growth_settings_goal": "Goal",
   "growth_settings_permission_mode": "Permission mode",

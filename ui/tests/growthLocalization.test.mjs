@@ -103,6 +103,7 @@ const settingsKeys = [
   "growth_settings_read_only",
   "growth_settings_contract_empty",
   "growth_settings_product",
+  "growth_settings_description",
   "growth_settings_audience",
   "growth_settings_goal",
   "growth_settings_permission_mode",

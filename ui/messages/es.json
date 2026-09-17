@@ -1242,6 +1242,7 @@
   "growth_settings_read_only": "Solo lectura",
   "growth_settings_contract_empty": "Selecciona un espacio de producto para inspeccionar su contrato congelado. Los espacios locales aparecen aquí.",
   "growth_settings_product": "Producto",
+  "growth_settings_description": "Descripción",
   "growth_settings_audience": "Audiencia",
   "growth_settings_goal": "Objetivo",
   "growth_settings_permission_mode": "Modo de permisos",

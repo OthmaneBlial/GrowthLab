@@ -1242,6 +1242,7 @@
   "growth_settings_read_only": "केवल पढ़ने के लिए",
   "growth_settings_contract_empty": "स्थिर अनुबंध देखने के लिए कोई उत्पाद वर्कस्पेस चुनें। स्थानीय वर्कस्पेस यहाँ सूचीबद्ध हैं।",
   "growth_settings_product": "उत्पाद",
+  "growth_settings_description": "विवरण",
   "growth_settings_audience": "दर्शक",
   "growth_settings_goal": "लक्ष्य",
   "growth_settings_permission_mode": "अनुमति मोड",

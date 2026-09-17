@@ -1242,6 +1242,7 @@
   "growth_settings_read_only": "只读",
   "growth_settings_contract_empty": "选择一个产品工作区来查看其冻结契约。本地工作区会列在这里。",
   "growth_settings_product": "产品",
+  "growth_settings_description": "描述",
   "growth_settings_audience": "受众",
   "growth_settings_goal": "目标",
   "growth_settings_permission_mode": "权限模式",

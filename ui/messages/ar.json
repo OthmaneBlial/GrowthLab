@@ -1242,6 +1242,7 @@
   "growth_settings_read_only": "للقراءة فقط",
   "growth_settings_contract_empty": "اختر مساحة منتج لفحص عقدها المجمّد. ستظهر مساحات العمل المحلية هنا.",
   "growth_settings_product": "المنتج",
+  "growth_settings_description": "الوصف",
   "growth_settings_audience": "الجمهور",
   "growth_settings_goal": "الهدف",
   "growth_settings_permission_mode": "وضع الأذونات",

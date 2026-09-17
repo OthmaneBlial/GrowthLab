@@ -1242,6 +1242,7 @@
   "growth_settings_read_only": "فقط خواندنی",
   "growth_settings_contract_empty": "برای بررسی قرارداد ثابت، یک فضای کاری محصول انتخاب کنید. فضاهای کاری محلی اینجا فهرست می‌شوند.",
   "growth_settings_product": "محصول",
+  "growth_settings_description": "توضیحات",
   "growth_settings_audience": "مخاطب",
   "growth_settings_goal": "هدف",
   "growth_settings_permission_mode": "حالت مجوز",
