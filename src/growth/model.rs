@@ -105,6 +105,10 @@ pub struct EvidenceRecord {
     pub limitations: String,
 }
 
+const MAX_EVIDENCE_TEXT_BYTES: usize = 16 * 1024;
+const MAX_EVIDENCE_CLAIMS: usize = 64;
+const MAX_EVIDENCE_CLAIM_BYTES: usize = 2 * 1024;
+
 impl EvidenceRecord {
     /// Validate the minimum provenance needed to make an evidence record
     /// inspectable. Evidence is user or external input, so credential-shaped
@@ -128,6 +132,30 @@ impl EvidenceRecord {
         }
         if self.retrieved_at <= 0 {
             return Err(anyhow!("Evidence retrieval time must be positive"));
+        }
+        let text_fields = [
+            self.id.as_str(),
+            self.title.as_str(),
+            self.source.as_str(),
+            self.observation.as_str(),
+            self.evidence_type.as_str(),
+            self.limitations.as_str(),
+            self.confidence.rationale.as_str(),
+            self.publisher.as_deref().unwrap_or_default(),
+        ];
+        if text_fields
+            .iter()
+            .any(|value| value.len() > MAX_EVIDENCE_TEXT_BYTES)
+            || self.supports_claims.len() + self.challenges_claims.len() > MAX_EVIDENCE_CLAIMS
+            || self
+                .supports_claims
+                .iter()
+                .chain(self.challenges_claims.iter())
+                .any(|claim| claim.len() > MAX_EVIDENCE_CLAIM_BYTES)
+        {
+            return Err(anyhow!(
+                "Evidence exceeds the bounded source and claim limits"
+            ));
         }
         if self
             .supports_claims
@@ -351,6 +379,23 @@ mod tests {
         let error = hypothesis.validate().unwrap_err().to_string();
         assert!(
             error.contains("at least one non-empty claim"),
+            "unexpected error: {error}"
+        );
+    }
+
+    #[test]
+    fn hypothesis_validation_rejects_oversized_evidence_claims() {
+        let workspace = GrowthWorkspace {
+            project_id: "p".into(),
+            config: super::super::config::fixture(),
+            source_snapshot_commit: "a".repeat(40),
+            created_at: 1,
+        };
+        let mut hypothesis = starter_hypotheses(&workspace).remove(0);
+        hypothesis.evidence[0].supports_claims = vec!["x".repeat(2049)];
+        let error = hypothesis.validate().unwrap_err().to_string();
+        assert!(
+            error.contains("bounded source and claim limits"),
             "unexpected error: {error}"
         );
     }
