@@ -63,9 +63,14 @@ not a combined growth score. The bundled demo also has a local visual-regression
 smoke at `scripts/test-growth-visual-regression.py`. It compares all six sealed
 PNG captures with checked-in SHA-256 baselines for the pinned local Chromium
 renderer and both supported viewports. Baseline changes require an intentional
-fixture update and review; this smoke does not establish cross-browser
-equivalence, visual parity for arbitrary products or assistive-technology
-conformance.
+fixture update and review. A companion
+`scripts/test-growth-firefox-regression.py` smoke renders the same sealed HTML
+in the locally installed Firefox 139.0.4 build, pins six additional
+desktop/phone PNG baselines, checks viewport dimensions, overflow, named
+controls and heading-level continuity, and keeps the provider boundary
+untouched. Both renderer smokes are local fixtures; they do not establish
+all-browser equivalence, visual parity for arbitrary products, Safari parity
+or assistive-technology conformance.
 
 The bundled demo also has a local accessibility-tree and keyboard smoke at
 `scripts/test-growth-accessibility.py`. It opens the real recorded battle in

@@ -128,7 +128,7 @@ causality, statistical significance or growth lift. See the [local measurement g
 
 **Source alpha · about 95% overall (subjective estimate) · updated 2026-09-17**
 
-Current milestone: **Editable experiment tree with frozen lineage, localized GrowthLab onboarding and inspection details, explicit workspace settings lifecycle, measurement and battle/detail UI, read-only settings contract overview, provider-neutral measurement boundary, deterministic local CLI packaging with complete notices, local Linux musl cross-target packaging, estimated accessibility structure hints in comparisons and standalone page audits, continuous browser walkthrough, observed timing hints, bundled visual-regression baseline smoke, local Chromium accessibility-tree and keyboard smoke, public repository review, manual-brief onboarding, executable playbooks, public checkout import and distribution-aware measurement validated**.
+Current milestone: **Editable experiment tree with frozen lineage, localized GrowthLab onboarding and inspection details, explicit workspace settings lifecycle, measurement and battle/detail UI, read-only settings contract overview, provider-neutral measurement boundary, deterministic local CLI packaging with complete notices, local Linux musl cross-target packaging, estimated accessibility structure hints in comparisons and standalone page audits, continuous browser walkthrough, observed timing hints, bundled Chromium and Firefox visual-regression baseline smokes, local Chromium accessibility-tree and keyboard smoke, public repository review, manual-brief onboarding, executable playbooks, public checkout import and distribution-aware measurement validated**.
 
 **Working today**
 
@@ -194,6 +194,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 - Corrected dashboard heading hierarchy and verified live accessible names, IDs, image alternatives and overflow
 - Explicit opt-in self-contained HTML and Markdown reports embed verified desktop and phone captures
 - Bundled demo visual-regression smoke matches six checked-in local Chromium PNG baselines with archive metadata verification
+- Bundled demo Firefox visual-regression smoke matches six additional PNG baselines with viewport and layout invariant verification
 - Bundled demo accessibility-tree and keyboard smoke verifies named controls, headings, labels, focus stops and overflow with no provider invocation
 
 | Validation | Current evidence |
@@ -237,6 +238,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 | Live dashboard accessibility structure smoke | **passed** — Chrome AX and DOM inspection on a recorded battle found 23 named interactive controls, one h1 with no skipped heading level, no duplicate IDs, no images missing alt text and no horizontal overflow; this remains a local structure smoke, not WCAG or assistive-technology certification. |
 | Visual report disclosure | **passed** — CLI --include-visuals and API includeVisuals=true explicitly embed verified archived desktop/phone PNGs; default reports omit captures, Rust report tests cover opt-in encoding and the 4 MiB bound, and the screenshot-required bundled demo asserts both default omission and six opt-in captures without provider requests. Embedded captures remain render artifacts, not visual-regression, accessibility, performance or growth results. |
 | Bundled visual regression smoke | **passed** — The real bundled demo's three sealed variants match six checked-in SHA-256 PNG baselines at 1280x900 desktop and 390x844 phone; archive dimensions, digests and the no-provider boundary are verified locally. This is a pinned local renderer smoke, not cross-browser parity or assistive-technology conformance. |
+| Bundled Firefox visual regression smoke | **passed** — The real bundled demo's three sealed preview documents match six additional checked-in SHA-256 PNG baselines in Firefox 139.0.4 at 1280x900 desktop and 390x844 phone; viewport dimensions, overflow, named controls, heading-level continuity and the no-provider boundary are verified locally. Safari, other browser versions and assistive-technology conformance remain unverified. |
 | Bundled accessibility-tree and keyboard smoke | **passed** — A real recorded bundled battle rendered in local Chromium; 19 DOM and AX interactive controls were named, one h1 had no skipped level, IDs/images/forms and overflow passed, and 30 Tab events reached visible focus stops without invoking a provider. This remains a local structure and keyboard smoke, not screen-reader, cross-browser or WCAG evidence. |
 
 **Still ahead**

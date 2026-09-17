@@ -96,3 +96,16 @@ records, verifies expected failures and clean baselines, checks privacy and grac
 shutdown, and detects unexpected provider CLI invocations. Its provider sentinels
 do not substitute for the battle engine or configured commands. Failed checks retain
 only their owned evidence directory for inspection. GitHub CI remains disabled.
+
+For the pinned Chromium and Firefox renderer checks, run the focused local
+smokes after building the debug binary:
+
+```sh
+python3 scripts/test-growth-visual-regression.py
+python3 scripts/test-growth-firefox-regression.py
+```
+
+The Firefox command uses the installed Firefox build through WebDriver BiDi,
+renders the same sealed preview documents at both viewports and compares its
+checked-in PNG baselines. Use `--update-baselines` only for an intentional,
+reviewed bundled-fixture or browser-version update.
