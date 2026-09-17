@@ -83,6 +83,9 @@ the browser, named AX roles, DOM summary, focus count and provider boundary for
 review or a local assistive-technology handoff. This is a reproducible
 structure and keyboard signal for the bundled fixture; it does not test a
 screen reader, every browser, touch input, or WCAG conformance.
+The [manual accessibility handoff](accessibility-evaluation.md) describes the
+VoiceOver/Safari review path and the evidence fields to record when a human
+reviewer is available.
 
 When navigation timing entries are present, comparisons also expose the
 separate `browser-timing-hints-v1` rubric. It summarizes DOM content loaded,
