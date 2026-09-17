@@ -159,6 +159,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 - Localized GrowthLab measurement panel follows all six locale catalogs and preserves RTL rendering for Arabic and Persian
 - Local GrowthLab settings panel persists language and theme preferences and shows provider-neutral integration state
 - Read-only settings contract overview exposes product, permissions, validation, metrics and source snapshot per local workspace
+- Workspace contract labels and permission modes follow all six locale catalogs
 - Deterministic local CLI packaging with complete checked-in license notices and offline archive verification
 - Localized GrowthLab battle/detail inspection, decision and report labels follow all six locale catalogs
 - Local x86_64 Linux musl archive built and structure-verified with cargo-zigbuild; runtime remains unverified
@@ -174,7 +175,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 | Observed browser timing rubric | **passed** — Local Chromium smoke records desktop/phone DOM, load and first-paint timing hints in comparison rows and reports; no Lighthouse, Core Web Vitals, accessibility, visual-regression or field-performance claim |
 | GrowthLab localized onboarding | **passed** — Chrome exercised the shared language picker for Spanish and Arabic; the GrowthLab home shell refreshed its copy, Arabic set dir=rtl, desktop scroll width matched the viewport and the tab recorded no warning or error logs |
 | Localized measurement panel | **passed** — Chrome switched the measurement panel to Spanish and Arabic; translated headings, source states and controls rendered, Arabic set dir=rtl, viewport width stayed fitted and no browser warnings or errors were recorded |
-| GrowthLab settings panel | **passed** — Chrome opened the anchored settings surface, switched the theme to dark and restored the system preference; the read-only workspace contract stayed within the viewport in RTL and browser logs remained empty |
+| GrowthLab settings panel | **passed** — Chrome opened the anchored settings surface, switched the theme to dark and restored the system preference; the read-only workspace contract and permission modes stayed localized within the RTL viewport and browser logs remained empty |
 | Local CSV measurement | **passed** — Bounded UTF-8 CSV import smoke passed locally; means, sample sizes, optional date range, baseline differences, exploratory 95% intervals and MEASURED limits are emitted without network access |
 | Browser measurement dashboard | **passed** — Local Chrome smoke uploaded a synthetic CSV; the dashboard rendered MEASURED means, sample sizes, baseline differences, date range, 95% intervals and limits with no console warnings or errors |
 | Exploratory interval analysis | **passed** — Rust and TypeScript calculations matched on repeated synthetic samples; mean and difference intervals are omitted below n=2 and documented as descriptive normal approximations |
