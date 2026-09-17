@@ -100,9 +100,33 @@ pub struct MeasurementSourceDescriptor {
     pub limitation: &'static str,
 }
 
-/// Return the measurement integration boundary without contacting a provider.
-pub fn sources() -> Vec<MeasurementSourceDescriptor> {
-    vec![
+/// Inputs shared by measurement adapters. The local CSV adapter consumes the
+/// request today; future opt-in adapters can map their own read-only source
+/// data into the same report contract without changing callers.
+#[derive(Debug, Clone, Copy)]
+pub struct MeasurementImportRequest<'a> {
+    pub path: &'a Path,
+    pub baseline_variant: &'a str,
+    pub metric: Option<&'a str>,
+    pub variant_column: &'a str,
+    pub value_column: &'a str,
+    pub metric_column: &'a str,
+    pub distribution_column: &'a str,
+    pub timestamp_column: &'a str,
+}
+
+/// A read-only source adapter. Adapters must return the same provenance-aware
+/// report shape and must not perform a network request implicitly.
+pub trait MeasurementAdapter: Send + Sync {
+    fn descriptor(&self) -> MeasurementSourceDescriptor;
+    fn import(&self, request: MeasurementImportRequest<'_>) -> Result<MeasurementReport>;
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct LocalCsvAdapter;
+
+impl MeasurementAdapter for LocalCsvAdapter {
+    fn descriptor(&self) -> MeasurementSourceDescriptor {
         MeasurementSourceDescriptor {
             id: "csv-local",
             label: "Local CSV event import",
@@ -111,7 +135,27 @@ pub fn sources() -> Vec<MeasurementSourceDescriptor> {
             network: "none",
             provenance: "MEASURED",
             limitation: "Reads a user-supplied RFC-4180 CSV in the browser or local CLI; no rows leave this machine.",
-        },
+        }
+    }
+
+    fn import(&self, request: MeasurementImportRequest<'_>) -> Result<MeasurementReport> {
+        import_local_csv(request)
+    }
+}
+
+/// The adapters implemented in this build. Planned provider descriptors are
+/// intentionally not returned here until a read-only adapter exists.
+pub fn adapters() -> Vec<Box<dyn MeasurementAdapter>> {
+    vec![Box::new(LocalCsvAdapter)]
+}
+
+/// Return the measurement integration boundary without contacting a provider.
+pub fn sources() -> Vec<MeasurementSourceDescriptor> {
+    let mut sources = adapters()
+        .into_iter()
+        .map(|adapter| adapter.descriptor())
+        .collect::<Vec<_>>();
+    sources.extend([
         MeasurementSourceDescriptor {
             id: "privacy-analytics",
             label: "Privacy-friendly analytics",
@@ -166,7 +210,8 @@ pub fn sources() -> Vec<MeasurementSourceDescriptor> {
             provenance: "UNTESTED",
             limitation: "Adapter boundary reserved; the existing read-only repository audit is metadata-only and is not a metric feed.",
         },
-    ]
+    ]);
+    sources
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -629,16 +674,17 @@ fn summarize(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn import(
-    path: &Path,
-    baseline_variant: &str,
-    metric: Option<&str>,
-    variant_column: &str,
-    value_column: &str,
-    metric_column: &str,
-    distribution_column: &str,
-    timestamp_column: &str,
-) -> Result<MeasurementReport> {
+fn import_local_csv(request: MeasurementImportRequest<'_>) -> Result<MeasurementReport> {
+    let MeasurementImportRequest {
+        path,
+        baseline_variant,
+        metric,
+        variant_column,
+        value_column,
+        metric_column,
+        distribution_column,
+        timestamp_column,
+    } = request;
     if let Some(metric) = metric {
         bounded_text(metric, "metric filter")?;
     }
@@ -660,6 +706,29 @@ pub fn import(
         baseline_variant,
         indexes.timestamp.is_some(),
     )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn import(
+    path: &Path,
+    baseline_variant: &str,
+    metric: Option<&str>,
+    variant_column: &str,
+    value_column: &str,
+    metric_column: &str,
+    distribution_column: &str,
+    timestamp_column: &str,
+) -> Result<MeasurementReport> {
+    LocalCsvAdapter.import(MeasurementImportRequest {
+        path,
+        baseline_variant,
+        metric,
+        variant_column,
+        value_column,
+        metric_column,
+        distribution_column,
+        timestamp_column,
+    })
 }
 
 fn markdown_number(value: f64) -> String {
@@ -758,6 +827,9 @@ mod tests {
     #[test]
     fn source_registry_keeps_local_csv_available_and_external_adapters_unconfigured() {
         let sources = sources();
+        let adapters = adapters();
+        assert_eq!(adapters.len(), 1);
+        assert_eq!(adapters[0].descriptor(), sources[0]);
         assert_eq!(sources.len(), 7);
         assert_eq!(sources[0].id, "csv-local");
         assert_eq!(sources[0].status, "available");
@@ -825,6 +897,26 @@ mod tests {
         assert!((interval.lower - 5.2).abs() < 0.01);
         assert!((interval.upper - 24.8).abs() < 0.01);
         assert_eq!(report.analysis.method, "normal_approximation");
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn local_csv_adapter_uses_the_shared_report_contract() {
+        let (dir, path) = write_fixture("variant,value\nbase,10\nhero,15\n");
+        let report = LocalCsvAdapter
+            .import(MeasurementImportRequest {
+                path: &path,
+                baseline_variant: "base",
+                metric: None,
+                variant_column: "variant",
+                value_column: "value",
+                metric_column: "metric",
+                distribution_column: "distribution",
+                timestamp_column: "timestamp",
+            })
+            .unwrap();
+        assert_eq!(report.provenance, "MEASURED");
+        assert_eq!(report.groups.len(), 2);
         std::fs::remove_dir_all(dir).unwrap();
     }
 

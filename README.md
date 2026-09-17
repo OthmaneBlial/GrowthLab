@@ -161,6 +161,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 - Deterministic local CLI packaging with complete checked-in license notices and offline archive verification
 - Localized GrowthLab battle/detail inspection, decision and report labels follow all six locale catalogs
 - Local x86_64 Linux musl archive built and structure-verified with cargo-zigbuild; runtime remains unverified
+- Typed read-only measurement adapter boundary with the local CSV implementation
 
 | Validation | Current evidence |
 | --- | --- |
@@ -192,6 +193,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 | CLI archive packaging | **passed** — Local macOS arm64 archive build includes LICENSE, NOTICE.md, demo and six checked-in dependency notices; an offline verifier passed checksum, traversal/link checks, structure and real version/build-channel execution |
 | Localized battle/detail UI | **passed** — Chrome exercised Spanish and Arabic on a real recorded battle; inspection tabs, decision labels and report actions translated, Arabic set dir=rtl, viewport width stayed fitted and no browser warnings or errors were recorded |
 | Linux musl archive packaging | **passed** — Local x86_64-unknown-linux-musl release archive built with cargo-zigbuild and Zig; offline verifier passed SHA-256, traversal/link safety, required notices and archive structure, while runtime was honestly skipped on macOS arm64 |
+| Measurement adapter contract | **passed** — LocalCsvAdapter implements the shared read-only request/report contract; focused Rust measurement and API tests passed and no provider request is made |
 
 **Still ahead**
 
