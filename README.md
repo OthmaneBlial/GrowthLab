@@ -190,6 +190,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 - Structured localized playbook titles, questions, outputs and guardrails across all six dashboard locale catalogs
 - Localized rubric labels and dimension names across all six dashboard locale catalogs
 - Localized rubric calculations, recommendations and limitations across all six dashboard locale catalogs
+- Corrected dashboard heading hierarchy and verified live accessible names, IDs, image alternatives and overflow
 
 | Validation | Current evidence |
 | --- | --- |
@@ -229,6 +230,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 | Localized role and metadata copy | **passed** — Role names, hypothesis editor labels, execution choices, check metadata and delivery notices now use the six locale catalogs; i18n, style, type, build and 174 UI tests pass, and Chrome verified Spanish role labels and footer copy |
 | Localized playbook content | **passed** — The ten role playbooks now map titles, focus, summaries, questions, outputs, guardrails and saved-run follow-up text through locale catalogs; i18n, style, type, build and 174 UI tests pass, and Chrome verified Spanish playbook content |
 | Localized rubric labels | **passed** — Five SEO, quality, accessibility, static-render and browser-timing rubric labels, dimensions and static guidance now resolve through all six locale catalogs; i18n, style, type, production build and 174 UI tests pass, and Chrome verified Spanish battle and public-URL audit guidance. |
+| Live dashboard accessibility structure smoke | **passed** — Chrome AX and DOM inspection on a recorded battle found 23 named interactive controls, one h1 with no skipped heading level, no duplicate IDs, no images missing alt text and no horizontal overflow; this remains a local structure smoke, not WCAG or assistive-technology certification. |
 
 **Still ahead**
 
