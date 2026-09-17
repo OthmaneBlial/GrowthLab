@@ -7,14 +7,16 @@ without contacting an analytics or agent provider.
 
 ## Current source line and binary evidence
 
-`v0.1.0-alpha.20` includes one manually validated executable archive and two
+`v0.1.0-alpha.20` includes one manually validated executable archive and four
 cross-target archives whose structure was verified locally. The previous alpha.19
 archive remains available in its release history:
 
 | Target | Asset | Evidence |
 | --- | --- | --- |
 | macOS arm64 | [`growthlab-v0.1.0-alpha.20-macos-arm64.tar.gz`](https://github.com/OthmaneBlial/GrowthLab/releases/download/v0.1.0-alpha.20/growthlab-v0.1.0-alpha.20-macos-arm64.tar.gz) | Extracted, checksum-checked, and run locally with `--no-telemetry version`; `growthlab 0.1.0-alpha.20` reported the development build channel. |
+| macOS x86_64 | [`growthlab-v0.1.0-alpha.20-macos-x86_64.tar.gz`](https://github.com/OthmaneBlial/GrowthLab/releases/download/v0.1.0-alpha.20/growthlab-v0.1.0-alpha.20-macos-x86_64.tar.gz) | Built from the exact alpha.20 tag with Cargo; checksum, traversal/link safety, required notices and archive structure passed the offline verifier. The executable was not run on this arm64 host. |
 | Linux x86_64 (musl) | [`growthlab-v0.1.0-alpha.20-linux-x86_64-musl.tar.gz`](https://github.com/OthmaneBlial/GrowthLab/releases/download/v0.1.0-alpha.20/growthlab-v0.1.0-alpha.20-linux-x86_64-musl.tar.gz) | Built from the exact alpha.20 tag with `cargo-zigbuild`; checksum, traversal/link safety, required notices and archive structure passed the offline verifier. The ELF was not run on Linux here. |
+| Linux arm64 (musl) | [`growthlab-v0.1.0-alpha.20-linux-arm64-musl.tar.gz`](https://github.com/OthmaneBlial/GrowthLab/releases/download/v0.1.0-alpha.20/growthlab-v0.1.0-alpha.20-linux-arm64-musl.tar.gz) | Built from the exact alpha.20 tag with `cargo-zigbuild`; checksum, traversal/link safety, required notices and archive structure passed the offline verifier. The ELF was not run on Linux here. |
 | Windows x86_64 (GNU) | [`growthlab-v0.1.0-alpha.20-windows-x86_64-gnu.zip`](https://github.com/OthmaneBlial/GrowthLab/releases/download/v0.1.0-alpha.20/growthlab-v0.1.0-alpha.20-windows-x86_64-gnu.zip) | Built from the exact alpha.20 tag with `cargo-zigbuild`; checksum, traversal/link safety, required notices and ZIP structure passed the offline verifier. The executable was not run on Windows here. |
 
 The current `main` source line (still versioned alpha.20) also produces local
@@ -22,9 +24,9 @@ The current `main` source line (still versioned alpha.20) also produces local
 `cargo-zigbuild` and Zig. Their checksums,
 archive safety and required notices passed the offline verifier; neither binary
 was run on its target operating system here. They are evidence of reproducible
-cross-target packages, not runtime or installer proof. The exact-tag Linux and
-Windows GNU archives are attached to alpha.20; the current-main packages remain
-separate reproducibility checks.
+cross-target packages, not runtime or installer proof. The exact-tag Linux,
+Windows GNU, macOS x86_64 and Linux arm64 archives are attached to alpha.20;
+the current-main packages remain separate reproducibility checks.
 
 The archives are unsigned and not notarized. They are CLI archives rather than
 desktop installers. Linux and Windows runtime behavior remains unverified on the
@@ -53,7 +55,7 @@ explicit read-only network check:
 python3 scripts/test-release-assets.py
 ```
 
-It compares GitHub's asset digests with downloaded bytes, validates all three
+It compares GitHub's asset digests with downloaded bytes, validates all five
 checksum sidecars and runs the local archive safety/notices verifier. It does
 not contact an analytics or agent provider and does not turn a skipped Linux
 runtime into a support claim.
@@ -66,9 +68,9 @@ validated only after its binary has been built and run on that platform:
 | Target | Packaging shape | Current state |
 | --- | --- | --- |
 | `aarch64-apple-darwin` | `.tar.xz` or local `.tar.gz` | **Observed** on macOS arm64 for alpha.20 |
-| `x86_64-apple-darwin` | `.tar.xz` | Build and runtime proof pending |
+| `x86_64-apple-darwin` | `.tar.xz` or local `.tar.gz` | **Built and structure-verified locally**; exact alpha.20 archive attached, runtime proof pending |
 | `x86_64-unknown-linux-musl` | `.tar.xz` | **Built and structure-verified locally**; runtime proof pending |
-| `aarch64-unknown-linux-musl` | `.tar.xz` | Build and runtime proof pending |
+| `aarch64-unknown-linux-musl` | `.tar.xz` or local `.tar.gz` | **Built and structure-verified locally**; exact alpha.20 archive attached, runtime proof pending |
 | `x86_64-pc-windows-gnu` | `.zip` | **Built and structure-verified locally**; exact alpha.20 archive attached, runtime proof pending |
 | `x86_64-pc-windows-msvc` | `.zip` / PowerShell installer | Build and runtime proof pending |
 
@@ -77,8 +79,9 @@ shell/PowerShell installer formats. GitHub Actions remains disabled for this
 repository, so those artifacts are not presented as built until a local or
 explicitly authorized platform runner supplies the evidence.
 
-For Linux musl or Windows GNU cross-builds on macOS, install a Rust target, Zig
-and `cargo-zigbuild`, then run the matching command:
+For cross-builds on macOS, install the matching Rust target. Linux musl and
+Windows GNU use Zig through `cargo-zigbuild`; macOS Intel uses Cargo's Apple
+linker:
 
 ```sh
 rustup target add x86_64-unknown-linux-musl
@@ -91,6 +94,18 @@ scripts/verify-release-archive.sh dist/archives/growthlab-v0.1.0-alpha.20-linux-
 rustup target add x86_64-pc-windows-gnu
 scripts/package-cli-archive.sh --target x86_64-pc-windows-gnu
 scripts/verify-release-archive.sh dist/archives/growthlab-v0.1.0-alpha.20-windows-x86_64-gnu.zip
+```
+
+```sh
+rustup target add x86_64-apple-darwin
+scripts/package-cli-archive.sh --target x86_64-apple-darwin
+scripts/verify-release-archive.sh dist/archives/growthlab-v0.1.0-alpha.20-macos-x86_64.tar.gz
+```
+
+```sh
+rustup target add aarch64-unknown-linux-musl
+scripts/package-cli-archive.sh --target aarch64-unknown-linux-musl
+scripts/verify-release-archive.sh dist/archives/growthlab-v0.1.0-alpha.20-linux-arm64-musl.tar.gz
 ```
 
 ## Notices and trust boundary
