@@ -432,6 +432,36 @@ const growthRubricCatalogKeys = [
   "growth_rubric_dimension_dom_content_loaded",
   "growth_rubric_dimension_load_complete",
   "growth_rubric_dimension_timing_integrity",
+  "growth_rubric_evidence_title_missing",
+  "growth_rubric_evidence_title_length",
+  "growth_rubric_evidence_description_missing",
+  "growth_rubric_evidence_description_length",
+  "growth_rubric_evidence_heading_counts",
+  "growth_rubric_evidence_language_declared",
+  "growth_rubric_evidence_language_missing",
+  "growth_rubric_evidence_content_count",
+  "growth_rubric_evidence_canonical_present",
+  "growth_rubric_evidence_canonical_missing",
+  "growth_rubric_evidence_links_count",
+  "growth_rubric_evidence_no_images",
+  "growth_rubric_evidence_images_count",
+  "growth_rubric_evidence_viewport_present",
+  "growth_rubric_evidence_viewport_missing",
+  "growth_rubric_evidence_controls_counts",
+  "growth_rubric_evidence_forms_counts",
+  "growth_rubric_evidence_loading_counts",
+  "growth_rubric_evidence_claims_none",
+  "growth_rubric_evidence_claims_count",
+  "growth_rubric_evidence_landmarks_counts",
+  "growth_rubric_evidence_accessibility_language_declared",
+  "growth_rubric_evidence_accessibility_language_missing",
+  "growth_rubric_evidence_accessibility_heading_counts",
+  "growth_rubric_evidence_accessibility_images_counts",
+  "growth_rubric_evidence_accessibility_no_images",
+  "growth_rubric_evidence_render_missing",
+  "growth_rubric_evidence_render_check",
+  "growth_rubric_evidence_timing_missing",
+  "growth_rubric_evidence_timing_check",
   "growth_rubric_recommendation_title",
   "growth_rubric_recommendation_description",
   "growth_rubric_recommendation_headings",
@@ -593,6 +623,8 @@ test("GrowthLab onboarding shell uses every localized growth message", async () 
   assert.match(source, /GROWTH_RUBRIC_CALCULATION_KEYS/);
   assert.match(source, /GROWTH_RUBRIC_RECOMMENDATION_KEYS/);
   assert.match(source, /GROWTH_RUBRIC_LIMITATION_KEYS/);
+  assert.match(source, /GROWTH_RUBRIC_EVIDENCE_KEYS/);
+  assert.match(source, /localizedRubricEvidence/);
   assert.match(source, /websiteRubric/);
   for (const key of [...growthKeys, ...growthAuxiliaryKeys, ...growthDetailKeys]) {
     assert.match(source, /localizedPlaybook|growth_playbook_/, "GrowthDashboard should map dynamic playbook copy");

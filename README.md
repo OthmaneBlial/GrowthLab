@@ -236,6 +236,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 | Localized role and metadata copy | **passed** — Role names, hypothesis editor labels, execution choices, check metadata and delivery notices now use the six locale catalogs; i18n, style, type, build and 174 UI tests pass, and Chrome verified Spanish role labels and footer copy |
 | Localized playbook content | **passed** — The ten role playbooks now map titles, focus, summaries, questions, outputs, guardrails and saved-run follow-up text through locale catalogs; i18n, style, type, build and 174 UI tests pass, and Chrome verified Spanish playbook content |
 | Localized rubric labels | **passed** — Five SEO, quality, accessibility, static-render and browser-timing rubric labels, dimensions and static guidance now resolve through all six locale catalogs; i18n, style, type, production build and 174 UI tests pass, and Chrome verified Spanish battle and public-URL audit guidance. |
+| Localized rubric observations | **passed** — Known evaluator-generated rubric evidence sentences now map counts, HTML states, viewport checks and timing tokens through all six locale catalogs; unrecognized evaluator text and user-authored run content keep their recorded language and provenance. |
 | Live dashboard accessibility structure smoke | **passed** — Chrome AX and DOM inspection on a recorded battle found 23 named interactive controls, one h1 with no skipped heading level, no duplicate IDs, no images missing alt text and no horizontal overflow; this remains a local structure smoke, not WCAG or assistive-technology certification. |
 | Visual report disclosure | **passed** — CLI --include-visuals and API includeVisuals=true explicitly embed verified archived desktop/phone PNGs; default reports omit captures, Rust report tests cover opt-in encoding and the 4 MiB bound, and the screenshot-required bundled demo asserts both default omission and six opt-in captures without provider requests. Embedded captures remain render artifacts, not visual-regression, accessibility, performance or growth results. |
 | Bundled visual regression smoke | **passed** — The real bundled demo's three sealed variants match six checked-in SHA-256 PNG baselines at 1280x900 desktop and 390x844 phone; archive dimensions, digests and the no-provider boundary are verified locally. This is a pinned local renderer smoke, not cross-browser parity or assistive-technology conformance. |
@@ -248,7 +249,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 - Provider adapters
 - Full visual regression and assistive-technology accessibility evaluation
 - Native-agent battle verification and provider-specific launcher registration
-- Dynamic rubric evidence and user-generated run content remain source-language until structured mapping is added
+- Unrecognized or future rubric evidence and user-generated run content remain source-language until an explicit mapping is added
 - Cross-platform runtime proof and release-attached portable binaries/installers
 <!-- project-status:end -->
 
