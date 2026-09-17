@@ -9,7 +9,7 @@ renderers. It is still a local browser smoke, not a claim of every browser or
 assistive-technology conformance.
 
 Use ``--update-baselines`` only when the bundled fixture or the pinned Firefox
-build intentionally changes. The command writes the four PNGs and prints the
+build intentionally changes. The command writes the six PNGs and prints the
 digests needed to review the fixture update.
 """
 
