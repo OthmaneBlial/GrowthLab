@@ -47,11 +47,15 @@ pwsh -NoLogo -NoProfile -NonInteractive -Command \
 ```
 
 The 2026-09-17 local generation produced `growthlab-installer.sh` (55,250
-bytes) and `growthlab-installer.ps1` (22,419 bytes), both syntax-checked. These
-templates point at the tagged GitHub release and are kept as local build
-evidence only: the release still lacks a Windows MSVC artifact, and no installer
-is advertised as portable or runtime-validated until a matching target runner
-proves it.
+bytes) and `growthlab-installer.ps1` (22,419 bytes), both syntax-checked. The
+shell installer was also run end to end against a local HTTP server serving the
+`aarch64-apple-darwin` archive (SHA-256
+`247ce54db01d2c1f6fb881dd4647789955ee01b715be397a60d2a5c495ba113b`): it
+verified the sidecar, installed both `growthlab` and `orx` into an isolated
+prefix, and reported version `0.1.0-alpha.20` without editing the test profile.
+The templates still remain local evidence only: the release lacks a Windows
+MSVC artifact, and no installer is advertised as portable or runtime-validated
+until each matching target runner proves it.
 
 ## Reproduce and inspect an archive locally
 
