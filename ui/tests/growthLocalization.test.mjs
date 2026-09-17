@@ -249,6 +249,39 @@ const growthAuxiliaryKeys = [
   "growth_contract_isolation",
   "growth_contract_policy_sha",
 ];
+const growthDetailKeys = [
+  "growth_role_strategist",
+  "growth_role_researcher",
+  "growth_role_positioning",
+  "growth_role_conversion",
+  "growth_role_seo",
+  "growth_role_onboarding",
+  "growth_role_pricing",
+  "growth_role_launch",
+  "growth_role_evaluator",
+  "growth_role_skeptic",
+  "growth_label_hypothesis",
+  "growth_label_mechanism",
+  "growth_label_baseline_definition",
+  "growth_label_primary_metric",
+  "growth_label_success_threshold_optional",
+  "growth_label_guardrail_metrics",
+  "growth_label_risks",
+  "growth_confidence",
+  "growth_replay_option",
+  "growth_native_option",
+  "growth_source_sha",
+  "growth_archive_sha",
+  "growth_checkpoint_sha",
+  "growth_variant_id",
+  "growth_branch",
+  "growth_local_worktree",
+  "growth_agent_harness",
+  "growth_requested_model_label",
+  "growth_cost_tokens",
+  "growth_artifact_sha",
+];
+
 
 const staticPreviewKeys = [
   "growth_static_preview_evidence_failed",
@@ -365,7 +398,7 @@ test("GrowthLab onboarding shell uses every localized growth message", async () 
   const measurementSource = await readFile(new URL("src/growth/MeasurementPanel.tsx", uiRoot), "utf8");
   const settingsSource = await readFile(new URL("src/growth/GrowthSettingsPanel.tsx", uiRoot), "utf8");
   const settings = JSON.parse(await readFile(new URL("project.inlang/settings.json", uiRoot), "utf8"));
-  for (const key of [...growthKeys, ...growthAuxiliaryKeys]) {
+  for (const key of [...growthKeys, ...growthAuxiliaryKeys, ...growthDetailKeys]) {
     assert.match(source, new RegExp(key), `${key} should be rendered by GrowthDashboard`);
   }
   for (const key of staticPreviewKeys) {
@@ -379,7 +412,7 @@ test("GrowthLab onboarding shell uses every localized growth message", async () 
   }
   for (const locale of settings.locales) {
     const catalog = JSON.parse(await readFile(new URL(`messages/${locale}.json`, uiRoot), "utf8"));
-    for (const key of [...growthKeys, ...growthAuxiliaryKeys, ...staticPreviewKeys, ...measurementKeys, ...settingsKeys]) {
+    for (const key of [...growthKeys, ...growthAuxiliaryKeys, ...growthDetailKeys, ...staticPreviewKeys, ...measurementKeys, ...settingsKeys]) {
       assert.equal(typeof catalog[key], "string", `${locale} should define ${key}`);
       assert.ok(catalog[key].trim(), `${locale} should not leave ${key} empty`);
     }

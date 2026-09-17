@@ -169,6 +169,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 - Localized static-preview, evidence and rubric detail copy across all six dashboard locales, with visible settings lock policy after hypotheses or active battles
 - Localized workspace and battle action/status copy across all six dashboard locale catalogs
 - Localized dashboard onboarding, audit and auxiliary action/status copy across all six dashboard locale catalogs
+- Localized role labels, editor metadata and execution option copy across all six dashboard locale catalogs
 
 | Validation | Current evidence |
 | --- | --- |
@@ -205,6 +206,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 | Localized technical details and settings lifecycle | **passed** — Six locale catalogs cover static-preview evidence, render metadata and rubric detail labels; Chrome verified the edit control is enabled before hypotheses and disabled with an explicit Arabic lock explanation after the starter map is created |
 | Localized workspace and battle actions | **passed** — GrowthDashboard action and status labels for the experiment tree, battle execution, candidate inspection and selected delivery now use localized message keys; six catalogs define the shared keys, Chrome verified Spanish and Arabic controls, and the 174-test UI suite passes |
 | Localized auxiliary dashboard copy | **passed** — The six locale catalogs now cover dashboard busy states, home onboarding, public page and repository audit controls, playbook controls and execution status feedback; i18n, style, type, build and 174 UI tests pass, and Chrome verified the Spanish home flow with no browser warnings or errors |
+| Localized role and metadata copy | **passed** — Role names, hypothesis editor labels, execution choices, check metadata and delivery notices now use the six locale catalogs; i18n, style, type, build and 174 UI tests pass, and Chrome verified Spanish role labels and footer copy |
 
 **Still ahead**
 
