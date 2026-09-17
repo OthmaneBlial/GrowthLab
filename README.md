@@ -20,6 +20,7 @@ It is made for founders, indie hackers, marketers, designers, and developers who
 
 ![Real bundled battle with two eligible candidates and one deliberately failed heading check](docs/screenshots/growth-demo-failure.png)
 
+[![GrowthLab Battle](https://img.shields.io/badge/GrowthLab-3_variants_tested-17634f)](docs/demo.md)
 [Watch the 30-second demo recording](docs/assets/growthlab-demo-30s.mp4) — a continuous walkthrough captured in an isolated Chrome profile.
 
 ## What can I use it for?
@@ -31,6 +32,22 @@ It is made for founders, indie hackers, marketers, designers, and developers who
 - Keep a simple record of what you tried and why.
 
 GrowthLab helps you make a better decision. It does not pretend to know your future rankings or sales.
+
+## Why GrowthLab?
+
+Generic AI marketing tools hand back suggestions. GrowthLab keeps the question,
+the page versions, the checks and the decision together so you can inspect what
+changed before you test it.
+
+| | Generic marketing assistant | GrowthLab |
+| --- | --- | --- |
+| Starting point | A prompt | Your product page and a clear outcome |
+| Ideas | Copy or a list of tactics | Three competing, reviewable versions |
+| Confidence | An opinion in a chat | Evidence, checks, limits and provenance |
+| Next step | Publish or paste manually | Review, export or apply one explicit choice |
+
+GrowthLab is for SEO and product growth work that needs a real trail: what was
+tried, what changed, what passed, and what still needs evidence.
 
 ## The simple loop
 
