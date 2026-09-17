@@ -126,7 +126,14 @@ impl Fixture {
         loop {
             let status = self.get(&format!("/battles/{id}")).await;
             let reached = if terminal {
-                status["controller"]["running"] == false
+                // The controller flag is updated by the worker just after
+                // `battle::execute` returns.  Read-side polling can observe
+                // that flag before SQLite readers see the terminal battle
+                // row, so require both signals before asserting sealed runs.
+                matches!(
+                    status["battle"]["status"].as_str(),
+                    Some("completed" | "failed" | "cancelled")
+                ) && status["controller"]["running"] == false
                     && status["runs"]
                         .as_array()
                         .is_some_and(|runs| runs.len() == 3)

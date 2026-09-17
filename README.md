@@ -205,10 +205,11 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 - Versioned installer template mapping smoke prevents Windows GNU releases from selecting an unavailable MSVC asset
 - Public SEO discovery files, canonical URLs, social cards and truthful SoftwareApplication metadata are published
 - The local SEO audit scores the public home source 100/100 after the image-description fix
+- Hardened the API terminal polling smoke so it waits for the persisted terminal battle state before reading sealed runs
 
 | Validation | Current evidence |
 | --- | --- |
-| Rust tests | **passed** — 966 tests per binary; 964 passed, zero failures and two inherited ignored tests (serial run on the current source) |
+| Rust tests | **passed** — 966 tests per binary; 964 passed, zero failures and two inherited ignored tests (serial run on the current source), with the API terminal polling smoke passing three consecutive targeted runs |
 | UI tests | **passed** — 174 tests; zero failures or skips |
 | Local quality checks | **passed** — Formatting, Clippy, UI types, styles and builds; full serial Rust suite passed |
 | Actual demo and browser flow | **passed** — Real CLI/HTTP execution, desktop/phone captures, observed local Chromium render checks and static-render rubric, verified PNG endpoint checks, SEO and accessibility rubric records, page-quality hints and standalone local audit on owned fixtures |
