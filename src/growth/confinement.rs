@@ -60,6 +60,10 @@ fn runtime_roots() -> Vec<PathBuf> {
         "/usr/local/opt",
         "/System/Library",
         "/Library/Apple/System/Library",
+        // Rosetta-translated x86_64 processes load this system runtime from
+        // Apple\'s usr tree. Keep it read-only and scoped to the translator;
+        // without it, translated validation commands abort before starting.
+        "/Library/Apple/usr/libexec/oah",
         "/opt/homebrew/bin",
         "/opt/homebrew/Cellar",
         "/opt/homebrew/opt",
