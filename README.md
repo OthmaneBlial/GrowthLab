@@ -203,7 +203,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 - Provider adapters
 - Full visual regression and assistive-technology accessibility evaluation
 - Native-agent battle verification and provider-specific launcher registration
-- Broader settings coverage and remaining technical detail copy
+- Editable settings mutations and remaining dashboard technical detail copy
 - Cross-platform runtime proof and release-attached portable binaries/installers
 <!-- project-status:end -->
 
