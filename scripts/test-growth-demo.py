@@ -11,7 +11,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
 
@@ -50,8 +50,12 @@ def main():
             assert address, "Demo did not publish its local battle address."
 
             def get(route):
-                with urlopen(address + route, timeout=10) as response:
-                    return response.read()
+                try:
+                    with urlopen(address + route, timeout=10) as response:
+                        return response.read()
+                except HTTPError as error:
+                    detail = error.read().decode("utf-8", errors="replace")
+                    raise AssertionError(f"HTTP {error.code} for {route}: {detail}") from error
 
             deadline = time.monotonic() + 60
             while time.monotonic() < deadline:
@@ -141,6 +145,13 @@ def main():
                 expected_report_labels.extend(["Static render checks", "static-render-hints-v1", "Local browser timing hints (observed)", "browser-timing-hints-v1"])
             missing_report_labels = [label for label in expected_report_labels if label not in report]
             assert not missing_report_labels, missing_report_labels
+            assert "data:image/png;base64," not in report, "Default reports must omit visual captures."
+            if os.environ.get("GROWTHLAB_REQUIRE_SCREENSHOT") == "1":
+                visual_report = get(f"/api/growth/battles/{battle}/report?format=html&includeVisuals=true").decode()
+                assert "Verified static-preview captures are embedded below" in visual_report
+                assert "Render captures" in visual_report
+                assert visual_report.count("data:image/png;base64,") == 6, "The opt-in report must embed both captures for all three variants."
+                assert "OBSERVED local render artifact" in visual_report
             assert "PatchKit" not in report and str(root) not in report
             products = list((root / "lab/growth-demo").glob("*/product"))
             assert len(products) == 1

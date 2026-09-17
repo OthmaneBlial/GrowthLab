@@ -702,6 +702,9 @@ pub fn document(report: &BattleReport) -> String {
 <section id="comparison" aria-labelledby="comparison-title"><div class="section-heading"><h2 id="comparison-title">The competing approaches</h2><span>Expand checks to inspect their inputs</span></div><div class="variants">"##,
         html(&report.goal)
     );
+    if report.visuals_disclosed {
+        out.push_str("<div class=\"notice capture-disclosure\"><strong>Verified static-preview captures are embedded below</strong><span>They were explicitly requested and are render artifacts, not accessibility, performance or growth results.</span></div>");
+    }
     for row in &report.variants {
         let state = if row.eligible {
             "eligible"
@@ -942,7 +945,7 @@ pub fn document(report: &BattleReport) -> String {
             out.push_str("<section class=\"captures\" aria-label=\"Verified render captures\"><h4>Render captures</h4><p>Explicitly disclosed local artifacts; they are not accessibility, performance or growth results.</p><div class=\"capture-grid\">");
             for screenshot in &row.screenshots {
                 out.push_str(&format!(
-                    "<figure><img src=\"{}\" width=\"{}\" height=\"{}\" alt=\"{} {} render capture\"><figcaption>{} × {} · OBSERVED · SHA-256 {}</figcaption></figure>",
+                    "<figure><img src=\"{}\" width=\"{}\" height=\"{}\" alt=\"{} {} render capture\"><figcaption>{} × {} · OBSERVED local render artifact · SHA-256 {}</figcaption></figure>",
                     screenshot.data_url,
                     screenshot.width,
                     screenshot.height,
