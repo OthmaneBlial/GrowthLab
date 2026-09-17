@@ -5,6 +5,7 @@ This deliberately bounded check inspects the real bundled demo dashboard with
 Chromium's DOM and accessibility tree, then exercises keyboard focus. It is a
 local structure/interaction smoke, not a WCAG audit or screen-reader test.
 """
+import argparse
 import base64
 import hashlib
 import json
@@ -131,6 +132,13 @@ def stop_process(process, name):
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Run the local GrowthLab Chromium accessibility-tree and keyboard smoke.")
+    parser.add_argument(
+        "--output",
+        type=Path,
+        help="Write the passing, non-sensitive fixture summary as JSON to this path.",
+    )
+    args = parser.parse_args()
     repo = Path(__file__).resolve().parents[1]
     binary = repo / "target/debug/growthlab"
     if not binary.is_file():
@@ -317,7 +325,24 @@ def main():
             raise AssertionError(f"keyboard focus smoke failed: {focus}")
         if marker.exists():
             raise AssertionError("a provider CLI was invoked")
-        print(json.dumps({"dom": dom, "axInteractive": len(ax_interactive), "axHeadings": len(ax_headings), "tabStops": len(focus), "browser": browser, "browserSha256": hashlib.sha256(Path(browser).read_bytes()).hexdigest()[:16]}))
+        result = {
+            "dom": dom,
+            "axInteractive": len(ax_interactive),
+            "axInteractiveNodes": [
+                {"role": node.get("role", {}).get("value"), "name": node.get("name", {}).get("value", "")}
+                for node in ax_interactive
+            ],
+            "axHeadings": len(ax_headings),
+            "tabStops": len(focus),
+            "browser": browser,
+            "browserSha256": hashlib.sha256(Path(browser).read_bytes()).hexdigest()[:16],
+            "providerInvoked": False,
+            "scope": "local accessibility-tree and keyboard smoke; not screen-reader or WCAG certification",
+        }
+        if args.output:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n")
+        print(json.dumps(result, ensure_ascii=False))
     finally:
         if devtools:
             devtools.close()
