@@ -91,6 +91,55 @@ const GROWTH_RUBRIC_LABEL_KEYS: Record<string, string> = {
   "static-render-hints-v1": "growth_rubric_render_label",
   "browser-timing-hints-v1": "growth_rubric_performance_label",
 };
+const GROWTH_RUBRIC_CALCULATION_KEYS: Record<string, string> = {
+  "seo-page-hygiene-v1": "growth_rubric_calculation_seo",
+  "page-quality-hints-v1": "growth_rubric_calculation_quality",
+  "accessibility-structure-v1": "growth_rubric_calculation_accessibility",
+  "static-render-hints-v1": "growth_rubric_calculation_render",
+  "browser-timing-hints-v1": "growth_rubric_calculation_performance",
+};
+const GROWTH_RUBRIC_RECOMMENDATION_KEYS: Record<string, string> = {
+  "Add one descriptive <title> between 10 and 60 characters.": "growth_rubric_recommendation_title",
+  "Add a useful meta description between 70 and 160 characters.": "growth_rubric_recommendation_description",
+  "Use one clear <h1> and at least one supporting <h2>.": "growth_rubric_recommendation_headings",
+  "Declare the document language with an html lang attribute.": "growth_rubric_recommendation_language",
+  "Add more visible, product-specific copy that explains the page.": "growth_rubric_recommendation_content",
+  "Add a canonical link with a stable, non-empty URL.": "growth_rubric_recommendation_canonical",
+  "Add at least one useful link to the next reader action.": "growth_rubric_recommendation_links",
+  "Give every image a concise, useful alt attribute.": "growth_rubric_recommendation_media",
+  "Add a viewport declaration so narrow screens get an intentional layout.": "growth_rubric_recommendation_viewport",
+  "Give every link and button visible text or an explicit accessible name.": "growth_rubric_recommendation_controls",
+  "Associate each form control with a visible label or an accessible name.": "growth_rubric_recommendation_forms",
+  "Review external styles and parser-blocking scripts; confirm timing in a real browser.": "growth_rubric_recommendation_loading",
+  "Replace absolute growth or winner language with a specific, evidenced claim.": "growth_rubric_recommendation_claims",
+  "Provide one main landmark and label each navigation landmark.": "growth_rubric_recommendation_landmarks",
+  "Add an alt attribute to every image, using empty text only for decorative images.": "growth_rubric_recommendation_images",
+  "Run a fresh local Chromium capture for both 1280 × 900 desktop and 390 × 844 phone targets.": "growth_rubric_recommendation_render_capture",
+  "Inspect the overflowing elements at the affected viewport before shipping.": "growth_rubric_recommendation_render_overflow",
+  "Confirm that the page exposes meaningful visible copy in each captured viewport.": "growth_rubric_recommendation_render_copy",
+  "Keep provenance and a limitation attached to every local render observation.": "growth_rubric_recommendation_render_integrity",
+  "Inspect blocking resources and first paint timing in the affected local capture.": "growth_rubric_recommendation_performance_fcp",
+  "Reduce parser-blocking work before the DOM becomes ready.": "growth_rubric_recommendation_performance_dom",
+  "Inspect local resource loading and defer non-essential work.": "growth_rubric_recommendation_performance_load",
+  "Keep complete observed timing metadata and limitations for both viewports.": "growth_rubric_recommendation_performance_integrity",
+};
+const GROWTH_RUBRIC_LIMITATION_KEYS: Record<string, string> = {
+  "This reviews the archived HTML only; it does not crawl, index, rank or measure traffic.": "growth_rubric_limitation_seo_html",
+  "Scores are estimated structural signals, not a predicted position or conversion result.": "growth_rubric_limitation_seo_scores",
+  "External links, search demand, backlinks, structured data and real user behavior are not evaluated here.": "growth_rubric_limitation_seo_external",
+  "This inspects archived HTML only; it does not run Lighthouse, a browser timing trace or a screen reader.": "growth_rubric_limitation_quality_html",
+  "A strong hint is not an accessibility certification, Core Web Vital or performance result.": "growth_rubric_limitation_quality_hint",
+  "Review the rendered page on supported devices and run dedicated accessibility and performance tools before shipping.": "growth_rubric_limitation_quality_review",
+  "This inspects archived HTML only; it does not run a browser, keyboard path, screen reader or automated axe/WCAG audit.": "growth_rubric_limitation_accessibility_html",
+  "Color contrast, focus visibility, dynamic announcements, target size, timing and interaction semantics are not established by these hints.": "growth_rubric_limitation_accessibility_contrast",
+  "Review the rendered page with keyboard and assistive technology before shipping; the estimate does not prove accessibility or conversion lift.": "growth_rubric_limitation_accessibility_review",
+  "The check covers one sanitized static document in the locally installed Chromium build; it is not a Lighthouse score, Core Web Vital or real-user performance measurement.": "growth_rubric_limitation_render_capture",
+  "PNG dimensions are validated separately; browser layout floors can make a requested phone width a covered minimum rather than an exact CSS layout width.": "growth_rubric_limitation_render_png",
+  "No screenshot comparison, screen-reader run, interaction test, network waterfall or growth outcome is included.": "growth_rubric_limitation_render_comparison",
+  "Timings come from one sanitized static document in the locally installed Chromium build; when file:// does not expose a paint entry, the first-paint value is a first rendered frame proxy. They are not field data or a Core Web Vital.": "growth_rubric_limitation_performance_timings",
+  "The thresholds are heuristic and do not account for network conditions, device diversity, CPU contention or repeat-view caching.": "growth_rubric_limitation_performance_thresholds",
+  "No Lighthouse audit, accessibility audit, visual regression comparison or growth outcome is included.": "growth_rubric_limitation_performance_tools",
+};
 function localizedRubric(rubric: SeoRubric | PageQualityRubric | RenderRubric | PerformanceRubric | AccessibilityRubric) {
   const catalog = m as unknown as Record<string, unknown>;
   const read = (key: string, fallback: string) => {
@@ -104,6 +153,9 @@ function localizedRubric(rubric: SeoRubric | PageQualityRubric | RenderRubric | 
       ...dimension,
       label: read(`growth_rubric_dimension_${dimension.key.replaceAll("-", "_")}`, dimension.label),
     })),
+    recommendations: rubric.recommendations.map((recommendation) => read(GROWTH_RUBRIC_RECOMMENDATION_KEYS[recommendation] ?? "", recommendation)),
+    calculation: read(GROWTH_RUBRIC_CALCULATION_KEYS[rubric.id] ?? "", rubric.calculation),
+    limitations: rubric.limitations.map((limitation) => read(GROWTH_RUBRIC_LIMITATION_KEYS[limitation] ?? "", limitation)),
   };
 }
 function QualityRubricDetails({ rubric }: { rubric: SeoRubric | PageQualityRubric | RenderRubric | PerformanceRubric | AccessibilityRubric }) {
