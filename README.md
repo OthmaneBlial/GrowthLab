@@ -204,6 +204,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 - cargo-dist target matrix aligned with the published Windows GNU archive; MSVC remains out until a Windows SDK runner validates it
 - Versioned installer template mapping smoke prevents Windows GNU releases from selecting an unavailable MSVC asset
 - Public SEO discovery files, canonical URLs, social cards and truthful SoftwareApplication metadata are published
+- The local SEO audit scores the public home source 100/100 after the image-description fix
 
 | Validation | Current evidence |
 | --- | --- |
@@ -257,6 +258,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 | Installer target matrix alignment | **passed** — The cargo-dist matrix now includes the published x86_64-pc-windows-gnu archive and leaves MSVC out until a Windows SDK runner can validate it. Regenerated shell and PowerShell templates select the GNU asset; mapping assertions, shell syntax, PowerShell parsing, SHA-256 sidecar verification and an isolated macOS shell-install smoke passed. |
 | Installer template mapping smoke | **passed** — scripts/test-installer-templates.py --check-shell is versioned and checks that generated shell and PowerShell templates select growthlab-x86_64-pc-windows-gnu.zip for the GNU target; shell syntax and PowerShell parsing passed without network, upload or provider access. |
 | Public SEO discovery contract | **passed** — The public home and documentation pages expose one canonical URL each, Open Graph and Twitter cards, and truthful SoftwareApplication structured data. Static robots.txt, sitemap.xml and llms.txt are present, list only the two indexable pages, and state the product's SEO focus and evidence limits without analytics or growth claims. |
+| Public SEO page self-audit | **passed** — The real GrowthLab CLI audited site/index.html locally: the explainable SEO page-hygiene rubric scored 100/100, all four images had useful alt descriptions, and no recommendation remained. The separate quality score stayed 28/30 and the accessibility structure score 100/100; both remain estimates rather than performance or WCAG certification. |
 | Native harness boundary fixture | **passed** — scripts/test-growth-native-fixture.py used a disposable fake Claude CLI with no provider credentials; the current binary created three isolated worktrees, accepted valid implementation JSON, ran observed checks and sealed three UNTESTED runs while the product HEAD, files and remotes stayed unchanged. This verifies the local harness boundary, not a real provider response. |
 | Translated macOS x86_64 source suite | **passed** — The current source x86_64-apple-darwin release suite ran under Rosetta on macOS arm64: 964 passed, zero failed and two inherited ignored tests. The confinement profile now permits only the Apple Rosetta runtime directory read-only; this does not prove native Intel hardware or the separately attached alpha.20 archive beyond its version smoke. |
 
