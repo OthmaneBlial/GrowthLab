@@ -13,7 +13,7 @@ to 1 MiB. The existing loopback/origin and remote-host authentication guards app
 | POST | `/briefs` | Create a private local analysis workspace from `{ "name": "…", "audience": "…", "goal": "…", "description": "…", "metric": "qualified_signup", "mode": "analyze_only" }`; no remote or provider request |
 | POST | `/repository-audit` | Inspect one public GitHub URL with a single unauthenticated metadata request; no clone, checkout, execution or workspace registration |
 | POST | `/repository-import` | Explicitly clone one public GitHub URL into a new local path and register it; existing `growthlab.yaml` is preserved, otherwise a supplied local brief is committed; no push or provider request |
-| GET | `/workspaces/{id}` | Read the recorded committed product context |
+| GET / PATCH | `/workspaces/{id}` | Read the recorded product context / update the validated local contract with `{ "config": { … }, "expectedSourceSnapshotCommit": "…" }`; the patch atomically writes `growthlab.yaml` without committing or pushing and is refused when the file drifted, hypotheses exist or a battle is ready/running |
 | GET / POST | `/workspaces/{id}/hypotheses` | List / create three UNTESTED starter hypotheses |
 | GET | `/workspaces/{id}/playbooks` | List saved local role-contract runs for this workspace |
 | POST | `/workspaces/{id}/playbooks/{role}` | Execute a deterministic role contract with optional ordered `{ "answers": [] }`; saves an UNTESTED local run and makes no provider request |

@@ -97,6 +97,14 @@ Import records the full HEAD commit and committed config, verifies the on-disk
 configuration agrees, and registers an inherited LocalProject with publication
 disabled. Existing repositories are never changed, committed or given a remote.
 
+The selected workspace settings panel can edit the local contract before a
+hypothesis map exists. GrowthLab validates the full schema, checks that the
+recorded source and `growthlab.yaml` still match, writes the file atomically and
+updates its local record. The file is intentionally left uncommitted for review;
+no remote or automatic commit is created. Edits are refused after hypotheses
+exist, while a battle is ready or running, or when the file changed outside
+GrowthLab.
+
 For a local folder that is not versioned yet, opt in explicitly after reviewing
 the configuration:
 
