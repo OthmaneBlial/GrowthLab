@@ -7,8 +7,8 @@ without contacting an analytics or agent provider.
 
 ## Current source line and binary evidence
 
-`v0.1.0-alpha.20` includes one manually validated executable archive and one
-cross-target archive whose structure was verified locally. The previous alpha.19
+`v0.1.0-alpha.20` includes one manually validated executable archive and two
+cross-target archives whose structure was verified locally. The previous alpha.19
 archive remains available in its release history:
 
 | Target | Asset | Evidence |
@@ -53,7 +53,7 @@ explicit read-only network check:
 python3 scripts/test-release-assets.py
 ```
 
-It compares GitHub's asset digests with downloaded bytes, validates both
+It compares GitHub's asset digests with downloaded bytes, validates all three
 checksum sidecars and runs the local archive safety/notices verifier. It does
 not contact an analytics or agent provider and does not turn a skipped Linux
 runtime into a support claim.
@@ -69,7 +69,7 @@ validated only after its binary has been built and run on that platform:
 | `x86_64-apple-darwin` | `.tar.xz` | Build and runtime proof pending |
 | `x86_64-unknown-linux-musl` | `.tar.xz` | **Built and structure-verified locally**; runtime proof pending |
 | `aarch64-unknown-linux-musl` | `.tar.xz` | Build and runtime proof pending |
-| `x86_64-pc-windows-gnu` | `.zip` | **Built and structure-verified locally**; runtime and release attachment pending |
+| `x86_64-pc-windows-gnu` | `.zip` | **Built and structure-verified locally**; exact alpha.20 archive attached, runtime proof pending |
 | `x86_64-pc-windows-msvc` | `.zip` / PowerShell installer | Build and runtime proof pending |
 
 The cargo-dist configuration preserves the intended portable target matrix and
