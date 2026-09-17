@@ -3,7 +3,8 @@
 The backend now prepares and executes a three-competitor landing-page battle.
 Each uses one frozen product commit, configuration and validation contract.
 This is a working CLI slice. [Selected apply/export and reports](delivery.md)
-extend it; the bundled visual demo and GrowthLab dashboard are still being built.
+extend it; the bundled visual demo and GrowthLab dashboard exercise the same
+backend through the local API.
 
 ## Prepare and inspect
 

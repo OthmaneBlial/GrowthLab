@@ -78,6 +78,11 @@ fi
 if [[ "$SKIP_BUILD" != 1 ]]; then
   if [[ "$TARGET" == "$HOST_TARGET" ]]; then
     cargo build --release --locked --bin growthlab
+  elif [[ "$TARGET" == *-unknown-linux-musl && -n "$(command -v cargo-zigbuild 2>/dev/null || true)" ]]; then
+    # cargo-zigbuild supplies a reproducible Zig linker for cross-target musl
+    # builds. Keep plain Cargo as the fallback so hosts without Zig get the
+    # native toolchain error instead of a hidden dependency installation.
+    cargo zigbuild --release --locked --target "$TARGET" --bin growthlab
   else
     cargo build --release --locked --target "$TARGET" --bin growthlab
   fi
