@@ -129,6 +129,22 @@ impl EvidenceRecord {
         if self.retrieved_at <= 0 {
             return Err(anyhow!("Evidence retrieval time must be positive"));
         }
+        if self
+            .supports_claims
+            .iter()
+            .chain(self.challenges_claims.iter())
+            .next()
+            .is_none()
+            || self
+                .supports_claims
+                .iter()
+                .chain(self.challenges_claims.iter())
+                .any(|claim| claim.trim().is_empty())
+        {
+            return Err(anyhow!(
+                "Evidence must support or challenge at least one non-empty claim"
+            ));
+        }
         for value in [
             self.title.as_str(),
             self.source.as_str(),
@@ -301,6 +317,40 @@ mod tests {
         let error = hypothesis.validate().unwrap_err().to_string();
         assert!(
             error.contains("Evidence requires"),
+            "unexpected error: {error}"
+        );
+    }
+
+    #[test]
+    fn hypothesis_validation_rejects_evidence_without_claim_links() {
+        let workspace = GrowthWorkspace {
+            project_id: "p".into(),
+            config: super::super::config::fixture(),
+            source_snapshot_commit: "a".repeat(40),
+            created_at: 1,
+        };
+        let mut hypothesis = starter_hypotheses(&workspace).remove(0);
+        hypothesis.evidence[0].supports_claims.clear();
+        let error = hypothesis.validate().unwrap_err().to_string();
+        assert!(
+            error.contains("at least one non-empty claim"),
+            "unexpected error: {error}"
+        );
+    }
+
+    #[test]
+    fn hypothesis_validation_rejects_blank_evidence_claim_links() {
+        let workspace = GrowthWorkspace {
+            project_id: "p".into(),
+            config: super::super::config::fixture(),
+            source_snapshot_commit: "a".repeat(40),
+            created_at: 1,
+        };
+        let mut hypothesis = starter_hypotheses(&workspace).remove(0);
+        hypothesis.evidence[0].supports_claims = vec!["   ".into()];
+        let error = hypothesis.validate().unwrap_err().to_string();
+        assert!(
+            error.contains("at least one non-empty claim"),
             "unexpected error: {error}"
         );
     }
