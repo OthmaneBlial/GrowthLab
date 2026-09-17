@@ -168,6 +168,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 - Guarded local workspace settings edits write the validated contract atomically before hypotheses are created and never create commits or remote changes
 - Localized static-preview, evidence and rubric detail copy across all six dashboard locales, with visible settings lock policy after hypotheses or active battles
 - Localized workspace and battle action/status copy across all six dashboard locale catalogs
+- Localized dashboard progress feedback and home status copy across all six dashboard locale catalogs
 
 | Validation | Current evidence |
 | --- | --- |
@@ -203,6 +204,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 | Editable workspace settings | **passed** — Focused API and configuration tests prove validated local writes, stale-file refusal, atomic replacement and refusal after hypotheses or active battles; UI exposes localized save/cancel controls without automatic commits or remotes |
 | Localized technical details and settings lifecycle | **passed** — Six locale catalogs cover static-preview evidence, render metadata and rubric detail labels; Chrome verified the edit control is enabled before hypotheses and disabled with an explicit Arabic lock explanation after the starter map is created |
 | Localized workspace and battle actions | **passed** — GrowthDashboard action and status labels for the experiment tree, battle execution, candidate inspection and selected delivery now use localized message keys; six catalogs define the shared keys, Chrome verified Spanish and Arabic controls, and the 174-test UI suite passes |
+| Localized dashboard progress feedback | **passed** — The six locale catalogs now cover dashboard busy states plus home onboarding, about, import and measurement status feedback; i18n, style, type, build and 174 UI tests pass, and Chrome verified the Spanish home flow with no browser warnings or errors |
 
 **Still ahead**
 
