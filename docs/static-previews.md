@@ -59,7 +59,13 @@ inspectable with the candidate commit, document SHA-256 and archive SHA-256.
 Artifact readers, comparison and recovery verify the metadata, archived source,
 document and PNG hashes. Comparisons can summarize available checks with the
 `static-render-hints-v1` rubric; its `OBSERVED` score remains an inspection aid,
-not a combined growth score.
+not a combined growth score. The bundled demo also has a local visual-regression
+smoke at `scripts/test-growth-visual-regression.py`. It compares all six sealed
+PNG captures with checked-in SHA-256 baselines for the pinned local Chromium
+renderer and both supported viewports. Baseline changes require an intentional
+fixture update and review; this smoke does not establish cross-browser
+equivalence, visual parity for arbitrary products or assistive-technology
+conformance.
 
 When navigation timing entries are present, comparisons also expose the
 separate `browser-timing-hints-v1` rubric. It summarizes DOM content loaded,
