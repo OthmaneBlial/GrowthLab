@@ -53,6 +53,47 @@ const growthKeys = [
   "growth_contract_parallel_variants",
   "growth_contract_baseline_commit",
   "growth_contract_sha",
+  "growth_digest_not_recorded",
+  "growth_evidence_mechanism",
+  "growth_evidence_outcome_contract",
+  "growth_evidence_success_threshold",
+  "growth_evidence_not_supplied",
+  "growth_evidence_skeptic_notes",
+  "growth_rubric_suggested_steps",
+  "growth_rubric_no_gaps",
+  "growth_rubric_no_structural_gaps",
+];
+const staticPreviewKeys = [
+  "growth_static_preview_evidence_failed",
+  "growth_static_preview_no_archive",
+  "growth_static_preview_not_configured",
+  "growth_static_preview_viewport_group",
+  "growth_static_preview_desktop",
+  "growth_static_preview_phone",
+  "growth_static_preview_sealed_source",
+  "growth_static_preview_checkpoint_source",
+  "growth_static_preview_note_captured",
+  "growth_static_preview_note_missing",
+  "growth_static_preview_iframe_title",
+  "growth_static_preview_captured_png",
+  "growth_static_preview_observed_render_check",
+  "growth_static_preview_viewport",
+  "growth_static_preview_matched",
+  "growth_static_preview_mismatched",
+  "growth_static_preview_horizontal_overflow",
+  "growth_static_preview_detected",
+  "growth_static_preview_none_detected",
+  "growth_static_preview_visible_copy",
+  "growth_static_preview_characters",
+  "growth_static_preview_dom_load",
+  "growth_static_preview_first_contentful_paint",
+  "growth_static_preview_source_limitations",
+  "growth_static_preview_candidate_commit",
+  "growth_static_preview_document_sha",
+  "growth_static_preview_archive_sha",
+  "growth_static_preview_checkpoint_sha",
+  "growth_static_preview_source_summary",
+  "growth_static_preview_alt",
 ];
 const measurementKeys = [
   "growth_measure_title",
@@ -125,15 +166,23 @@ const settingsKeys = [
   "growth_settings_saving",
   "growth_settings_cancel",
   "growth_settings_saved",
+  "growth_settings_policy_loading",
+  "growth_settings_policy_hypotheses",
+  "growth_settings_policy_battle",
+  "growth_settings_policy_available",
 ];
 
 test("GrowthLab onboarding shell uses every localized growth message", async () => {
   const source = await readFile(new URL("src/growth/GrowthDashboard.tsx", uiRoot), "utf8");
+  const staticPreviewSource = await readFile(new URL("src/growth/StaticPreviewPanel.tsx", uiRoot), "utf8");
   const measurementSource = await readFile(new URL("src/growth/MeasurementPanel.tsx", uiRoot), "utf8");
   const settingsSource = await readFile(new URL("src/growth/GrowthSettingsPanel.tsx", uiRoot), "utf8");
   const settings = JSON.parse(await readFile(new URL("project.inlang/settings.json", uiRoot), "utf8"));
   for (const key of growthKeys) {
     assert.match(source, new RegExp(key), `${key} should be rendered by GrowthDashboard`);
+  }
+  for (const key of staticPreviewKeys) {
+    assert.match(staticPreviewSource, new RegExp(key), `${key} should be rendered by StaticPreviewPanel`);
   }
   for (const key of measurementKeys) {
     assert.match(measurementSource, new RegExp(key), `${key} should be rendered by MeasurementPanel`);
@@ -143,7 +192,7 @@ test("GrowthLab onboarding shell uses every localized growth message", async () 
   }
   for (const locale of settings.locales) {
     const catalog = JSON.parse(await readFile(new URL(`messages/${locale}.json`, uiRoot), "utf8"));
-    for (const key of [...growthKeys, ...measurementKeys, ...settingsKeys]) {
+    for (const key of [...growthKeys, ...staticPreviewKeys, ...measurementKeys, ...settingsKeys]) {
       assert.equal(typeof catalog[key], "string", `${locale} should define ${key}`);
       assert.ok(catalog[key].trim(), `${locale} should not leave ${key} empty`);
     }

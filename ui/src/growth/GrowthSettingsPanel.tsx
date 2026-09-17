@@ -19,9 +19,12 @@ const LOCALE_LABELS: Record<Locale, string> = {
 type GrowthSettingsPanelProps = {
   workspaces?: Workspace[];
   activeWorkspace?: Workspace;
+  hypothesisCount?: number;
+  hasActiveBattle?: boolean;
+  policyReady?: boolean;
 };
 
-export function GrowthSettingsPanel({ workspaces = [], activeWorkspace }: GrowthSettingsPanelProps) {
+export function GrowthSettingsPanel({ workspaces = [], activeWorkspace, hypothesisCount, hasActiveBattle = false, policyReady = true }: GrowthSettingsPanelProps) {
   const client = useQueryClient();
   const locale = useLocale();
   const [theme, setTheme] = useThemePreference();
@@ -32,6 +35,14 @@ export function GrowthSettingsPanel({ workspaces = [], activeWorkspace }: Growth
   const [notice, setNotice] = useState<string | null>(null);
   const sources = useQuery({ queryKey: workspaceKey("growth", "measurement-sources"), queryFn: ({ signal }) => growth.measurementSources(signal) });
   const config = activeWorkspace?.config;
+  const editBlocked = policyReady && (!!hypothesisCount || hasActiveBattle);
+  const editPolicyMessage = !policyReady
+    ? m.growth_settings_policy_loading()
+    : hypothesisCount
+      ? m.growth_settings_policy_hypotheses()
+      : hasActiveBattle
+        ? m.growth_settings_policy_battle()
+        : m.growth_settings_policy_available();
   useEffect(() => {
     if (!editing) setDraft(config ? structuredClone(config) : null);
   }, [config, editing]);
@@ -77,7 +88,8 @@ export function GrowthSettingsPanel({ workspaces = [], activeWorkspace }: Growth
       <div><span className="growth-eyebrow">{m.growth_settings_integrations_title()}</span><p>{m.growth_settings_integrations_body()}</p>{sources.data && <p className="growth-muted">{sources.data.filter((source) => source.status === "available").length} {m.growth_settings_local_source_count()} · {sources.data.filter((source) => source.status === "planned").length} {m.growth_settings_planned_source_count()}</p>}</div>
     </div>
     <div className="growth-settings-contract">
-      <div className="growth-settings-contract-heading"><div><span className="growth-eyebrow">{m.growth_settings_contract_title()}</span><p>{m.growth_settings_contract_intro()}</p></div>{config && !editing && <button type="button" className="growth-button growth-button-secondary" onClick={() => { setDraft(structuredClone(config)); setEditing(true); setError(null); setNotice(null); }}>{m.growth_settings_edit()}</button>}{!editing && <span className="growth-settings-readonly">{m.growth_settings_read_only()}</span>}</div>
+      <div className="growth-settings-contract-heading"><div><span className="growth-eyebrow">{m.growth_settings_contract_title()}</span><p>{m.growth_settings_contract_intro()}</p></div>{config && !editing && <button type="button" className="growth-button growth-button-secondary" disabled={editBlocked || !policyReady} aria-describedby="growth-settings-policy" onClick={() => { setDraft(structuredClone(config)); setEditing(true); setError(null); setNotice(null); }}>{m.growth_settings_edit()}</button>}{!editing && <span className="growth-settings-readonly">{m.growth_settings_read_only()}</span>}</div>
+      {config && !editing && <p id="growth-settings-policy" className="growth-muted">{editPolicyMessage}</p>}
       {config && editing && draft ? <form className="growth-settings-editor" onSubmit={(event) => void save(event)}>
         <p className="growth-muted">{m.growth_settings_edit_notice()}</p>
         <div className="growth-settings-editor-grid">
