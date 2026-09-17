@@ -16,8 +16,9 @@ archive remains available in its release history:
 | macOS arm64 | [`growthlab-v0.1.0-alpha.20-macos-arm64.tar.gz`](https://github.com/OthmaneBlial/GrowthLab/releases/download/v0.1.0-alpha.20/growthlab-v0.1.0-alpha.20-macos-arm64.tar.gz) | Extracted, checksum-checked, and run locally with `--no-telemetry version`; `growthlab 0.1.0-alpha.20` reported the development build channel. |
 | Linux x86_64 (musl) | [`growthlab-v0.1.0-alpha.20-linux-x86_64-musl.tar.gz`](https://github.com/OthmaneBlial/GrowthLab/releases/download/v0.1.0-alpha.20/growthlab-v0.1.0-alpha.20-linux-x86_64-musl.tar.gz) | Built from the exact alpha.20 tag with `cargo-zigbuild`; checksum, traversal/link safety, required notices and archive structure passed the offline verifier. The ELF was not run on Linux here. |
 
-The alpha.20 source line also produces local `x86_64-unknown-linux-musl` and
-`x86_64-pc-windows-gnu` packages with `cargo-zigbuild` and Zig. Their checksums,
+The current `main` source line (still versioned alpha.20) also produces local
+`x86_64-unknown-linux-musl` and `x86_64-pc-windows-gnu` packages with
+`cargo-zigbuild` and Zig. Their checksums,
 archive safety and required notices passed the offline verifier; neither binary
 was run on its target operating system here. They are evidence of reproducible
 cross-target packages, not runtime or installer proof. The Linux archive is
