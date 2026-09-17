@@ -46,11 +46,13 @@ pwsh -NoLogo -NoProfile -NonInteractive -Command \
   '$p = Get-Content -Raw target/distrib/growthlab-installer.ps1; [System.Management.Automation.Language.Parser]::ParseInput($p, [ref]$null, [ref]$null) | Out-Null'
 ```
 
-The 2026-09-17 local generation produced `growthlab-installer.sh` (55,250
-bytes) and `growthlab-installer.ps1` (22,419 bytes), both syntax-checked. The
-shell installer was also run end to end against a local HTTP server serving the
+The 2026-09-17 local generation produced `growthlab-installer.sh` and
+`growthlab-installer.ps1`, both syntax-checked. The target matrix includes the
+published Windows GNU archive, so the PowerShell template selects the GNU
+asset while MSVC remains intentionally absent until a Windows SDK runner can
+build and validate it. The shell installer was also run end to end against a local HTTP server serving the
 `aarch64-apple-darwin` archive (SHA-256
-`247ce54db01d2c1f6fb881dd4647789955ee01b715be397a60d2a5c495ba113b`): it
+`0e5e0a0275f24b794938af9862efb1868d32e327e0bde8ab6d534226e3f672d4`): it
 verified the sidecar, installed both `growthlab` and `orx` into an isolated
 prefix, and reported version `0.1.0-alpha.20` without editing the test profile.
 The templates still remain local evidence only: the release lacks a Windows
@@ -87,8 +89,10 @@ runtime into a support claim.
 
 ## Target matrix
 
-The release configuration names the targets below, but a target is called
-validated only after its binary has been built and run on that platform:
+The release configuration names the currently reproducible targets below, but a
+target is called validated only after its binary has been built and run on that
+platform. MSVC is intentionally documented as a future target rather than
+included in the current cargo-dist matrix until its runner is available:
 
 | Target | Packaging shape | Current state |
 | --- | --- | --- |
