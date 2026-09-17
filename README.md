@@ -196,6 +196,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 - Bundled demo visual-regression smoke matches six checked-in local Chromium PNG baselines with archive metadata verification
 - Bundled demo Firefox visual-regression smoke matches six additional PNG baselines with viewport and layout invariant verification
 - Bundled demo accessibility-tree and keyboard smoke verifies named controls, headings, labels, focus stops and overflow with no provider invocation
+- Public alpha.20 release assets have a read-only verifier for GitHub digests, checksum sidecars and archive safety
 
 | Validation | Current evidence |
 | --- | --- |
@@ -240,6 +241,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 | Bundled visual regression smoke | **passed** — The real bundled demo's three sealed variants match six checked-in SHA-256 PNG baselines at 1280x900 desktop and 390x844 phone; archive dimensions, digests and the no-provider boundary are verified locally. This is a pinned local renderer smoke, not cross-browser parity or assistive-technology conformance. |
 | Bundled Firefox visual regression smoke | **passed** — The real bundled demo's three sealed preview documents match six additional checked-in SHA-256 PNG baselines in Firefox 139.0.4 at 1280x900 desktop and 390x844 phone; viewport dimensions, overflow, named controls, heading-level continuity and the no-provider boundary are verified locally. Safari, other browser versions and assistive-technology conformance remain unverified. |
 | Bundled accessibility-tree and keyboard smoke | **passed** — A real recorded bundled battle rendered in local Chromium; 19 DOM and AX interactive controls were named, one h1 had no skipped level, IDs/images/forms and overflow passed, and 30 Tab events reached visible focus stops without invoking a provider. The optional --output JSON handoff records all role/name pairs and providerInvoked=false. This remains a local structure and keyboard smoke, not screen-reader, cross-browser or WCAG evidence. |
+| Public release asset verification | **passed** — The read-only scripts/test-release-assets.py check downloaded both alpha.20 archive/checksum pairs, matched GitHub asset digests and sidecars, and passed archive safety/notices verification; macOS runtime passed locally and Linux runtime was skipped on the macOS host. |
 
 **Still ahead**
 

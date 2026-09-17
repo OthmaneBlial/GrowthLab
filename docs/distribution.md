@@ -43,6 +43,18 @@ only when the archive target matches the current operating system and CPU; for
 other targets it still verifies the archive structure and reports runtime as
 skipped.
 
+To verify the assets currently attached to the public alpha.20 release, run the
+explicit read-only network check:
+
+```sh
+python3 scripts/test-release-assets.py
+```
+
+It compares GitHub's asset digests with downloaded bytes, validates both
+checksum sidecars and runs the local archive safety/notices verifier. It does
+not contact an analytics or agent provider and does not turn a skipped Linux
+runtime into a support claim.
+
 ## Target matrix
 
 The release configuration names the targets below, but a target is called
