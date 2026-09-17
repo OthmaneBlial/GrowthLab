@@ -1729,5 +1729,7 @@
   "growth_rubric_limitation_render_comparison": "No screenshot comparison, screen-reader run, interaction test, network waterfall or growth outcome is included.",
   "growth_rubric_limitation_performance_timings": "Timings come from one sanitized static document in the locally installed Chromium build; when file:// does not expose a paint entry, the first-paint value is a first rendered frame proxy. They are not field data or a Core Web Vital.",
   "growth_rubric_limitation_performance_thresholds": "The thresholds are heuristic and do not account for network conditions, device diversity, CPU contention or repeat-view caching.",
-  "growth_rubric_limitation_performance_tools": "No Lighthouse audit, accessibility audit, visual regression comparison or growth outcome is included."
+  "growth_rubric_limitation_performance_tools": "No Lighthouse audit, accessibility audit, visual regression comparison or growth outcome is included.",
+  "growth_battle_include_visuals": "Embed verified page captures",
+  "growth_battle_include_visuals_note": "Adds archived desktop and phone images to the report. They are render artifacts, not accessibility, performance or growth results."
 }

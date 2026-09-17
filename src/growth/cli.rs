@@ -364,6 +364,10 @@ pub struct ReportArgs {
     pub public_goal: Option<String>,
     #[arg(long)]
     pub without_attribution: bool,
+    /// Explicitly embed verified desktop/phone static-preview PNGs when present.
+    /// Omitted by default because captures can contain product copy.
+    #[arg(long)]
+    pub include_visuals: bool,
 }
 
 pub fn select(args: SelectArgs) -> Result<()> {
@@ -393,6 +397,7 @@ pub fn report(args: ReportArgs) -> Result<()> {
         include_context: args.include_context,
         public_goal: args.public_goal,
         without_attribution: args.without_attribution,
+        include_visuals: args.include_visuals,
     };
     let path = super::report::export(
         &store,
@@ -402,7 +407,7 @@ pub fn report(args: ReportArgs) -> Result<()> {
         matches!(args.format, ReportFormat::Markdown),
     )?;
     print_json(
-        &serde_json::json!({"output":path,"contextDisclosed":options.include_context,
+        &serde_json::json!({"output":path,"contextDisclosed":options.include_context,"visualsDisclosed":options.include_visuals,
         "outcomeProvenance":"UNTESTED","privacy":"Private metadata, prompts and raw logs are omitted. Explicit context export may contain identifying names/paths."}),
     )
 }

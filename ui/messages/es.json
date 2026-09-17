@@ -1729,5 +1729,7 @@
   "growth_rubric_limitation_render_comparison": "No incluye comparación de capturas, recorrido con lector de pantalla, prueba de interacción, cascada de red ni resultado de crecimiento.",
   "growth_rubric_limitation_performance_timings": "Los tiempos proceden de un documento estático sanitizado en el Chromium instalado localmente; cuando file:// no expone una entrada de pintado, el primer pintado es un proxy del primer fotograma renderizado. No son datos reales ni un Core Web Vital.",
   "growth_rubric_limitation_performance_thresholds": "Los umbrales son heurísticos y no consideran condiciones de red, diversidad de dispositivos, carga de CPU ni caché de visitas repetidas.",
-  "growth_rubric_limitation_performance_tools": "No incluye auditoría Lighthouse, auditoría de accesibilidad, comparación de regresión visual ni resultado de crecimiento."
+  "growth_rubric_limitation_performance_tools": "No incluye auditoría Lighthouse, auditoría de accesibilidad, comparación de regresión visual ni resultado de crecimiento.",
+  "growth_battle_include_visuals": "Incluir capturas verificadas",
+  "growth_battle_include_visuals_note": "Añade al informe las imágenes de escritorio y teléfono archivadas. Son artefactos de renderizado, no resultados de accesibilidad, rendimiento o crecimiento."
 }

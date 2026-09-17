@@ -42,6 +42,8 @@ const growthKeys = [
   "growth_battle_download_html",
   "growth_battle_download_markdown",
   "growth_battle_inspect_diff",
+  "growth_battle_include_visuals",
+  "growth_battle_include_visuals_note",
   "growth_contract_summary",
   "growth_contract_configured_checks",
   "growth_contract_allowed_paths",

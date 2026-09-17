@@ -969,6 +969,8 @@ struct ReportQuery {
     public_goal: Option<String>,
     #[serde(default)]
     without_attribution: bool,
+    #[serde(default)]
+    include_visuals: bool,
     format: Option<String>,
 }
 async fn battle_report(
@@ -987,6 +989,7 @@ async fn battle_report(
                 include_context: query.include_context,
                 public_goal: query.public_goal,
                 without_attribution: query.without_attribution,
+                include_visuals: query.include_visuals,
             },
         )
         .map_err(domain_error)?;

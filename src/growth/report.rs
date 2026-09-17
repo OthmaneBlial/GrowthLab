@@ -4,11 +4,14 @@ use super::archive;
 use super::battle_model::ValidationRecord;
 use super::evaluation::{PageQualityRubric, RenderRubric, SeoRubric};
 use super::model::{Confidence, Provenance};
+use super::preview;
 use super::redaction::{contains_secret, redact};
 use super::selection::{self, SelectionStatus};
 use crate::error::{anyhow, Result};
 use crate::store::{now_ms, Store};
+use base64::Engine as _;
 use serde::Serialize;
+use std::collections::BTreeMap;
 use std::path::Path;
 
 #[derive(Debug, Default)]
@@ -16,6 +19,9 @@ pub struct ReportOptions {
     pub include_context: bool,
     pub public_goal: Option<String>,
     pub without_attribution: bool,
+    /// Embed verified static-preview PNGs in the exported report. This is an
+    /// explicit disclosure because the captures may contain product copy.
+    pub include_visuals: bool,
 }
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -64,6 +70,18 @@ pub struct ReportVariant {
     pub performance: Option<RenderRubric>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub accessibility: Option<RenderRubric>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub screenshots: Vec<ReportScreenshot>,
+}
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReportScreenshot {
+    pub viewport: String,
+    pub width: u32,
+    pub height: u32,
+    pub digest: String,
+    /// A data URL keeps the HTML and Markdown reports self-contained.
+    pub data_url: String,
 }
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -83,6 +101,43 @@ pub struct BattleReport {
     pub selected_candidate: Option<usize>,
     pub selection_action: Option<String>,
     pub attribution: bool,
+    pub visuals_disclosed: bool,
+}
+
+fn screenshots(
+    files: Option<&BTreeMap<String, Vec<u8>>>,
+    include_visuals: bool,
+) -> Result<Vec<ReportScreenshot>> {
+    if !include_visuals {
+        return Ok(Vec::new());
+    }
+    let Some(files) = files else {
+        return Ok(Vec::new());
+    };
+    let mut captures = Vec::new();
+    for (viewport, width, height, path) in [
+        ("desktop", 1280_u32, 900_u32, preview::SCREENSHOT_DESKTOP),
+        ("phone", 390_u32, 844_u32, preview::SCREENSHOT_PHONE),
+    ] {
+        let Some(bytes) = files.get(path) else {
+            continue;
+        };
+        if bytes.len() > 4 * 1024 * 1024 {
+            return Err(anyhow!(
+                "Archived report screenshot exceeds the 4 MiB limit"
+            ));
+        }
+        let digest = archive::digest(bytes);
+        let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
+        captures.push(ReportScreenshot {
+            viewport: viewport.into(),
+            width,
+            height,
+            digest,
+            data_url: format!("data:image/png;base64,{encoded}"),
+        });
+    }
+    Ok(captures)
 }
 fn check(check: &ValidationRecord, index: usize, include_context: bool) -> ReportCheck {
     ReportCheck {
@@ -195,6 +250,7 @@ pub fn build(store: &Store, id: &str, options: &ReportOptions) -> Result<BattleR
             .unwrap_or_default();
         let run = sealed.map(|sealed| &sealed.run);
         let (files_changed, lines_added, lines_removed) = diff_stats(&diff);
+        let screenshots = screenshots(files.as_ref(), options.include_visuals)?;
         variants.push(ReportVariant {
             number: index + 1,
             hypothesis_id: row.hypothesis_id.clone(),
@@ -245,6 +301,7 @@ pub fn build(store: &Store, id: &str, options: &ReportOptions) -> Result<BattleR
             render: row.render.clone(),
             performance: row.performance.clone(),
             accessibility: row.accessibility.clone(),
+            screenshots,
         });
     }
     Ok(BattleReport {
@@ -268,6 +325,7 @@ pub fn build(store: &Store, id: &str, options: &ReportOptions) -> Result<BattleR
             selection::SelectionAction::Apply=>"Copied to product working tree",
             selection::SelectionAction::Export=>"Exported as a local patch",
         }.into()), variants,attribution:!options.without_attribution,
+        visuals_disclosed: options.include_visuals,
     })
 }
 fn html(text: &str) -> String {
@@ -299,6 +357,9 @@ fn provenance(value: Provenance) -> &'static str {
 }
 pub fn markdown(report: &BattleReport) -> String {
     let mut out = format!("# Growth Battle report\n\n{}\n\n**Recommended candidates**, not measured growth winners.\n\n",md(&report.goal));
+    if report.visuals_disclosed {
+        out.push_str("Verified static-preview captures are embedded below because visual disclosure was explicitly requested. They are render artifacts, not accessibility, performance or growth results.\n\n");
+    }
     match report.selected_candidate {
         Some(number) => out.push_str(&format!(
             "Selected: **Variant {number:02}** — {}.\n\n",
@@ -360,6 +421,24 @@ pub fn markdown(report: &BattleReport) -> String {
             md(&row.label),row.files_changed,row.lines_added,row.lines_removed,md(&row.confidence.rationale)));
         if let Some(summary) = &row.implementation_summary {
             out.push_str(&format!("{}\n\n", md(summary)));
+        }
+        if !row.screenshots.is_empty() {
+            out.push_str("### Render captures\n\n");
+            for screenshot in &row.screenshots {
+                out.push_str(&format!(
+                    "![{} {} render capture ({}×{})]({})\n\n",
+                    md(&row.label),
+                    md(&screenshot.viewport),
+                    screenshot.width,
+                    screenshot.height,
+                    screenshot.data_url
+                ));
+                out.push_str(&format!(
+                    "`{}` capture · SHA-256 `{}` · OBSERVED local render artifact.\n\n",
+                    md(&screenshot.viewport),
+                    md(&screenshot.digest)
+                ));
+            }
         }
         if let Some(rubric) = &row.rubric {
             out.push_str(&format!(
@@ -859,6 +938,23 @@ pub fn document(report: &BattleReport) -> String {
                 html(summary)
             ));
         }
+        if !row.screenshots.is_empty() {
+            out.push_str("<section class=\"captures\" aria-label=\"Verified render captures\"><h4>Render captures</h4><p>Explicitly disclosed local artifacts; they are not accessibility, performance or growth results.</p><div class=\"capture-grid\">");
+            for screenshot in &row.screenshots {
+                out.push_str(&format!(
+                    "<figure><img src=\"{}\" width=\"{}\" height=\"{}\" alt=\"{} {} render capture\"><figcaption>{} × {} · OBSERVED · SHA-256 {}</figcaption></figure>",
+                    screenshot.data_url,
+                    screenshot.width,
+                    screenshot.height,
+                    html(&row.label),
+                    html(&screenshot.viewport),
+                    screenshot.width,
+                    screenshot.height,
+                    html(&screenshot.digest)
+                ));
+            }
+            out.push_str("</div></section>");
+        }
         out.push_str(&format!(r#"<p class="confidence"><strong>Low confidence</strong>{}</p><details class="seal"><summary>Inspect run seal</summary><dl><dt>Run SHA-256</dt><dd>{}</dd><dt>Candidate commit</dt><dd>{}</dd><dt>Adapter</dt><dd>{}</dd></dl></details></article>"#,
             html(&row.confidence.rationale),html(row.archive_digest.as_deref().unwrap_or("Not sealed")),html(row.candidate_commit.as_deref().unwrap_or("Unavailable")),html(row.harness.as_deref().unwrap_or("Not executed"))));
     }
@@ -892,4 +988,35 @@ pub fn export(
         document(&report)
     };
     selection::write_new_file(output, text.as_bytes())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn visual_disclosure_is_opt_in_and_self_contained() {
+        let files = BTreeMap::from([(
+            preview::SCREENSHOT_DESKTOP.to_owned(),
+            b"png bytes".to_vec(),
+        )]);
+        assert!(screenshots(Some(&files), false).unwrap().is_empty());
+        let captures = screenshots(Some(&files), true).unwrap();
+        assert_eq!(captures.len(), 1);
+        assert_eq!(captures[0].viewport, "desktop");
+        assert_eq!(captures[0].width, 1280);
+        assert_eq!(captures[0].height, 900);
+        assert_eq!(captures[0].digest, archive::digest(b"png bytes"));
+        assert_eq!(captures[0].data_url, "data:image/png;base64,cG5nIGJ5dGVz");
+    }
+
+    #[test]
+    fn oversized_visual_disclosure_is_refused() {
+        let files = BTreeMap::from([(
+            preview::SCREENSHOT_PHONE.to_owned(),
+            vec![0_u8; 4 * 1024 * 1024 + 1],
+        )]);
+        let error = screenshots(Some(&files), true).unwrap_err().to_string();
+        assert!(error.contains("4 MiB limit"));
+    }
 }

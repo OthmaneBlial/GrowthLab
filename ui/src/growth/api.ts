@@ -170,9 +170,10 @@ export const growth = {
   preview: (variantId: string) => request<ApplyPreview>(`/variants/${id(variantId)}/apply-preview`),
   apply: (variantId: string) => request<Selection>(`/variants/${id(variantId)}/apply`, "POST", { confirmed: true }),
   export: (variantId: string, path: string) => request<Selection>(`/variants/${id(variantId)}/export`, "POST", { path }),
-  report: async (battleId: string, format: "html" | "markdown") => {
+  report: async (battleId: string, format: "html" | "markdown", includeVisuals = false) => {
     const scope = workspaceScope();
-    const blob = await (await response(`/battles/${id(battleId)}/report?format=${format}`)).blob();
+    const visuals = includeVisuals ? "&includeVisuals=true" : "";
+    const blob = await (await response(`/battles/${id(battleId)}/report?format=${format}${visuals}`)).blob();
     if (!isCurrentScope(scope)) throw new DOMException("Workspace changed", "AbortError");
     return blob;
   },

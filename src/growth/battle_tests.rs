@@ -785,6 +785,11 @@ async fn reports_withhold_private_context_escape_explicit_context_and_verify_sea
     let options = super::report::ReportOptions::default();
     let report = super::report::build(&fixture.store, &battle.id, &options).unwrap();
     assert_eq!(report.selected_candidate, Some(1));
+    assert!(!report.visuals_disclosed);
+    assert!(report
+        .variants
+        .iter()
+        .all(|variant| variant.screenshots.is_empty()));
     let output = super::report::document(&report);
     let markdown = super::report::markdown(&report);
     let json = serde_json::to_string(&report).unwrap();
@@ -819,6 +824,7 @@ async fn reports_withhold_private_context_escape_explicit_context_and_verify_sea
             include_context: true,
             without_attribution: true,
             public_goal: None,
+            include_visuals: false,
         },
     )
     .unwrap();

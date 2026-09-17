@@ -140,8 +140,11 @@ See [delivery.md](delivery.md) for refusals and receipt semantics.
 
 HTML and Markdown downloads omit private product names, goals, paths, raw logs
 and prompts by default. They retain provenance, check results, selection and
-reproducibility digests. Explicit context disclosure and removable attribution
-are available through the report API and CLI; review disclosed reports before sharing.
+reproducibility digests. Explicit context disclosure, removable attribution and
+opt-in verified desktop/phone captures are available through the report API and
+CLI (`includeVisuals=true` or `--include-visuals`); review disclosed reports
+before sharing. Captures are render artifacts, not accessibility, performance
+or growth results.
 
 ## Boundaries and remaining work
 

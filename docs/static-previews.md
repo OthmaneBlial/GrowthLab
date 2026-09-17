@@ -70,8 +70,10 @@ heuristic from one sanitized local run, not Lighthouse, Core Web Vitals,
 accessibility, visual regression, real-user performance or growth evidence.
 
 Private reports do not include these source documents or renderings by default.
-The dashboard exposes a verified desktop PNG only inside the local candidate
-inspector; explicit visual report disclosure remains pending.
+The CLI `--include-visuals` flag or report API `includeVisuals=true` query
+explicitly embeds verified desktop and phone PNGs when they are archived.
+Embedded images remain render artifacts, not visual-regression, accessibility,
+performance or growth results.
 
 Real manual captures show the [desktop candidate](screenshots/growth-preview-desktop.jpg),
 [deliberately failed candidate](screenshots/growth-preview-failed.jpg) and

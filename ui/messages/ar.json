@@ -1729,5 +1729,7 @@
   "growth_rubric_limitation_render_comparison": "لا تتضمن العملية مقارنة لقطات أو اختبار قارئ شاشة أو اختبار تفاعل أو شلال شبكة أو نتيجة نمو.",
   "growth_rubric_limitation_performance_timings": "تأتي التوقيتات من مستند ثابت منظف في Chromium المثبت محلياً؛ وعندما لا يعرض file:// إدخال الرسم، تكون قيمة الرسم الأول بديلاً لأول إطار مرئي. ليست بيانات ميدانية ولا Core Web Vital.",
   "growth_rubric_limitation_performance_thresholds": "الحدود إرشادية ولا تراعي ظروف الشبكة أو تنوع الأجهزة أو ضغط CPU أو التخزين المؤقت للزيارات المتكررة.",
-  "growth_rubric_limitation_performance_tools": "لا يتضمن الفحص تدقيق Lighthouse أو تدقيق إمكانية الوصول أو مقارنة تراجع بصري أو نتيجة نمو."
+  "growth_rubric_limitation_performance_tools": "لا يتضمن الفحص تدقيق Lighthouse أو تدقيق إمكانية الوصول أو مقارنة تراجع بصري أو نتيجة نمو.",
+  "growth_battle_include_visuals": "تضمين لقطات الصفحة المتحققة",
+  "growth_battle_include_visuals_note": "يضيف صور سطح المكتب والهاتف المؤرشفة إلى التقرير. إنها أدلة عرض وليست نتائج لإمكانية الوصول أو الأداء أو النمو."
 }
