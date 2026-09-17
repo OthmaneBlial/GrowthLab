@@ -170,6 +170,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 - Localized workspace and battle action/status copy across all six dashboard locale catalogs
 - Localized dashboard onboarding, audit and auxiliary action/status copy across all six dashboard locale catalogs
 - Localized role labels, editor metadata and execution option copy across all six dashboard locale catalogs
+- Structured localized playbook titles, questions, outputs and guardrails across all six dashboard locale catalogs
 
 | Validation | Current evidence |
 | --- | --- |
@@ -207,13 +208,14 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 | Localized workspace and battle actions | **passed** — GrowthDashboard action and status labels for the experiment tree, battle execution, candidate inspection and selected delivery now use localized message keys; six catalogs define the shared keys, Chrome verified Spanish and Arabic controls, and the 174-test UI suite passes |
 | Localized auxiliary dashboard copy | **passed** — The six locale catalogs now cover dashboard busy states, home onboarding, public page and repository audit controls, playbook controls and execution status feedback; i18n, style, type, build and 174 UI tests pass, and Chrome verified the Spanish home flow with no browser warnings or errors |
 | Localized role and metadata copy | **passed** — Role names, hypothesis editor labels, execution choices, check metadata and delivery notices now use the six locale catalogs; i18n, style, type, build and 174 UI tests pass, and Chrome verified Spanish role labels and footer copy |
+| Localized playbook content | **passed** — The ten role playbooks now map titles, focus, summaries, questions, outputs, guardrails and saved-run follow-up text through locale catalogs; i18n, style, type, build and 174 UI tests pass, and Chrome verified Spanish playbook content |
 
 **Still ahead**
 
 - Provider adapters
 - Full visual regression and assistive-technology accessibility evaluation
 - Native-agent battle verification and provider-specific launcher registration
-- Dynamic playbook and audit result content remains source-language until structured catalog mapping is added
+- Dynamic SEO/audit result dimensions and user-generated run content remain source-language until structured mapping is added
 - Cross-platform runtime proof and release-attached portable binaries/installers
 <!-- project-status:end -->
 
