@@ -15,14 +15,16 @@ archive remains available in its release history:
 | --- | --- | --- |
 | macOS arm64 | [`growthlab-v0.1.0-alpha.20-macos-arm64.tar.gz`](https://github.com/OthmaneBlial/GrowthLab/releases/download/v0.1.0-alpha.20/growthlab-v0.1.0-alpha.20-macos-arm64.tar.gz) | Extracted, checksum-checked, and run locally with `--no-telemetry version`; `growthlab 0.1.0-alpha.20` reported the development build channel. |
 | Linux x86_64 (musl) | [`growthlab-v0.1.0-alpha.20-linux-x86_64-musl.tar.gz`](https://github.com/OthmaneBlial/GrowthLab/releases/download/v0.1.0-alpha.20/growthlab-v0.1.0-alpha.20-linux-x86_64-musl.tar.gz) | Built from the exact alpha.20 tag with `cargo-zigbuild`; checksum, traversal/link safety, required notices and archive structure passed the offline verifier. The ELF was not run on Linux here. |
+| Windows x86_64 (GNU) | [`growthlab-v0.1.0-alpha.20-windows-x86_64-gnu.zip`](https://github.com/OthmaneBlial/GrowthLab/releases/download/v0.1.0-alpha.20/growthlab-v0.1.0-alpha.20-windows-x86_64-gnu.zip) | Built from the exact alpha.20 tag with `cargo-zigbuild`; checksum, traversal/link safety, required notices and ZIP structure passed the offline verifier. The executable was not run on Windows here. |
 
 The current `main` source line (still versioned alpha.20) also produces local
 `x86_64-unknown-linux-musl` and `x86_64-pc-windows-gnu` packages with
 `cargo-zigbuild` and Zig. Their checksums,
 archive safety and required notices passed the offline verifier; neither binary
 was run on its target operating system here. They are evidence of reproducible
-cross-target packages, not runtime or installer proof. The Linux archive is
-attached to alpha.20; the Windows package remains a local structure check.
+cross-target packages, not runtime or installer proof. The exact-tag Linux and
+Windows GNU archives are attached to alpha.20; the current-main packages remain
+separate reproducibility checks.
 
 The archives are unsigned and not notarized. They are CLI archives rather than
 desktop installers. Linux and Windows runtime behavior remains unverified on the

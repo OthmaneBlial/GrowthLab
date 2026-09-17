@@ -29,6 +29,10 @@ ASSET_PAIRS = (
         "growthlab-v0.1.0-alpha.20-linux-x86_64-musl.tar.gz",
         "growthlab-v0.1.0-alpha.20-linux-x86_64-musl.tar.gz.sha256",
     ),
+    (
+        "growthlab-v0.1.0-alpha.20-windows-x86_64-gnu.zip",
+        "growthlab-v0.1.0-alpha.20-windows-x86_64-gnu.zip.sha256",
+    ),
 )
 
 

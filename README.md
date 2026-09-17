@@ -182,7 +182,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 - Deterministic local CLI packaging with complete checked-in license notices and offline archive verification
 - Localized GrowthLab battle/detail inspection, decision and report labels follow all six locale catalogs
 - Local x86_64 Linux musl archive built and structure-verified with cargo-zigbuild; runtime remains unverified
-- Local x86_64 Windows GNU ZIP packaging is deterministic and structure-verified; runtime and release attachment remain unverified
+- Local x86_64 Windows GNU ZIP packaging is deterministic and structure-verified; the exact alpha.20 tag archive is attached, with runtime still unverified
 - Typed read-only measurement adapter boundary with the local CSV implementation
 - Guarded local workspace settings edits write the validated contract atomically before hypotheses are created and never create commits or remote changes
 - Localized static-preview, evidence and rubric detail copy across all six dashboard locales, with visible settings lock policy after hypotheses or active battles
@@ -243,8 +243,8 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 | Bundled visual regression smoke | **passed** — The real bundled demo's three sealed variants match six checked-in SHA-256 PNG baselines at 1280x900 desktop and 390x844 phone; archive dimensions, digests and the no-provider boundary are verified locally. This is a pinned local renderer smoke, not cross-browser parity or assistive-technology conformance. |
 | Bundled Firefox visual regression smoke | **passed** — The real bundled demo's three sealed preview documents match six additional checked-in SHA-256 PNG baselines in Firefox 139.0.4 at 1280x900 desktop and 390x844 phone; viewport dimensions, overflow, named controls, heading-level continuity and the no-provider boundary are verified locally. Safari, other browser versions and assistive-technology conformance remain unverified. |
 | Bundled accessibility-tree and keyboard smoke | **passed** — A real recorded bundled battle rendered in local Chromium; 19 DOM and AX interactive controls were named, one h1 had no skipped level, IDs/images/forms and overflow passed, and 30 Tab events reached visible focus stops without invoking a provider. The optional --output JSON handoff records all role/name pairs and providerInvoked=false. This remains a local structure and keyboard smoke, not screen-reader, cross-browser or WCAG evidence. |
-| Windows GNU package smoke | **passed** — The current source built x86_64-pc-windows-gnu with cargo-zigbuild and Zig; two independent ZIP packages matched by SHA-256 and the offline archive verifier passed checksum, traversal/link and notice checks. Windows runtime, MSVC packaging, signing and release attachment remain unverified. |
-| Public release asset verification | **passed** — The read-only scripts/test-release-assets.py check downloaded both alpha.20 archive/checksum pairs, matched GitHub asset digests and sidecars, and passed archive safety/notices verification; macOS runtime passed locally and Linux runtime was skipped on the macOS host. |
+| Windows GNU package smoke | **passed** — The current source built x86_64-pc-windows-gnu with cargo-zigbuild and Zig; two independent ZIP packages matched by SHA-256 and the offline archive verifier passed checksum, traversal/link and notice checks. The exact alpha.20 tag ZIP is attached to the public release; Windows runtime, MSVC packaging and signing remain unverified. |
+| Public release asset verification | **passed** — The read-only scripts/test-release-assets.py check downloads all three alpha.20 archive/checksum pairs, matches GitHub asset digests and sidecars, and passes archive safety/notices verification; macOS runtime passes locally while Linux and Windows runtimes are skipped on the macOS host. |
 
 **Still ahead**
 
@@ -252,7 +252,7 @@ Current milestone: **Editable experiment tree with frozen lineage, localized Gro
 - Full visual regression and assistive-technology accessibility evaluation
 - Native-agent battle verification and provider-specific launcher registration
 - Unrecognized or future rubric evidence and user-generated run content remain source-language until an explicit mapping is added
-- Cross-platform runtime proof and release-attached portable binaries/installers
+- Cross-platform runtime proof, MSVC support and portable installers
 <!-- project-status:end -->
 
 The percentage is a human estimate against the full [product specification](docs/SPEC.md), not a traffic or ranking metric. Local checks show what has been verified; they do not prove SEO lift, provider authorization, or production readiness. See the detailed [progress log](docs/PROGRESS.md).
