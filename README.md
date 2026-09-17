@@ -6,7 +6,7 @@ GrowthLab helps you answer a simple question:
 
 > **Which change could help more people find and understand our product?**
 
-GrowthLab is an open-source SEO growth tool for landing pages, content ideas, and the small changes that help a product get found and understood.
+GrowthLab is an open-source SEO growth tool for comparing landing pages, content ideas, and onboarding experiments with inspectable local checks.
 
 Bring in your product, describe an SEO or growth idea, and compare three clear versions side by side. GrowthLab shows the pages, the changes, and the checks behind each option so you can choose what to test next.
 
