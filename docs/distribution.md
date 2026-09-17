@@ -42,6 +42,7 @@ anything:
 dist build --artifacts global --installer shell,powershell \
   --tag v0.1.0-alpha.20 --allow-dirty
 sh -n target/distrib/growthlab-installer.sh
+python3 scripts/test-installer-templates.py --check-shell
 pwsh -NoLogo -NoProfile -NonInteractive -Command \
   '$p = Get-Content -Raw target/distrib/growthlab-installer.ps1; [System.Management.Automation.Language.Parser]::ParseInput($p, [ref]$null, [ref]$null) | Out-Null'
 ```
