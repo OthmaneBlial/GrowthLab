@@ -630,6 +630,12 @@ mod tests {
             Some(workspace.clone())
         );
         let proposals = crate::growth::model::starter_hypotheses(&workspace);
+        let mut invalid_evidence = proposals.clone();
+        invalid_evidence[0].evidence[0].supports_claims.clear();
+        assert!(store
+            .insert_growth_hypotheses("p", &invalid_evidence)
+            .is_err());
+        assert!(store.list_growth_hypotheses("p").unwrap().is_empty());
         let mut duplicate = proposals.clone();
         duplicate[2].id = duplicate[0].id.clone();
         assert!(store.insert_growth_hypotheses("p", &duplicate).is_err());
