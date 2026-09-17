@@ -1,6 +1,6 @@
 [package]
 name = "growthlab"
-version = "0.1.0-alpha.19"
+version = "0.1.0-alpha.20"
 default-run = "growthlab"
 edition = "2021"
 description = "Local-first, Git-native growth experimentation lab"
