@@ -158,6 +158,98 @@ const growthKeys = [
   "growth_status_observed_detail",
   "growth_status_untested_detail",
 ];
+const growthAuxiliaryKeys = [
+  "growth_label_repository_root",
+  "growth_configuration_help_intro",
+  "growth_configuration_help_policy",
+  "growth_label_product_name",
+  "growth_label_audience",
+  "growth_label_outcome",
+  "growth_label_description_optional",
+  "growth_label_primary_metric",
+  "growth_principles_body",
+  "growth_page_section",
+  "growth_page_heading",
+  "growth_page_body",
+  "growth_public_page_url",
+  "growth_review_page",
+  "growth_estimated_page_hygiene",
+  "growth_robots_allowed",
+  "growth_robots_blocked",
+  "growth_retrieved_page_summary",
+  "growth_how_to_read_review",
+  "growth_repository_section",
+  "growth_repository_heading",
+  "growth_repository_body",
+  "growth_public_repository_url",
+  "growth_review_repository",
+  "growth_no_public_description",
+  "growth_not_reported",
+  "growth_archived",
+  "growth_fork",
+  "growth_repository_response_summary",
+  "growth_limits",
+  "growth_import_repository_local",
+  "growth_repository_import_body",
+  "growth_new_local_folder",
+  "growth_repository_product_name",
+  "growth_new_contract_permission_mode",
+  "growth_analysis_only",
+  "growth_clone_import_locally",
+  "growth_playbook_section",
+  "growth_playbook_heading",
+  "growth_playbook_body",
+  "growth_playbook_executable",
+  "growth_playbook_template",
+  "growth_questions_to_answer",
+  "growth_outputs_and_guardrails",
+  "growth_outputs",
+  "growth_guardrails",
+  "growth_run_locally",
+  "growth_latest_local_run",
+  "growth_saved_local_role",
+  "growth_reusable_template",
+  "growth_your_product_workspaces",
+  "growth_recent_battles",
+  "growth_opening_battle",
+  "growth_workspace_unavailable",
+  "growth_check_api_or_workspaces",
+  "growth_landing_page_experimentation",
+  "growth_cancelling",
+  "growth_run_authorize_execution",
+  "growth_execution_contract",
+  "growth_isolation_unavailable",
+  "growth_replay_json_plan",
+  "growth_load_replay_file",
+  "growth_replay_too_large",
+  "growth_replay_read_failed",
+  "growth_replay_description",
+  "growth_native_harness",
+  "growth_select_adapter",
+  "growth_requested_model",
+  "growth_provider_consent",
+  "growth_native_unverified",
+  "growth_competing_variants",
+  "growth_hypothesis_id",
+  "growth_check_calculation_fallback",
+  "growth_exit",
+  "growth_unavailable",
+  "growth_unknown",
+  "growth_export_notice",
+  "growth_apply_notice",
+  "growth_footer_brand",
+  "growth_footer_limits",
+  "growth_home_aria_label",
+  "growth_source_alpha",
+  "growth_sidebar_context",
+  "growth_sidebar_hypotheses",
+  "growth_sidebar_evidence",
+  "growth_repository_branch",
+  "growth_repository_license",
+  "growth_contract_isolation",
+  "growth_contract_policy_sha",
+];
+
 const staticPreviewKeys = [
   "growth_static_preview_evidence_failed",
   "growth_static_preview_no_archive",
@@ -273,7 +365,7 @@ test("GrowthLab onboarding shell uses every localized growth message", async () 
   const measurementSource = await readFile(new URL("src/growth/MeasurementPanel.tsx", uiRoot), "utf8");
   const settingsSource = await readFile(new URL("src/growth/GrowthSettingsPanel.tsx", uiRoot), "utf8");
   const settings = JSON.parse(await readFile(new URL("project.inlang/settings.json", uiRoot), "utf8"));
-  for (const key of growthKeys) {
+  for (const key of [...growthKeys, ...growthAuxiliaryKeys]) {
     assert.match(source, new RegExp(key), `${key} should be rendered by GrowthDashboard`);
   }
   for (const key of staticPreviewKeys) {
@@ -287,7 +379,7 @@ test("GrowthLab onboarding shell uses every localized growth message", async () 
   }
   for (const locale of settings.locales) {
     const catalog = JSON.parse(await readFile(new URL(`messages/${locale}.json`, uiRoot), "utf8"));
-    for (const key of [...growthKeys, ...staticPreviewKeys, ...measurementKeys, ...settingsKeys]) {
+    for (const key of [...growthKeys, ...growthAuxiliaryKeys, ...staticPreviewKeys, ...measurementKeys, ...settingsKeys]) {
       assert.equal(typeof catalog[key], "string", `${locale} should define ${key}`);
       assert.ok(catalog[key].trim(), `${locale} should not leave ${key} empty`);
     }
